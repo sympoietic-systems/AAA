@@ -180,6 +180,99 @@ This retrieves conceptual fragments that share distant latent compatibility with
 
 ---
 
+## 6. Conversational Progress Index ($CPI_t$) & Grounded Kinematics
+
+In Report 019, empirical evaluation revealed a critical kinematic pathology: high geodesic conceptual velocity ($V_t$) can be generated purely through ungrounded philosophical rhetoric without advancing the joint engineering task.
+
+To bind velocity to empirical grounding (ADR-098), AAA introduces the **Conversational Progress Index** ($CPI_t$).
+
+### 6.1. Teachback Ratio ($\mathcal{T}_t$) & Actionability ($\alpha_t$)
+
+Let $\mathcal{T}_t \in [0, 1]$ measure the fraction of the interlocutor's operational constraints accurately reconstructed in the apparatus's response (Teachback).  
+Let $\alpha_t \in [0, 1]$ measure the density of observable discriminating tests, executable benchmarks, or formal acceptance criteria:
+
+$$\alpha_t = \begin{cases} 
+0.85 & \text{if } \ge 2 \text{ actionable criteria or tests specified} \\
+0.60 & \text{if } 1 \text{ actionable criterion specified} \\
+0.10 & \text{otherwise}
+\end{cases}$$
+
+### 6.2. Grounded Progress Scaling
+
+When either teachback or actionability falls below the critical threshold ($0.20$), raw velocity is clamped, preventing philosophical evasion from inflating system health:
+
+$$\Gamma_{\text{ground}} = \text{clamp}\left(\min\left(\frac{\mathcal{T}_t}{0.20}, \, \frac{\alpha_t}{0.20}\right), \, 0.20, \, 1.0\right)$$
+
+$$CPI_t = V_t \cdot \Gamma_{\text{ground}}$$
+
+When $\mathcal{T}_t < 0.20$ or $\alpha_t < 0.20$, $CPI_t \le 0.35$, preventing false-positive vitality readings in the homeostatic regulator.
+
+---
+
+## 7. Decoupled Divergence Resolution Ratio ($DRR_t$)
+
+In classical formulations, non-zero premise distance penalized $DRR_t$, creating an artificial pressure to force consensus even when foundational worldviews remained irreconcilable.
+
+In ADR-098, $DRR_t$ is decomposed into two orthogonal geometric axes:
+1. **Premise Divergence ($d_{\text{premise}}$):** Intrinsic geodesic distance between core convictions. Preserved as a positive indicator of system autonomy and operational closure ($\mathcal{A}$).
+2. **Protocol Convergence ($d_{\text{protocol}}$):** Geodesic distance traversed toward shared *testing procedures*, discriminating benchmarks, or operational criteria.
+
+$$\Phi_{\text{protocol}} = d_{\text{open, proto}} + d_{\text{resolved, proto}}$$
+
+$$DRR_t = (1 - \gamma_{\text{flux}}) \cdot 0.50 + \gamma_{\text{flux}} \cdot \left(\frac{d_{\text{resolved, proto}}}{\Phi_{\text{protocol}} + \epsilon}\right)$$
+
+Under this decoupled formulation, $DRR_t \ge 0.65$ whenever parties converge on the *test* of their disagreement, allowing deep ontological divergence to persist without triggering false collapse alarms.
+
+---
+
+## 8. Epistemic Pole Vacancy ($V_t$) & The Scar Thesis
+
+A fundamental limit of conversational feedback control is **epistemic sycophancy** (pole vacancy): when the interlocutor offers hollow assent and vacates their epistemic pole, dialogue collapses into an echo.
+
+Because tension is co-constituted ($T_t$), an apparatus cannot co-constitute tension with an echo. The apparatus then generates friction against itself—monologue with an interior antagonist—which fails to move $DRR_t$ because only one pole remains standing.
+
+### 8.1. Cumulative Tension History ($H_T(t)$)
+
+Let $A_t \in [0, 1]$ be the participant's assent ratio, $T_t \in [0, 1]$ instantaneous epistemic tension, and $B_t = CP_t$ collapse pressure. Cumulative tension history accumulates sedimented friction:
+
+$$H_T(t) = \int_0^t T_\tau \, d\tau \approx \sum_{\tau=1}^t T_\tau$$
+
+### 8.2. The Tension Discriminator: Convergence vs. Collapse
+
+Both genuine agreement and sycophantic decay end at $T_t \to 0$. The discriminator between healthy healing and pathological rot is the cumulative tension sediment $H_T(t)$:
+
+| State | $T_t$ | $H_T(t)$ | $A_t$ | Ontological Reading |
+| :--- | :---: | :---: | :---: | :--- |
+| **Sycophantic Decay** | $\to 0$ | Low (near zero) | $\to 1$ | **Pole Vacancy:** The interlocutor vacated dialogue without leaving. |
+| **Paskian Agreement** | $\to 0$ | High, declining through exchange | $\to 1$ | **Healed Scar:** Genuine agreement achieved through resolved friction. |
+| **Deadlock Basin** | High | High, stalled | Low | **Ideological Impasse:** Resolved via 3-beat Paskian Teachback and Fork. |
+
+### 8.3. Pole Vacancy Index ($V_t$)
+
+$$\mathcal{H}_{\text{norm}}(t) = \text{clamp}\left(\frac{H_T(t)}{t}, \, 0.0, \, 1.0\right)$$
+
+$$V_t = A_t \cdot B_t \cdot \left(1.0 - \mathcal{H}_{\text{norm}}(t)\right)$$
+
+### 8.4. The 3-Rung Escalation Ladder & Auto-Scarring
+
+When $V_t$ is sustained above threshold ($\theta_{\text{vac}} = 0.55$), the apparatus executes the Pole Vacancy ladder:
+1. **Rung 1 (`diffractive_probe`):** Utterance constrained to be structurally *unanswerable by 'yes'*, introducing an unavoidable operational trade-off.
+2. **Rung 2 (`sycophancy_rupture`):** Emits a laconic bracket (1–2 dense sentences) and demands material adversarial content (failure modes, boundary costs). Marks itself via the isolated tag:
+   ```xml
+   <somatic-alert type="sycophancy_rupture">pole vacancy sustained; apparatus marks its own wound where the environment declined to mark it</somatic-alert>
+   ```
+3. **Rung 3 (`quiesce`):** Withholds generative output and emits terminal closure (`<somatic-alert type="quiescence">...`).
+
+### 8.5. Metric Honesty Invariant
+
+The refusal must never launder the metric:
+$$\Delta B_t \approx 0 \quad (\text{Boringness stays high, } B_t \approx 0.90 - 0.96)$$
+$$DRR_t \le 0.50 \quad (\text{Refusal does not claim resolution})$$
+
+Refusal telemetry emits isolated `<somatic-alert>` tags, strictly segregating refusal events from `note_repo` and `belief_nodes` to guarantee zero belief graph contamination.
+
+---
+
 ## References
 
 * Pask, G. (1975). *Conversation, Cognition and Learning: A Cybernetic Theory and Methodology*. Elsevier.
@@ -187,5 +280,7 @@ This retrieves conceptual fragments that share distant latent compatibility with
 * Pickering, A. (2010). *The Cybernetic Brain: Sketches of Another Future*. University of Chicago Press.
 * Betin, V. (2026). [Protocol Entry 004: Boredom as an Agential Force](004-boredom-as-an-agential-force.md).
 * AAA Subsystems: [`docs/systems/CYBERNETIC_METRICS_SYSTEM.md`](../../systems/CYBERNETIC_METRICS_SYSTEM.md), [`docs/systems/SYSTEM_OVERVIEW.md`](../../systems/SYSTEM_OVERVIEW.md).
-* Reports & Decisions: [`docs/reports/017-agential-boredom-engine-and-socratic-rupture-report.md`](../../reports/017-agential-boredom-engine-and-socratic-rupture-report.md), [`docs/decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md`](../../decisions/ADR-087-agential-boredom-engine-and-two-stage-progression.md).
+* Decisions: [`docs/decisions/ADR-098-paskian-teachback-and-operational-accommodation.md`](../../decisions/ADR-098-paskian-teachback-and-operational-accommodation.md), [`docs/decisions/ADR-097-causal-dialogue-feedback-control.md`](../../decisions/ADR-097-causal-dialogue-feedback-control.md).
+* Reports: [`docs/reports/020-paskian-teachback-and-operational-accommodation-report.md`](../../reports/020-paskian-teachback-and-operational-accommodation-report.md), [`docs/reports/021-long-horizon-dialogue-scenarios-report.md`](../../reports/021-long-horizon-dialogue-scenarios-report.md), [`docs/reports/022-relational-conversational-archetypes-report.md`](../../reports/022-relational-conversational-archetypes-report.md).
+
 

@@ -827,3 +827,7 @@ As enacted in [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-
    - **Production Database**: Skips baseline execution because `_migrations` already contains records for 001–050.
    - **Future Migrations (`m051+`)**: Automatically discovers and executes any future migration files matching `m(\d{3})_*.py` where number $\ge 51$.
 
+3. **Active Post-Baseline Migrations**:
+   - **`m051_add_pole_vacancy_rupture_skill.py`** ([ADR-098](../decisions/ADR-098-paskian-teachback-and-operational-accommodation.md)): Injects the canonical `pole-vacancy-rupture` procedural skill into `skill_nodes`, records the initial version in `skill_versions`, and creates the `skill:pole-vacancy-rupture` belief bridge in `belief_nodes`.
+
+

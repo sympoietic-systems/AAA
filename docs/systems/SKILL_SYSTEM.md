@@ -209,10 +209,11 @@ Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](
 ### Backend Modules & Services
 - [afferent_sensory_router.py](file:///d:/01_GIT/AAA/backend/modules/afferent_sensory_router.py): Afferent sensory router implementing Option C hybrid topology, attractor prior weighting, and boredom inversion.
 - [typesafe_provider.py](file:///d:/01_GIT/AAA/backend/modules/providers/typesafe_provider.py): Decision client for TypeSafe Jev on direct API and OpenRouter Alpha Decisions.
-- [tag_protocols.yaml](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml): Canonical single-source-of-truth YAML consolidating XML tag grammar.
+- [tag_protocols.yaml](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml): Canonical single-source-of-truth YAML consolidating XML tag grammar (including Tag 7: `<somatic-alert>`).
 - [tag_protocols.py](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py): Dynamic prompt loader with fallback.
 - [refactor_skills_with_llm.py](file:///d:/01_GIT/AAA/backend/scripts/refactor_skills_with_llm.py): Non-destructive LLM evolutionary refactoring pipeline.
 - [m048_skill_blueprint_migration.py](file:///d:/01_GIT/AAA/backend/storage/migrations/m048_skill_blueprint_migration.py): Non-destructive migration deactivating `always_active` on XML tag skills.
+- [m051_add_pole_vacancy_rupture_skill.py](file:///d:/01_GIT/AAA/backend/storage/migrations/m051_add_pole_vacancy_rupture_skill.py): Migration injecting the `pole-vacancy-rupture` on-demand skill and belief bridge.
 - [skill_activator.py](file:///d:/01_GIT/AAA/backend/modules/skill_activator.py): Coordinates skill routing, relevance coordinates injection, and fallback.
 - [refine_skill.py](file:///d:/01_GIT/AAA/backend/modules/background_tasks/actions/refine_skill.py): Vets decisions, updates nodes, handles accretion, and writes collapsed traces.
 - [repositories/skill.py](file:///d:/01_GIT/AAA/backend/storage/repositories/skill.py): Database operations for reading and writing `skill_nodes`, `skill_events`, and `skill_versions`.
@@ -224,5 +225,7 @@ Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](
   - *Proposed Nucleations* (Purple `▲`)
   - *Refused/Integrated Proposals* (Refused: Red `✖`, Merged/Integrated: Purple `⎋` with `[ Integration Rationale ]` details).
 - [SkillDetail.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[agent]`, `[auto]`, `[llm_refactor]`, or `[user]` badges.
+- [SomaticAlertBanner.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/SomaticAlertBanner.tsx): High-visibility retro-cybernetic alert banner for rendering somatic refusal and quiescence alerts (`<somatic-alert>`).
+
 
 

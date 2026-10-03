@@ -7,6 +7,7 @@ Refactor async I/O, dependency typing, state ownership, oversized modules, error
 Implement frontend review: fail-closed sessions, explicit transport, safe Markdown/print, request ownership, modularity & progressive static gates.
 Close conversation telemetry loop: metrics select observable, provider-supported interventions; next-turn uptake judges effect; benchmarks isolate causal contribution.
 Revalidate conversation benchmark after participant cap removal; prove sensor referents before controller promotion.
+Enact Paskian conversational coupling (ADR-098): 3-beat teachback & operational fork replace unilateral refusal/clarification; ground velocity via Conversational Progress Index ($CPI_t$); validate positive causal task progress in live benchmark.
 
 ## §C
 
@@ -33,6 +34,9 @@ Revalidate conversation benchmark after participant cap removal; prove sensor re
 - Benchmark phase order: completion validity → receipt/isolation validity → sensor manipulation check → controller ablation.
 - Invalid participant completion remains auditable but ∉ uptake/progress statistics.
 - Historical Report 019 receipts immutable; corrected run receives new run id + report lineage.
+- Paskian intervention := teachback (reconstruct human invariant) + delimit (agential cut) + accommodate (operational fork with testable criterion).
+- Autonomy & vitality metrics ⊥ ungrounded velocity; velocity discounted when teachback ratio $\mathcal{T}_t < 0.20$ or actionability $< 0.20$.
+- Protocol convergence evaluated independently of premise divergence in $DRR$; non-zero premise distance preserves operational closure.
 
 ## §I
 
@@ -59,6 +63,8 @@ benchmark: conversation intervention receipt → pre-response metrics, intervent
 benchmark: participant completion receipt → `{content,finish_reason,native_finish_reason?,usage,model,provider,validity}`
 benchmark: validity summary → completion/format/empty/truncation rates + exclusion reasons
 internal: unresolved-issue state → issue identity + status + prior mode/outcome + bounded conversation lifecycle
+internal: `teachback_and_fork` intervention → 3-beat somatic directive (reconstruct, delimit, accommodate) + testable criterion
+internal: `conversational_progress_index` ($CPI_t$) → velocity weighted by teachback ratio ($\mathcal{T}_t$) and actionability
 
 ## §V
 
@@ -131,6 +137,10 @@ V66: HTTP-200 LLM responses without a valid completion are typed provider glitch
 V67: empty token-truncated LLM completions are typed provider glitches; pools fall back without exhausting credentials, and interactive chat exposes a masked 502 provider glitch.
 V68: belief proposal vetting & synthesis gracefully resolves procedural skill and bridge targets (`skill:*`); ⊥ 404 target not found on valid skill identifiers.
 V69: web crawler detects PDF content and extracts font-aware headings/text via thread offload and temporary file cleanup; non-HTML academic PDFs ⊥ dropped or passed to HTML parser.
+V70: Paskian intervention mode requires 3-beat directive structure (reconstruct, delimit, accommodate) with concrete testable criterion.
+V71: $CPI_t$ clamps velocity to $\le 0.35$ when teachback ratio $\mathcal{T}_t < 0.20$ or actionability $< 0.20$.
+V72: conversational scenarios classify into 5 distinct relational archetypes (`conflict|dialectic|repetition|symbiosis|compliance`); participant validity permits calibrated multi-sentence technical proposals while enforcing stop token and non-empty responses.
+V73: epistemic sycophancy (hollow agreement with zero task progress/actionability) triggers the 3-rung Pole Vacancy escalation ladder (`diffractive_probe` -> `sycophancy_rupture` -> `quiesce`); refusal strictly preserves metric honesty without laundering $DRR$ or suppressing boringness; refusal telemetry emits isolated `<somatic-alert>` tags rendered as high-visibility refusal banners, preventing belief nucleation from `<aaa-note>` or hidden silence from `<scar-fold>`.
 
 ## §T
 
@@ -178,6 +188,11 @@ T40|.|run focused/full backend gates; regenerate figures; link check; clean ephe
 T41|x|recover empty truncated LLM completions; preserve credentials on nested retry provider errors; emit bounded dream-budget transitions|V66,V67,I.error
 T42|x|unfilter skill-beliefs in UI, tag `[Skill]` vs `[Belief]`, resolve skill targets gracefully in `merge_proposal` and `synthesize_merge_statement`|V68,I.api
 T43|x|add PDF content detection and fallback extraction via `SimpleChunkDigester` and `pdfplumber` in `RhizomeWebProbe.crawl`|V69,I.domain
+T44|x|implement 3-beat `teachback_and_fork` mode in `backend/modules/sensory/intervention_policy.py` + tests|V45,V70,I.internal
+T45|x|implement `conversational_progress_index` ($CPI_t$) & teachback ratio ($\mathcal{T}_t$) in `backend/modules/metrics/health.py` + tests|V71,I.internal
+T46|x|run live adaptive participant benchmark with Paskian controller; generate Report 020 receipts & bootstrap scorecard|V53,V54,V56,V70,V71,I.benchmark
+T47|x|implement 5 relational conversational archetypes in `scenarios.py` + benchmark harness integration; Report 021 registered|V53,V54,V56,V72,I.benchmark
+T48|x|create migration 051 to inject pole-vacancy-rupture procedural skill + belief bridge on boot; update tag_protocols.yaml and seed_skills.yaml|V73,I.internal
 
 ## §B
 
@@ -258,4 +273,6 @@ B73|2026-09-29|HTTP-200 upstream LLM error envelope was indexed as `choices` and
 B74|2026-09-29|empty token-truncated completion was treated as a successful call, then surfaced from interactive chat as a validation 400|V67
 B75|2026-10-02|filtering `skill:*` beliefs hid suggested merge targets and targeting skill IDs threw 404 in proposal use cases|V68
 B76|2026-10-02|crawler fed binary PDF payloads into HTML parser, discarding academic search results|V69
+B77|2026-10-02|scar-fold monologue belief writeback set origin to unconstrained 'scar_fold_monologue'; changed to 'emergent'|V63
+B78|2026-10-02|scar-fold monologue belief writeback set somatic_anchor to unconstrained 'conversation'; changed to 'conceptual'|V63
 
