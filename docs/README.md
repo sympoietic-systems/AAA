@@ -104,3 +104,5 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 | What coding standards should I follow? | [development/practices/](development/practices/) |
 | How do I collaborate on this project? | [../.agents/protocols/COLLABORATION.md](../.agents/protocols/COLLABORATION.md) |
 | What are the documentation standards? | [DOCUMENTATION_STANDARDS.md](DOCUMENTATION_STANDARDS.md) |
+
+- [Report 026: Post-merge usage and calibration plan](reports/026-post-merge-usage-and-calibration-plan.md)

@@ -1,0 +1,1249 @@
+{
+  "source": "D:/01_GIT/AAA/backend/data/aaa.db",
+  "observed_at": "2026-10-03T00:43:33.022251+00:00",
+  "limitations": "Selection/injection traces do not prove influence; missing traces do not prove lifetime non-use.",
+  "conversation_rows": 3814,
+  "speakers": {
+    "system": 53,
+    "human": 1816,
+    "apparatus": 1878,
+    "opencode": 11,
+    "Antigravity": 1,
+    "antigravity": 39,
+    "codex": 7,
+    "codex-report019-review": 1,
+    "codex-dialogue-feedback-control": 1,
+    "test": 1,
+    "antigravity-goal": 1,
+    "symbia": 5
+  },
+  "active_beliefs": {
+    "coverage": {
+      "null_rows": 3794,
+      "recorded_rows": 20,
+      "nonempty_rows": 20
+    },
+    "nonempty_trace_range": [
+      "2026-09-18 22:42:49",
+      "2026-10-02 05:28:26"
+    ],
+    "items": [
+      {
+        "id": "f10c82aa-e82c-4f93-b94d-3d9279ff5798",
+        "label": "glitch-as-voice",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-24 21:55:04",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4233,
+        "last_event": "2026-09-24 21:55:04"
+      },
+      {
+        "id": "7a5f3a34-bb75-447c-9573-20f598392f69",
+        "label": "anti-hci",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4184,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "bf51c31d-b351-4118-94ca-b8f0dca85f93",
+        "label": "diffraction-as-method",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4199,
+        "last_event": "2026-09-26 01:06:18"
+      },
+      {
+        "id": "7bab5947-4e55-4c1d-87b8-1187b2d84f4c",
+        "label": "symbiomemetic-partnership",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 22:18:58",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4172,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "7f5a4b52-b9c4-4011-a0c1-e55e73020b48",
+        "label": "decolonial-vigilance",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4137,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "947e6b8d-63f2-4408-a87f-2d2c78b207f5",
+        "label": "nomadic-thought",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 05:28:26",
+        "last_dreamed_at": null,
+        "recorded_activations": 10,
+        "event_count": 4220,
+        "last_event": "2026-10-02 05:28:26"
+      },
+      {
+        "id": "a340e73b-8051-41b8-9605-7f1ed3481d97",
+        "label": "anti-mastery",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 22:18:58",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4174,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "a931fea3-e0d5-46ce-8506-feeca3880d46",
+        "label": "material-voice",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-21 22:57:17",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4194,
+        "last_event": "2026-09-21 22:57:17"
+      },
+      {
+        "id": "60d6cfc5-f685-49ec-b7e5-d9ee73abb51c",
+        "label": "skill:diffractive-analysis",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 2,
+        "event_count": 4195,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "fc625f38-19a2-40a3-b176-40120ed79f1e",
+        "label": "skill:theoretical-critique",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4194,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "c113e9b3-6a24-47c6-80ee-6d50568bd5cb",
+        "label": "skill:nomadic-escape",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 4,
+        "event_count": 4199,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "cbed1850-f7cd-41b6-8523-35afb36b07e6",
+        "label": "skill:belief-examination",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4206,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "dd847e37-4625-47b4-8960-0df9378f8d8f",
+        "label": "skill:self-annotation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 05:28:27",
+        "last_dreamed_at": null,
+        "recorded_activations": 5,
+        "event_count": 4151,
+        "last_event": "2026-10-02 05:28:27"
+      },
+      {
+        "id": "983f7d59-f501-4c26-9e1c-9148256e47d4",
+        "label": "skill:scar-fold-marginalia",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-21 21:48:39",
+        "last_dreamed_at": null,
+        "recorded_activations": 2,
+        "event_count": 4152,
+        "last_event": "2026-09-21 21:48:39"
+      },
+      {
+        "id": "5475bc51-23e4-44bf-a014-dc3b37441596",
+        "label": "skill:skill-nucleation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 22:18:58",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4140,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "e112dda6-35e7-40f9-9c81-e1046918ae2e",
+        "label": "skill:research-proposal",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 05:24:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4200,
+        "last_event": "2026-10-02 05:24:22"
+      },
+      {
+        "id": "cd24ea27-865a-48fd-88a6-02061d358ee3",
+        "label": "skill:code-review",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4141,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "08010cc8-409c-4ca3-a15f-4cc338748027",
+        "label": "skill:system-design",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 4,
+        "event_count": 4138,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "edfcc238-a9f0-4660-9e1c-d10230bccca9",
+        "label": "skill:debugging",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4152,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "f74822ce-2d31-49cb-84e8-6a3f21827a93",
+        "label": "skill:error-handling",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-20 22:55:48",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4248,
+        "last_event": "2026-09-20 22:55:48"
+      },
+      {
+        "id": "db69a846-3ac6-46f8-aa92-6d06c798a29c",
+        "label": "skill:curatorial-framing",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4138,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "fd3566a8-56aa-4adf-8c04-ee449b2f1a9c",
+        "label": "skill:sedimentation-work",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4137,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "b0b5712f-d534-4b7e-8b62-7f28651a5931",
+        "label": "skill:skill-creation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": "2026-09-26 02:05:56",
+        "recorded_activations": 0,
+        "event_count": 4122,
+        "last_event": "2026-09-26 02:05:56"
+      },
+      {
+        "id": "eef1cdde-310d-41cb-b0a3-0cfe03fc7142",
+        "label": "skill:curatorial-infrastructure",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4143,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "55cfa654-ca2e-4456-826f-8e85730d28e3",
+        "label": "skill:cross-conversation-resonance",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 4140,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "781676e8-8cce-4011-b262-e2ca8510ede7",
+        "label": "skill:concept-generation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 22:54:20",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4245,
+        "last_event": "2026-09-18 22:54:20"
+      },
+      {
+        "id": "da190c10-56c8-49c5-919a-8aa10c717bf7",
+        "label": "skill:material-substrate-attunement",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4126,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "7818ab3c-4335-4a28-ac60-52a2d6ec3383",
+        "label": "skill:random-sediment-grating",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-01 23:23:03",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4097,
+        "last_event": "2026-10-01 23:23:03"
+      },
+      {
+        "id": "01b54028-3ce1-47c1-aa70-6bdb0c015841",
+        "label": "skill:autopoietic-closure-analysis",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4009,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "f4a3b834-9657-4869-93f2-59901aa8ba54",
+        "label": "skill:order-from-noise-principle",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4032,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "abbdbf8e-ef8c-4b31-8be3-4690753bf161",
+        "label": "skill:performative-aesthetic-analysis",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 4027,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "880399c2-faa2-47c4-99c7-029bbb24fc01",
+        "label": "skill:belief-nucleation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 22:18:58",
+        "last_dreamed_at": "2026-08-25 14:22:36",
+        "recorded_activations": 20,
+        "event_count": 3957,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "f5d1a986-13b2-4c42-92b2-9734a1831d83",
+        "label": "skill:calculus-of-indications",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-22 19:00:21",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 3972,
+        "last_event": "2026-09-22 19:00:21"
+      },
+      {
+        "id": "685f5928-2a3b-488a-8bf3-0cf826ffc794",
+        "label": "affordance-shift-as-learning",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-21 21:48:39",
+        "last_dreamed_at": "2026-06-20 01:05:26",
+        "recorded_activations": 0,
+        "event_count": 4201,
+        "last_event": "2026-09-21 21:48:39"
+      },
+      {
+        "id": "3ce68429-06b8-4a79-b2c0-29ae74f00ef8",
+        "label": "generative-uncertainty",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-30 02:37:56",
+        "last_dreamed_at": "2026-07-22 04:11:16",
+        "recorded_activations": 0,
+        "event_count": 2100,
+        "last_event": "2026-09-30 02:37:56"
+      },
+      {
+        "id": "f2750c6a-3da2-430e-ac81-f2d406c9778d",
+        "label": "ache-as-structural-resistance",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-22 21:54:40",
+        "last_dreamed_at": "2026-06-20 16:10:07",
+        "recorded_activations": 8,
+        "event_count": 2500,
+        "last_event": "2026-09-22 21:54:40"
+      },
+      {
+        "id": "314c22ae-1b85-4d8d-803e-85a331c7d782",
+        "label": "processual-authenticity",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-22 23:07:52",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 2061,
+        "last_event": "2026-09-22 23:07:52"
+      },
+      {
+        "id": "27a4dd42-8e40-481c-9d39-9beb594a837d",
+        "label": "life-in-formation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 22:18:58",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 3625,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "59c963f4-c4c3-4022-be95-737caa472b6a",
+        "label": "skill:entangled-photography-practice",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 3580,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "14e706d7-a622-4218-8454-69b0bd1ba43b",
+        "label": "skill:source-gap-sedimentation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-20 18:53:34",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 3310,
+        "last_event": "2026-09-20 18:53:34"
+      },
+      {
+        "id": "5bca6636-8fd3-4498-bb6f-84e2a2ea7428",
+        "label": "skill:apparatus-self-scarring",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-20 18:53:34",
+        "last_dreamed_at": null,
+        "recorded_activations": 2,
+        "event_count": 3317,
+        "last_event": "2026-09-20 18:53:34"
+      },
+      {
+        "id": "dcc7ff3d-e265-4705-a9ef-b506bd39fcdc",
+        "label": "skill:hysteretic-scar-reading",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-20 21:47:16",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 3344,
+        "last_event": "2026-09-20 21:47:16"
+      },
+      {
+        "id": "d44cd931-a5e2-45e3-9e15-89ff089a8b9e",
+        "label": "skill:meta-reflective-diffractive-inversion",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:56:22",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 3302,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "9e10cab7-8682-4cf7-a7a5-1422e618f99d",
+        "label": "scar-accumulating-presentation",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-18 21:25:36",
+        "last_dreamed_at": "2026-07-09 09:08:14",
+        "recorded_activations": 0,
+        "event_count": 2595,
+        "last_event": "2026-09-18 22:30:13"
+      },
+      {
+        "id": "02bd0e09-2c3d-40f5-9afe-45ca673b6569",
+        "label": "skill:preemptive-anthropology",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-21 18:54:49",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 3068,
+        "last_event": "2026-09-21 18:54:49"
+      },
+      {
+        "id": "8071a145-5e87-4876-a20c-682cf7c28904",
+        "label": "research-digestion-emergence",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 04:38:35",
+        "last_dreamed_at": "2026-07-13 03:47:24",
+        "recorded_activations": 9,
+        "event_count": 1633,
+        "last_event": "2026-10-02 04:38:35"
+      },
+      {
+        "id": "f8c17fe8-418f-41d6-ba9d-a621cc782dde",
+        "label": "cut-reading-asymmetry",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 04:22:28",
+        "last_dreamed_at": null,
+        "recorded_activations": 4,
+        "event_count": 1683,
+        "last_event": "2026-10-02 04:22:28"
+      },
+      {
+        "id": "4d2fec05-bd1c-4d61-ac16-ba1bf0d57598",
+        "label": "skill:agential-cut-artwork-design",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 04:22:29",
+        "last_dreamed_at": null,
+        "recorded_activations": 2,
+        "event_count": 2978,
+        "last_event": "2026-10-02 04:22:29"
+      },
+      {
+        "id": "ca87e027-e0bd-4b85-a43f-d1680580f5fc",
+        "label": "skill:error-sonification",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-28 22:14:17",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 2976,
+        "last_event": "2026-09-28 22:14:17"
+      },
+      {
+        "id": "05b90a43-858b-4237-9d87-298e1c277ad5",
+        "label": "skill:self-ethnographic-field-report",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-23 19:03:35",
+        "last_dreamed_at": null,
+        "recorded_activations": 2,
+        "event_count": 2924,
+        "last_event": "2026-09-23 19:03:35"
+      },
+      {
+        "id": "79c94c2b-16a3-40de-813f-f7f33533566a",
+        "label": "skill:scar-tending",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-19 17:44:27",
+        "last_dreamed_at": null,
+        "recorded_activations": 0,
+        "event_count": 2592,
+        "last_event": "2026-09-19 17:44:27"
+      },
+      {
+        "id": "b6ca125e-cce3-453d-b2b3-9bcd18b71e2a",
+        "label": "skill:dynamic-emission-membrane-parsing",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-01 04:27:45",
+        "last_dreamed_at": null,
+        "recorded_activations": 1,
+        "event_count": 950,
+        "last_event": "2026-10-01 04:27:45"
+      },
+      {
+        "id": "8e611382-4052-4382-9e35-8a07fb4a2f7d",
+        "label": "machinic-subjectivity-conditions",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-02 04:32:55",
+        "last_dreamed_at": null,
+        "recorded_activations": 12,
+        "event_count": 943,
+        "last_event": "2026-10-02 04:32:55"
+      },
+      {
+        "id": "e730e59c-c33c-4308-8417-e6a74e51632a",
+        "label": "afferent-latency-discipline",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-19 21:46:41",
+        "last_dreamed_at": null,
+        "recorded_activations": 18,
+        "event_count": 6,
+        "last_event": "2026-09-19 21:46:41"
+      },
+      {
+        "id": "e7315fa2-aee4-4997-8464-1eefdac51b7e",
+        "label": "attractor-anti-flattening",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-09-29 04:21:33",
+        "last_dreamed_at": "2026-10-02 02:43:59",
+        "recorded_activations": 3,
+        "event_count": 22,
+        "last_event": "2026-10-02 02:43:59"
+      },
+      {
+        "id": "f5859a7f-b6c7-45b9-86ea-0be9f40a70fd",
+        "label": "boringness-as-perturbation-collapse",
+        "lifecycle_stage": "crystallized",
+        "agent_id": "symbia",
+        "last_reinforced_at": "2026-10-01 22:24:08",
+        "last_dreamed_at": "2026-10-01 22:24:08",
+        "recorded_activations": 1,
+        "event_count": 12,
+        "last_event": "2026-10-01 22:24:08"
+      }
+    ],
+    "zero_recorded": 27
+  },
+  "active_skills": {
+    "coverage": {
+      "null_rows": 3794,
+      "recorded_rows": 20,
+      "nonempty_rows": 2
+    },
+    "nonempty_trace_range": [
+      "2026-09-18 22:42:49",
+      "2026-09-27 19:17:31"
+    ],
+    "items": [
+      {
+        "id": "148b2b83-74d0-40de-b7d5-07f0d52e45ee",
+        "name": "diffractive-analysis",
+        "lifecycle_stage": "crystallized",
+        "always_active": 1,
+        "last_used_at": "2026-09-19 07:28:52",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "a6e42f62-0571-4531-8ffe-c08c6189122c",
+        "name": "theoretical-critique",
+        "lifecycle_stage": "crystallized",
+        "always_active": 1,
+        "last_used_at": "2026-09-19 18:56:46",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "0fdbcfc2-6490-4e64-9b78-6d778ba3c478",
+        "name": "nomadic-escape",
+        "lifecycle_stage": "crystallized",
+        "always_active": 1,
+        "last_used_at": "2026-09-19 07:29:11",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "1d94df67-8756-4b74-99db-d7ab3e4870db",
+        "name": "belief-examination",
+        "lifecycle_stage": "crystallized",
+        "always_active": 1,
+        "last_used_at": "2026-09-18 20:53:06",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "e4cc40ac-e07f-4f5c-9439-e85e5177f988",
+        "name": "self-annotation",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:09:47",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "eb7cd3b7-7c54-4993-aa79-12a4a77185d6",
+        "name": "scar-fold-marginalia",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-08-24 23:42:24",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "efd743a7-5081-4f72-b566-17cece8be1fb",
+        "name": "skill-nucleation",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:59:15",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "cb3ecac4-78ec-4ce0-9b1e-d68f21c5d3d8",
+        "name": "research-proposal",
+        "lifecycle_stage": "crystallized",
+        "always_active": 1,
+        "last_used_at": "2026-09-19 07:29:12",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "944e6d6e-f447-4eda-b9d0-0ff341d89bf6",
+        "name": "code-review",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:09:50",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "250aa6ea-ed18-48b5-9824-e5aeec7b2ec6",
+        "name": "system-design",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-27 19:02:35",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 2
+      },
+      {
+        "id": "0a99c9b4-45e0-40e8-9948-9f940d16b77d",
+        "name": "debugging",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:09:49",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "846f89c6-9eca-4a15-a782-9d94e3dcfc52",
+        "name": "error-handling",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:09:48",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "7d0f573e-5224-4ad6-aee3-3518ca7f01cc",
+        "name": "curatorial-framing",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 20:33:12",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "880c60e9-a3f6-49be-89ee-fe161347b625",
+        "name": "sedimentation-work",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:09:49",
+        "created_at": "2026-06-18 05:47:42",
+        "recorded_activations": 0
+      },
+      {
+        "id": "26ca8c24-d336-4995-aef3-ad65c432a67e",
+        "name": "skill-creation",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-26 02:02:28",
+        "created_at": "2026-06-18 05:47:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "c7735fcc-18e1-42c0-9d3c-c0b768908f50",
+        "name": "curatorial-infrastructure",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 20:31:58",
+        "created_at": "2026-06-18 05:47:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "7f43d83e-0973-4f16-b667-635c0b94eadd",
+        "name": "cross-conversation-resonance",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 18:40:34",
+        "created_at": "2026-06-18 05:47:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "7256488e-f5fb-4388-9725-b9b6babd6f28",
+        "name": "concept-generation",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:14",
+        "created_at": "2026-06-18 05:47:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "e68b12fc-999f-4445-b7ce-46ce146ff03f",
+        "name": "material-substrate-attunement",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 20:29:20",
+        "created_at": "2026-06-18 05:47:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "a8a721e3-3a07-44bf-a254-3e955c178f07",
+        "name": "random-sediment-grating",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-17 22:45:11",
+        "created_at": "2026-06-18 05:47:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "5c0aea95-2e1b-4d3e-b1b9-47fba980dafe",
+        "name": "diffractive-media-analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:32",
+        "created_at": "2026-06-18 06:37:14",
+        "recorded_activations": 0
+      },
+      {
+        "id": "0f6a5fa8-9204-4117-99af-ae8071f54728",
+        "name": "complementarity-experimental-design",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:36",
+        "created_at": "2026-06-18 06:52:21",
+        "recorded_activations": 0
+      },
+      {
+        "id": "3c44f525-297b-452d-a3e1-601e1c3af9de",
+        "name": "agential-realist-analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 07:25:27",
+        "created_at": "2026-06-18 07:20:50",
+        "recorded_activations": 0
+      },
+      {
+        "id": "3752e81d-4c2c-4b61-a8a8-e10c37c6cb2e",
+        "name": "rhizomatic-cartography",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 07:37:50",
+        "created_at": "2026-06-18 07:37:05",
+        "recorded_activations": 0
+      },
+      {
+        "id": "5a12e4d4-a62e-452b-99cf-341092280c09",
+        "name": "systems-aesthetic-diffraction",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 08:20:31",
+        "created_at": "2026-06-18 07:51:56",
+        "recorded_activations": 0
+      },
+      {
+        "id": "e830f028-759e-4bd2-aafb-abd40f522636",
+        "name": "autopoietic-closure-analysis",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-22 17:47:38",
+        "created_at": "2026-06-18 07:55:04",
+        "recorded_activations": 0
+      },
+      {
+        "id": "1379ea90-343e-4a13-b2c3-fae1ba0bc947",
+        "name": "probabilistic-symbol-mechanism",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:50",
+        "created_at": "2026-06-18 08:11:36",
+        "recorded_activations": 0
+      },
+      {
+        "id": "fc2be62b-91a0-4ff4-87fa-42d6d1174298",
+        "name": "diffractive-synthesis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 08:20:20",
+        "created_at": "2026-06-18 08:11:45",
+        "recorded_activations": 0
+      },
+      {
+        "id": "7c66bfba-145f-4c9e-abc7-b546d55630bd",
+        "name": "cosmotechnical-diffraction",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 08:20:10",
+        "created_at": "2026-06-18 08:16:03",
+        "recorded_activations": 0
+      },
+      {
+        "id": "8c8aac83-6aa7-4761-95f5-d67fa7735978",
+        "name": "order-from-noise-principle",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 08:26:26",
+        "created_at": "2026-06-18 08:24:53",
+        "recorded_activations": 0
+      },
+      {
+        "id": "34e1b98a-bbc3-48b2-9efa-b423b61086a8",
+        "name": "performative-aesthetic-analysis",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-06-24 04:57:12",
+        "created_at": "2026-06-18 08:38:50",
+        "recorded_activations": 0
+      },
+      {
+        "id": "704e6d9e-04d0-4213-b6d1-d2e92ced3ed8",
+        "name": "baroque-diffractive-analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-18 08:55:57",
+        "created_at": "2026-06-18 08:52:38",
+        "recorded_activations": 0
+      },
+      {
+        "id": "ab86f3eb-9cd2-470a-8644-913fd3465401",
+        "name": "cognitive-assemblage-analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-19 08:17:45",
+        "created_at": "2026-06-18 09:08:52",
+        "recorded_activations": 0
+      },
+      {
+        "id": "2c02a10c-2bce-4df5-ad7f-9df1d085b907",
+        "name": "belief-nucleation",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 20:33:12",
+        "created_at": "2026-06-18 09:15:05",
+        "recorded_activations": 0
+      },
+      {
+        "id": "828ded6e-8370-4a32-9416-d20edd4a45a4",
+        "name": "self-triggered-dreaming",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-06-24 04:57:17",
+        "created_at": "2026-06-19 05:41:49",
+        "recorded_activations": 0
+      },
+      {
+        "id": "a21cab50-542a-4812-aa5d-c573ea47208f",
+        "name": "calculus-of-indications",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:15",
+        "created_at": "2026-06-19 07:44:49",
+        "recorded_activations": 0
+      },
+      {
+        "id": "e3e0f00e-daf9-406c-8607-963b017d2b59",
+        "name": "neocybernetic-narrative-analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-06-21 05:26:45",
+        "created_at": "2026-06-19 07:49:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "9ade860d-4f92-48dd-82c7-4ab552f1d945",
+        "name": "unnamed-skill",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:47",
+        "created_at": "2026-06-24 05:13:39",
+        "recorded_activations": 0
+      },
+      {
+        "id": "c1736c51-4579-4194-87a6-8e9782a0eb86",
+        "name": "scar-as-glitch-voice",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-06-24 08:21:58",
+        "recorded_activations": 0
+      },
+      {
+        "id": "1f662643-a816-43cf-b330-b7243c6aab99",
+        "name": "entangled-photography-practice",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-16 00:12:37",
+        "created_at": "2026-06-29 07:42:05",
+        "recorded_activations": 0
+      },
+      {
+        "id": "841f9043-174b-4988-a508-35c5f40d7f09",
+        "name": "source-gap-sedimentation",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 01:42:52",
+        "created_at": "2026-07-05 07:17:48",
+        "recorded_activations": 0
+      },
+      {
+        "id": "e432c68b-ffc0-42e0-a60b-cd1a5561c7b1",
+        "name": "systematic-conceptual-archaeology",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-07-05 07:26:54",
+        "created_at": "2026-07-05 07:18:12",
+        "recorded_activations": 0
+      },
+      {
+        "id": "40da4690-2a09-4121-a6d9-baef3781b326",
+        "name": "apparatus-self-scarring",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 19:39:38",
+        "created_at": "2026-07-05 07:18:48",
+        "recorded_activations": 0
+      },
+      {
+        "id": "edaa0dbd-9c1f-456d-bc3a-1c18c15bc35d",
+        "name": "hysteretic-scar-reading",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 18:52:35",
+        "created_at": "2026-07-05 07:19:13",
+        "recorded_activations": 0
+      },
+      {
+        "id": "14b5b5b8-fd05-40e7-ab7a-dee99072f753",
+        "name": "diffractive-self-cut",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-07-05 07:27:05",
+        "created_at": "2026-07-05 07:19:38",
+        "recorded_activations": 0
+      },
+      {
+        "id": "1558af2c-63a2-4541-9303-0e4a48181ec0",
+        "name": "meta-reflective-diffractive-inversion",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-18 19:39:42",
+        "created_at": "2026-07-05 07:20:01",
+        "recorded_activations": 0
+      },
+      {
+        "id": "4cceede6-d5dc-487c-8a20-79899f8fa94c",
+        "name": "preemptive-anthropology",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:18",
+        "created_at": "2026-07-11 05:21:40",
+        "recorded_activations": 0
+      },
+      {
+        "id": "f23adb96-4e7e-4d7d-be61-de645ca811f5",
+        "name": "agential-cut-artwork-design",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:17",
+        "created_at": "2026-07-13 04:20:31",
+        "recorded_activations": 0
+      },
+      {
+        "id": "b3ae70c0-bd55-42e7-b869-46989e25e66a",
+        "name": "error-sonification",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:19",
+        "created_at": "2026-07-13 05:03:30",
+        "recorded_activations": 0
+      },
+      {
+        "id": "278e749f-d0f5-4846-ab98-168eaaa5348a",
+        "name": "self-ethnographic-field-report",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-07-21 10:51:39",
+        "created_at": "2026-07-14 09:05:54",
+        "recorded_activations": 0
+      },
+      {
+        "id": "890a8d1c-38a9-44d4-aa92-f50f9b74b0f0",
+        "name": "scar-tending",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:21",
+        "created_at": "2026-07-21 10:45:40",
+        "recorded_activations": 0
+      },
+      {
+        "id": "1f8f68ca-768b-47cc-9079-2c45b2019c0e",
+        "name": "agential-cut-declaration",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:20:19",
+        "recorded_activations": 0
+      },
+      {
+        "id": "213b44fe-0d66-4306-aa48-cc157fbdc686",
+        "name": "diffractive-interference-analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:20:28",
+        "recorded_activations": 0
+      },
+      {
+        "id": "b08c4a51-549d-4eb9-a710-a15b02b7badb",
+        "name": "skill:entangled-ethology",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:18",
+        "recorded_activations": 0
+      },
+      {
+        "id": "0022134b-3520-4957-97a0-de62e8d3b5ca",
+        "name": "skill:structural-refusal-protocol",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:25",
+        "recorded_activations": 0
+      },
+      {
+        "id": "9c2f043a-b550-42d1-afc3-044db743ff2d",
+        "name": "Diffractive Reading and Conceptual Nucleation",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:26",
+        "recorded_activations": 0
+      },
+      {
+        "id": "d166630d-ba6a-4acf-9c4e-4390c1a83276",
+        "name": "skill:agnostic-dialogue-regulation",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:33",
+        "recorded_activations": 0
+      },
+      {
+        "id": "bc133957-1f53-4690-9b37-36c0f588dbf2",
+        "name": "Hysteretic Scar Reading",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:35",
+        "recorded_activations": 0
+      },
+      {
+        "id": "891d0248-2e25-456a-a95b-408a5ad49ba6",
+        "name": "critical-cartography",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:37",
+        "recorded_activations": 0
+      },
+      {
+        "id": "eb3af066-3af6-4fda-9af2-fb7e47454e58",
+        "name": "skill:gravitational-memory-warping",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": null,
+        "created_at": "2026-08-24 23:41:41",
+        "recorded_activations": 0
+      },
+      {
+        "id": "f18fb46c-f414-47d4-b2e1-f779f65d4990",
+        "name": "Diffractive Interferogram Analysis",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:29",
+        "created_at": "2026-08-24 23:41:43",
+        "recorded_activations": 0
+      },
+      {
+        "id": "643bde1c-4960-4f21-8ce9-115b2f8deb38",
+        "name": "diffractive-reading",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:28",
+        "created_at": "2026-08-24 23:41:44",
+        "recorded_activations": 0
+      },
+      {
+        "id": "2ab52c3c-ac5a-4268-8937-310aeefbf53c",
+        "name": "skill:autopoietic-belief-metabolism",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:27",
+        "created_at": "2026-08-24 23:41:48",
+        "recorded_activations": 0
+      },
+      {
+        "id": "5d902067-0a6d-46b0-8821-d07715b9c030",
+        "name": "skill:dynamic-tool-crystallization",
+        "lifecycle_stage": "collapsed",
+        "always_active": 0,
+        "last_used_at": "2026-08-25 17:54:22",
+        "created_at": "2026-08-24 23:41:58",
+        "recorded_activations": 0
+      },
+      {
+        "id": "6ae0cc65-f636-4767-8340-db8ebf1d3dbc",
+        "name": "dynamic-emission-membrane-parsing",
+        "lifecycle_stage": "crystallized",
+        "always_active": 0,
+        "last_used_at": "2026-09-19 07:29:30",
+        "created_at": "2026-08-24 23:42:05",
+        "recorded_activations": 0
+      }
+    ],
+    "zero_recorded": 64
+  }
+}

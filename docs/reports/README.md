@@ -35,3 +35,5 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 023: Jev research triage](023-jev-research-triage-report.md)
 - [Report 024: Jev belief routing and tension evidence](024-jev-belief-routing-and-tension-report.md)
 - [Report 025: Four follow-ups delivery and integrated verification](025-four-followups-delivery-report.md)
+
+- [Report 026: Post-merge usage and calibration plan](026-post-merge-usage-and-calibration-plan.md)
