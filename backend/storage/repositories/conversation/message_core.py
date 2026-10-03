@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from backend.errors import ConstraintViolation
+from backend.storage.activation import serialize_activation_trace
 from backend.storage.connection import with_connection
 from backend.storage.models import Message
 from backend.storage.repositories.base import BaseRepository
@@ -32,7 +33,9 @@ class MessageCoreRepository(BaseRepository):
         parent_message_id: int | None = None,
         active_skills: list[str] | str | None = None,
         active_beliefs: list[str] | str | None = None,
+        activation_provenance: dict[str, Any] | None = None,
     ) -> Message:
+        provenance_str = serialize_activation_trace(activation_provenance)
         with self.atomic():
             conn = self._conn()
             skills_str = json.dumps(active_skills) if isinstance(active_skills, list) else active_skills
@@ -49,8 +52,8 @@ class MessageCoreRepository(BaseRepository):
                     )
             conn.execute(
                 """INSERT INTO conversation_log
-                   (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs, activation_provenance)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     agent_id,
                     speaker,
@@ -70,6 +73,7 @@ class MessageCoreRepository(BaseRepository):
                     parent_message_id,
                     skills_str,
                     beliefs_str,
+                    provenance_str,
                 ),
             )
             self._commit(conn)

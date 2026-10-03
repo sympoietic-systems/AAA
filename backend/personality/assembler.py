@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import yaml
 from backend.modules.base import ProcessingModule
 from backend.pipeline.registry import PipelineRegistry
 from backend.prompts.tag_protocols import get_tag_protocols_prompt
+from backend.utils.activation_provenance import build_activation_trace
 from backend.utils.persona_loader import get_persona_text
 from backend.utils.prompt_builder import (
     format_beliefs_block,
@@ -287,6 +289,7 @@ class PromptAssemblerModule(ProcessingModule):
         assembled.extend(diffractive_block)
         assembled.extend(current_query)
 
+        payload["activation_provenance"] = await asyncio.to_thread(build_activation_trace, payload, assembled)
         payload["messages"] = assembled
         return payload
 

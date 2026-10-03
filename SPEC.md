@@ -141,6 +141,8 @@ V104: SSRF unit verification uses deterministic public/restricted DNS fixtures; 
 
 V105: bridge storage faults → propagate; PDF parser/I/O failures → bounded fallback; unexpected extraction faults → propagate + temp cleanup; dream budget transition state ! explicit optional tuple
 
+V106: activation trace ! assembly-owned bounded IDs + selected/injected + origin; legacy NULL → unknown; chat/dream parity; provenance ≠ response influence; ⊥ automatic pruning
+
 ## §T
 
 id|status|task|cites
@@ -195,6 +197,8 @@ T49|x|implement and calibrate opt-in Jev source screening and grounded web colli
 T50|x|implement dry-run Jev candidate review routing and inspectable tension matrix producer|V103,V30
 
 T51|x|restore baseline failure boundaries and strict dream state typing|V105,V29,V30
+
+T52|x|persist assembly provenance and audit coverage; review stale skill probes|V106,V101,V23
 
 ## §B
 
@@ -285,3 +289,5 @@ B80|2026-10-03|absorbability confidence incorrectly gated contradiction; synthet
 B81|2026-10-03|SSRF unit test depended on live DNS; example.com resolved to restricted benchmark network here and correctly failed closed|V104,V23
 
 B82|2026-10-03|bridge faults disguised missing targets; PDF catch hid unexpected faults; dream tuple inferred None|V105
+
+B83|2026-10-03|provenance serializer imported prompt builder from storage → cognitive import cycle; pure schema moved storage leaf|V22,V106

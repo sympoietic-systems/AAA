@@ -49,6 +49,7 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         parent_message_id=row["parent_message_id"] if "parent_message_id" in row.keys() else None,
         active_skills=row["active_skills"] if "active_skills" in row.keys() else None,
         active_beliefs=row["active_beliefs"] if "active_beliefs" in row.keys() else None,
+        activation_provenance=row["activation_provenance"] if "activation_provenance" in row.keys() else None,
     )
 
 

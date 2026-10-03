@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import uuid
@@ -370,7 +371,8 @@ class ChatService:
             attractor_window = result.payload.get("attractor_window", [])
             active_belief_labels = [item.get("label", "") for item in attractor_window if item.get("label")]
 
-            response_msg = repo.insert(
+            response_msg = await asyncio.to_thread(
+                repo.insert,
                 speaker="apparatus",
                 content=response_text,
                 thinking=thinking,
@@ -389,6 +391,7 @@ class ChatService:
                 parent_message_id=msg.id,
                 active_skills=active_skill_names,
                 active_beliefs=active_belief_labels,
+                activation_provenance=result.payload.get("activation_provenance"),
             )
 
             # Save proposed agential resonance links (Tier 1)

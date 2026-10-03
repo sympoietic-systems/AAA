@@ -55,6 +55,7 @@ class SkillActivatorModule(ProcessingModule):
 
         payload["always_active_skills"] = [
             {
+                "id": s.id,
                 "name": s.name,
                 "short_content": s.short_content or s.description,
                 "content": s.content or "",

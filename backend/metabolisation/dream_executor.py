@@ -1,5 +1,6 @@
 """Dream turn execution, resonance continuation, and conversation resolution mixin."""
 
+import asyncio
 import json
 import logging
 import random
@@ -167,7 +168,8 @@ class DreamExecutorMixin:
         )
 
         # Insert assistant message (parented to this turn's user message)
-        assistant_msg = self.message_repo.insert(
+        assistant_msg = await asyncio.to_thread(
+            self.message_repo.insert,
             speaker="apparatus",
             content=response_text,
             thinking=thinking,
@@ -184,6 +186,9 @@ class DreamExecutorMixin:
             structural_signature=assistant_sig_blob,
             structural_justification=assistant_just,
             parent_message_id=user_msg.id,
+            active_skills=[s["name"] for s in result.payload.get("loaded_skills", []) if s.get("name")],
+            active_beliefs=[b["label"] for b in result.payload.get("attractor_window", []) if b.get("label")],
+            activation_provenance=result.payload.get("activation_provenance"),
         )
 
         # Embed assistant response

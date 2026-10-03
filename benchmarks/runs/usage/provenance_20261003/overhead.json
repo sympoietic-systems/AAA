@@ -1,0 +1,9 @@
+{
+  "fixture": "6 beliefs, 3 dynamic skills, 5 always-active skills, 12000-character assembled prompt",
+  "repetitions": 100,
+  "median_ms": 0.44070000149076805,
+  "mean_ms": 0.4962630012596492,
+  "max_ms": 2.6368999970145524,
+  "receipt_bytes": 1566,
+  "scope": "synthetic CPU assembly/serialization only; excludes thread scheduling, SQLite and production traffic"
+}

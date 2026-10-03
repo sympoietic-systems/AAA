@@ -39,3 +39,5 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 026: Post-merge usage and calibration plan](026-post-merge-usage-and-calibration-plan.md)
 
 - [Report 027: Baseline quality gate repairs](027-baseline-quality-gates-report.md)
+
+- [Report 028: Activation provenance and stale skill review](028-activation-provenance-and-stale-skill-review.md)

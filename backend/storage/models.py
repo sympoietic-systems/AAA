@@ -68,6 +68,7 @@ class Message:
     parent_message_id: int | None = None
     active_skills: str | None = None
     active_beliefs: str | None = None
+    activation_provenance: str | None = None
 
 
 @dataclass

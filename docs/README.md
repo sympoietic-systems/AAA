@@ -108,3 +108,5 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 026: Post-merge usage and calibration plan](reports/026-post-merge-usage-and-calibration-plan.md)
 
 - [Report 027: Baseline quality gate repairs](reports/027-baseline-quality-gates-report.md)
+
+- [Report 028: Activation provenance and stale skill review](reports/028-activation-provenance-and-stale-skill-review.md)
