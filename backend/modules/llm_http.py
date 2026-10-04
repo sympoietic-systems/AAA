@@ -1,6 +1,7 @@
 """HTTP-backed LLM providers."""
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -341,6 +342,14 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         # ── Thinking / reasoning configuration ────────────────────────
         thinking_override = merged_params.pop("thinking_override", None)
         use_thinking = self._thinking if thinking_override is None else bool(thinking_override)
+
+        # ── Outbound safety clamping: prevent thesaurus-vomit logit degeneration ─
+        if "presence_penalty" in merged_params and merged_params["presence_penalty"] is not None:
+            with contextlib.suppress(ValueError, TypeError):
+                merged_params["presence_penalty"] = max(-2.0, min(0.6, float(merged_params["presence_penalty"])))
+        if "frequency_penalty" in merged_params and merged_params["frequency_penalty"] is not None:
+            with contextlib.suppress(ValueError, TypeError):
+                merged_params["frequency_penalty"] = max(-2.0, min(0.4, float(merged_params["frequency_penalty"])))
 
         # ── Provider-specific parameter sanitization ──────────────────
         if is_google:

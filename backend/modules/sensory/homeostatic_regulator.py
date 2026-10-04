@@ -17,15 +17,15 @@ _DEFAULTS = {
     "presence_penalty": {
         "base": 0.0,
         "floor": 0.0,
-        "ceiling": 2.0,
-        "beta": 1.5,
-        "delta": 0.6,
+        "ceiling": 0.6,
+        "beta": 0.5,
+        "delta": 0.3,
     },
     "frequency_penalty": {
         "base": 0.0,
         "floor": 0.0,
-        "ceiling": 1.0,
-        "epsilon": 1.0,
+        "ceiling": 0.4,
+        "epsilon": 0.4,
     },
 }
 
@@ -244,16 +244,16 @@ def _compute_presence_penalty(
     if agent_divergence is not None:
         p -= agent_divergence * delta
 
-    # ponytail: boost presence penalty on low glitch fidelity or entropy collapse
+    # Boost presence penalty mildly on low glitch fidelity or entropy collapse
     if glitch_fidelity is not None and glitch_fidelity < 0.60:
-        p += (0.60 - glitch_fidelity) * 0.5
+        p += (0.60 - glitch_fidelity) * 0.25
     if entropy is not None and entropy < 0.05:
-        p += (0.05 - entropy) * 4.0
+        p += (0.05 - entropy) * 1.5
 
-    # Continuous quadratic presence penalty surge on collapse pressure (H_2):
-    # As CP_t climbs above 0.45, dynamically penalize recent token space
+    # Continuous presence penalty surge on collapse pressure (H_2):
+    # As CP_t climbs above 0.45, gently penalize recent token space
     if collapse_pressure is not None and collapse_pressure > 0.45:
-        p += 1.5 * ((collapse_pressure - 0.45) ** 2)
+        p += 0.5 * ((collapse_pressure - 0.45) ** 2)
 
     clamped = p != max(floor, min(ceiling, p))
     p = max(floor, min(ceiling, p))
@@ -282,9 +282,9 @@ def _compute_frequency_penalty(
     s_t_val = s_t if s_t is not None else 0.0
     f = base + (s_t_val * epsilon)
 
-    # ponytail: boost frequency penalty if entropy collapses to prevent repetition
+    # Boost frequency penalty mildly if entropy collapses to prevent repetition
     if entropy is not None and entropy < 0.05:
-        f += (0.05 - entropy) * 5.0
+        f += (0.05 - entropy) * 1.5
 
     clamped = f != max(floor, min(ceiling, f))
     f = max(floor, min(ceiling, f))
