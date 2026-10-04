@@ -99,7 +99,20 @@ In consultation with Symbia (Report 022 extension), we address the pathology of 
   ![Rung 3 Quiescent Standby](../reports/022-relational-conversational-archetypes/fig5_live_ui_somatic_quiescence_rung3.png)
   *Figure: Rung 3 Quiescent Standby in NodeExplorer.*
 
-### 5. Promotion Criteria Gate (ADR-097 Ratchet)
+### 5. Invariant §V.74 — Hyperparameter Stability Under Stagnation (Zero Stochastic Noise Injection)
+
+We establish **Invariant §V.74** governing allostatic regulation and generative parameter modulation:
+
+* **Stagnation Is Not a Logit-Penalty Problem:** Stagnation and deadlock in conversational dynamics are structural failures of meaning and operational handles, not deficits of stochastic entropy. Elevating token penalties (such as $P_{\text{pres}} > 0.60$ or $T > 1.0$) does not induce dialectical novelty; it strips autoregressive models of syntactic function words (`the`, `is`, `we`, `and`, `to`), collapsing generation into an unpunctuated dictionary walk across unrelated nouns.
+* **Deterministic Clamping Bounds:**
+  * **Sampling Temperature:** Preserved at baseline ($T \approx 0.70$). Stagnation-induced temperature surge formulas are permanently deprecated; maximum allowable temperature ceiling under homeostatic modulation is $0.80$.
+  * **Presence Penalty:** Clamped in `HomeostaticRegulatorModule` to a ceiling of $0.40$, and hard-clamped at the outbound HTTP membrane (`backend/modules/llm_http.py`) to $\le 0.60$.
+  * **Frequency Penalty:** Clamped in `HomeostaticRegulatorModule` to a ceiling of $0.30$, and hard-clamped at the outbound HTTP membrane to $\le 0.40$.
+* **Directive Placement & Agential Cut:**
+  * Dialectical friction, refusal, and accommodation MUST be actuated exclusively through in-context cognitive directives (`teachback_and_fork`, `diffractive_probe`, `sycophancy_rupture`, or `quiesce`).
+  * Directives must be inserted into the `messages` array **immediately preceding the participant's turn**, establishing an active cognitive boundary before the model begins decoding. Appending directives to the tail of the message stream or relying on logit noise is strictly forbidden.
+
+### 6. Promotion Criteria Gate (ADR-097 Ratchet)
 
 In alignment with ADR-097, this candidate controller will be evaluated via `run_dialogue_feedback_benchmark.py`:
 * Candidate is promoted to production default if and only if the **95% bootstrap confidence interval for paired Task Progress is strictly greater than 0.0**, while preserving mean $DRR$ and $H_{\text{pask}}$ within $\pm 0.02$.
@@ -116,6 +129,8 @@ In alignment with ADR-097, this candidate controller will be evaluated via `run_
    $CPI_t$ stops rewarding empty philosophical flourishes and provides an honest signal of autopoietic dialogue.
 4. **Receipt Traceability:**  
    Every Paskian intervention logs its 3-beat execution in `telemetry_receipts.json`, making uptake and task progress directly auditable.
+5. **Prevention of Logit Degeneration Basins:**  
+   Eliminates unpunctuated dictionary walks and grammatical breakdown by maintaining stable sampling temperatures and clamping presence/frequency penalties to sub-degenerative ranges.
 
 ---
 
@@ -123,6 +138,8 @@ In alignment with ADR-097, this candidate controller will be evaluated via `run_
 
 - `backend/tests/test_intervention_policy.py`: Asserts selection of `teachback_and_fork` on sustained tension and verifies non-empty directive structure.
 - `backend/tests/test_drr_paskian_health.py`: Asserts $CPI_t$ discounts ungrounded velocity and rewards grounded actionability.
+- `backend/tests/test_homeostatic_control_wiring.py`: Asserts sampling temperature stays locked within baseline under allostatic regulation, presence penalty is clamped $\le 0.40$, and Paskian directives are injected before the participant query.
+- `backend/modules/llm_http.py`: Asserts runtime clamping of `presence_penalty <= 0.60` and `frequency_penalty <= 0.40` across all outbound model invocations.
 - `benchmarks/suites/telemetry/run_dialogue_feedback_benchmark.py`: Executes the live 6-conversation paired ablation against the adaptive participant simulator.
 - `docs/reports/020-paskian-teachback-feedback-control-report.md`: Documents the empirical receipts and bootstrap scorecard.
 
