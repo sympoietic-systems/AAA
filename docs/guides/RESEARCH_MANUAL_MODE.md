@@ -61,8 +61,8 @@ the pipeline loops back to Searching for the next depth iteration.
 > ```
 > `next_queries` feeds the next Searching cycle.
 > `next_direct_urls` (up to 5) are fetched **directly** in the next Parsing phase,
-> bypassing the search engine entirely. `max_tokens` is **8192** to accommodate
-> complex research goals with many findings.
+> bypassing the search engine entirely. Prompt execution is **uncapped** (`max_tokens: None`)
+> to accommodate complex research goals without artificial truncation.
 
 ## Workflow
 
@@ -188,7 +188,7 @@ Key files:
 | `backend/storage/repositories/research_step.py` | DB step records (includes step_data for LLM responses) |
 | `backend/storage/repositories/research_meta_log.py` | Per-step traceability log (step_id column) |
 | `backend/prompts/research/orchestrator_planner.yaml` | Planning prompt with thinking mode override |
-| `backend/prompts/research/orchestrator_reflect.yaml` | Consolidation prompt — 8192 max_tokens, receives digest signals (gaps, followups, direct URLs), returns next_queries + next_direct_urls |
+| `backend/prompts/research/orchestrator_reflect.yaml` | Consolidation prompt — uncapped output, receives digest signals (gaps, followups, direct URLs), returns next_queries + next_direct_urls |
 | `backend/modules/llm_client.py` | LLM client with per-request thinking_override |
 
 ## Configuration

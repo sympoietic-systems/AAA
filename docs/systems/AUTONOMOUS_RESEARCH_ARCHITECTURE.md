@@ -1800,7 +1800,7 @@ The orchestrator exposes six tools as internal methods, not external function-ca
 | **web_search** | `_tool_web_search(query, n=3)` | Search query, result count | `[{url, title, snippet}]` | Calls DDG via Crawl4AI → Jina fallback |
 | **web_fetch** | `_tool_web_fetch(url)` | Full URL | `{url, title, markdown_content}` | Also saves HTML to `uploads/research/{id}/` |
 | **web_crawl** | `_tool_web_crawl(query, n=3)` | Search query + count | `[{url, title, content}]` | Convenience: search + parallel fetch |
-| **consolidate** | `_tool_reflect(context, max_rounds=3)` | Accumulated findings + digest signals (gaps, followups, direct_urls) + visited URLs | `{reflection, completeness, key_insights, remaining_gaps, next_queries, next_direct_urls}` | Multi-round LLM consolidation. `next_direct_urls` (≤5) fed directly to next Parse phase, bypassing search. `max_tokens=8192`. |
+| **consolidate** | `_tool_reflect(context, max_rounds=3)` | Accumulated findings + digest signals (gaps, followups, direct_urls) + visited URLs | `{reflection, completeness, key_insights, remaining_gaps, next_queries, next_direct_urls}` | Multi-round LLM consolidation. `next_direct_urls` (≤5) fed directly to next Parse phase, bypassing search. Uncapped tokens (model native completion ceiling). |
 | **download_doc** | `_tool_download(url)` | Document URL | `{file_id, extracted_text, metadata}` | PDF/DOCX → save to disk → run digestion → index |
 | **evaluate** | `_tool_evaluate(findings, criteria)` | All results + thresholds | `{should_stop, reason, completeness}` | Hard budget/depth check + LLM satisfaction |
 
@@ -1884,7 +1884,7 @@ research_orchestrator:
   max_concurrent_parses: 3        # Async semaphore for source fetching
   upload_dir: "data/uploads/research"
   html_archive: true              # Save HTML copies of fetched pages
-  # orchestrator_reflect.yaml: max_tokens=8192 (supports complex research goals)
+  # orchestrator_reflect.yaml: uncapped tokens (omits max_tokens so model native context ceiling applies)
   # next_direct_urls: up to 5 per consolidation round, fetched directly
   #   without a search engine query in the subsequent Parsing phase
 ```
