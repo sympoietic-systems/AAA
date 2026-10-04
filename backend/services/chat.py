@@ -155,7 +155,7 @@ class ChatService:
             )
 
             # Phase 2: Metabolize and generate assistant response
-            return await self.generate_response(
+            return await self._generate_response_impl(
                 conversation_id=user_response.conversation_id,
                 user_message_id=user_response.id,
                 max_tokens_override=max_tokens_override,

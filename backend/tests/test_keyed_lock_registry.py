@@ -90,3 +90,17 @@ def test_chat_services_share_app_owned_registry():
 
     assert first._conversation_locks is state.conversation_locks
     assert second._conversation_locks is state.conversation_locks
+
+
+async def test_nested_reentrant_hold_in_same_task_does_not_deadlock():
+    registry = KeyedLockRegistry()
+    depth = 0
+
+    async with registry.hold("conversation-nested"):
+        depth += 1
+        async with registry.hold("conversation-nested"):
+            depth += 1
+            assert depth == 2
+            assert registry.active_key_count == 1
+
+    assert registry.active_key_count == 0
