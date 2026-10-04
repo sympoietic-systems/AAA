@@ -69,4 +69,5 @@ async def chat_generate(
         max_tokens_override=body.max_tokens,
         include_structural_scoring=body.include_structural_scoring,
         background_tasks=background_tasks,
+        force_regenerate=body.force_regenerate,
     )

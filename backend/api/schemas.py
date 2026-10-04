@@ -41,6 +41,7 @@ class GenerateRequest(BaseModel):
     user_message_id: int = Field(..., ge=1)
     max_tokens: int | None = Field(default=None, ge=1, le=131_072, description="Override max_tokens for this request")
     include_structural_scoring: bool | None = None
+    force_regenerate: bool = False
 
 
 class HealthResponse(BaseModel):

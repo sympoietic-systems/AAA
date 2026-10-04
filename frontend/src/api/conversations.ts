@@ -49,11 +49,15 @@ export async function saveMessage(content: string, conversationId?: string, pare
   return res.json()
 }
 
-export async function generateResponse(conversationId: string, userMessageId: number): Promise<ChatMessage> {
+export async function generateResponse(conversationId: string, userMessageId: number, forceRegenerate: boolean = false): Promise<ChatMessage> {
   const res = await apiFetch(`${BASE}/chat/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ conversation_id: conversationId, user_message_id: userMessageId }),
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      user_message_id: userMessageId,
+      force_regenerate: forceRegenerate,
+    }),
   })
   if (!res.ok) { const err = await res.json().catch(() => ({ detail: "Unknown error" })); throw new Error(err.detail || `HTTP ${res.status}`) }
   return res.json()

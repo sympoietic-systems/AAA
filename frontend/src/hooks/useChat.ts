@@ -30,8 +30,8 @@ export function useChat(conversationId: string) {
   const [loadingMore, setLoadingMore] = useState(false)
 
   const loading = useMemo(() => {
-    return isHistoryLoading || (activeMessageId !== null && generatingUserMessageIds.has(activeMessageId))
-  }, [isHistoryLoading, activeMessageId, generatingUserMessageIds])
+    return isHistoryLoading || generatingUserMessageIds.size > 0
+  }, [isHistoryLoading, generatingUserMessageIds])
 
   const activeMessageIdRef = useRef(activeMessageId)
   useEffect(() => {
@@ -453,7 +453,7 @@ export function useChat(conversationId: string) {
         throw new Error("No active conversation")
       }
 
-      const response = await generateResponse(targetConvId, targetMsgId)
+      const response = await generateResponse(targetConvId, targetMsgId, true)
 
       if (owner !== lifecycle.current || loadedRef.current !== targetConvId) {
         addNotification({

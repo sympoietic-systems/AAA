@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import re
 import uuid
@@ -22,6 +23,7 @@ from backend.services.keyed_lock import KeyedLockRegistry
 from backend.services.metrics import MetricsService
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
+from backend.storage.models import Message
 from backend.utils.parsers.belief import parse_belief_nucleate_tags
 from backend.utils.parsers.dream_trigger import parse_dream_trigger_tags
 from backend.utils.parsers.refusal import parse_refusal_tags
@@ -267,6 +269,38 @@ class ChatService:
         include_structural_scoring: bool | None = None,
         background_tasks: BackgroundTaskSink | None = None,
         attachments: list[dict] | None = None,
+        force_regenerate: bool = False,
+    ) -> ChatResponse:
+        if conversation_id:
+            async with self._conversation_locks.hold(conversation_id):
+                return await self._generate_response_impl(
+                    conversation_id=conversation_id,
+                    user_message_id=user_message_id,
+                    max_tokens_override=max_tokens_override,
+                    include_structural_scoring=include_structural_scoring,
+                    background_tasks=background_tasks,
+                    attachments=attachments,
+                    force_regenerate=force_regenerate,
+                )
+        return await self._generate_response_impl(
+            conversation_id=conversation_id,
+            user_message_id=user_message_id,
+            max_tokens_override=max_tokens_override,
+            include_structural_scoring=include_structural_scoring,
+            background_tasks=background_tasks,
+            attachments=attachments,
+            force_regenerate=force_regenerate,
+        )
+
+    async def _generate_response_impl(
+        self,
+        conversation_id: str,
+        user_message_id: int,
+        max_tokens_override: int | None = None,
+        include_structural_scoring: bool | None = None,
+        background_tasks: BackgroundTaskSink | None = None,
+        attachments: list[dict] | None = None,
+        force_regenerate: bool = False,
     ) -> ChatResponse:
         state = self._state
         pipeline = state.pipeline
@@ -285,6 +319,25 @@ class ChatService:
         msg = repo.get_by_id(user_message_id)
         if not msg:
             raise ValueError(f"Message {user_message_id} not found")
+
+        # Idempotency / deduplication check: if an apparatus reply already exists for this
+        # user message and force_regenerate is False, return it directly to avoid concurrent/duplicate generations.
+        if not force_regenerate:
+            existing_messages = repo.get_messages_by_conversation(conversation_id)
+            for existing in existing_messages:
+                if existing.parent_message_id == user_message_id and existing.speaker == "apparatus":
+                    logger.info(
+                        "Found existing apparatus response %d for user message %d in conversation %s. Returning existing response.",
+                        existing.id,
+                        user_message_id,
+                        conversation_id,
+                    )
+                    return self._build_chat_response_from_message(
+                        response_msg=existing,
+                        user_msg=msg,
+                        conversation_id=conversation_id,
+                        attachments=attachments,
+                    )
 
         content = msg.content
         speaker = msg.speaker
@@ -657,7 +710,7 @@ class ChatService:
             raise
 
     @staticmethod
-    def _build_response_attachments(attachments, result):
+    def _build_response_attachments(attachments, result=None):
         if not attachments:
             return None
         response_attachments: list[AttachmentInfo] = []
@@ -674,3 +727,73 @@ class ChatService:
                 )
             )
         return response_attachments
+
+    def _build_chat_response_from_message(
+        self,
+        response_msg: Message,
+        user_msg: Message,
+        conversation_id: str,
+        attachments: list[dict] | None = None,
+    ) -> ChatResponse:
+        import numpy as np
+
+        user_sig_list = None
+        if user_msg.structural_signature:
+            try:
+                user_sig = np.frombuffer(user_msg.structural_signature, dtype="float32")
+                user_sig_list = user_sig.tolist()
+            except Exception:
+                user_sig_list = None
+
+        active_skills_list: list[str] = []
+        if response_msg.active_skills:
+            try:
+                active_skills_list = json.loads(response_msg.active_skills)
+            except Exception:
+                active_skills_list = [response_msg.active_skills]
+
+        active_beliefs_list: list[str] = []
+        if response_msg.active_beliefs:
+            try:
+                active_beliefs_list = json.loads(response_msg.active_beliefs)
+            except Exception:
+                active_beliefs_list = [response_msg.active_beliefs]
+
+        metrics_info = None
+        metrics_repo = getattr(self._state, "metrics_repo", None)
+        if metrics_repo and response_msg.id:
+            try:
+                rec = metrics_repo.get_by_message_id(response_msg.id)
+                if rec:
+                    metrics_info = MetricsService.build_history(rec.__dict__)
+            except Exception:
+                logger.debug("Could not load metrics record for message %d", response_msg.id)
+
+        return ChatResponse(
+            id=response_msg.id,
+            timestamp=response_msg.timestamp,
+            conversation_id=conversation_id,
+            speaker=response_msg.speaker,
+            content=response_msg.content,
+            thinking=response_msg.thinking,
+            content_tokens=response_msg.content_tokens or estimate_tokens(response_msg.content),
+            thinking_tokens=response_msg.thinking_tokens,
+            embedding_generated=bool(response_msg.embedding),
+            metrics=metrics_info,
+            homeostatic_recommendations=None,
+            attachments=self._build_response_attachments(attachments),
+            context_sent=response_msg.context_sent,
+            model_used=response_msg.model_used,
+            provider_used=response_msg.provider_used,
+            structural_justification=response_msg.structural_justification or get_justification(response_msg.content),
+            user_message_id=user_msg.id,
+            user_structural_signature=user_sig_list,
+            user_structural_justification=user_msg.structural_justification or get_justification(user_msg.content),
+            truncated=False,
+            finish_reason="stop",
+            active_skills=active_skills_list,
+            active_beliefs=active_beliefs_list,
+            parent_message_id=response_msg.parent_message_id,
+            proposed_branches=None,
+        )
+

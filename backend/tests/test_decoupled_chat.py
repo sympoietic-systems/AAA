@@ -40,3 +40,24 @@ def test_decoupled_chat_flow():
         assert gen_data["parent_message_id"] == user_msg_id
         assert gen_data["conversation_id"] == conv_id
         assert "content" in gen_data
+        first_apparatus_id = gen_data["id"]
+
+        # Phase 3: Retry/duplicate generate without force_regenerate returns the same existing message
+        dup_response = client.post(
+            "/api/chat/generate", json={"conversation_id": conv_id, "user_message_id": user_msg_id}
+        )
+        assert dup_response.status_code == 200
+        dup_data = dup_response.json()
+        assert dup_data["id"] == first_apparatus_id
+        assert dup_data["content"] == gen_data["content"]
+
+        # Phase 4: Intentional regeneration with force_regenerate=True generates a new response
+        regen_response = client.post(
+            "/api/chat/generate",
+            json={"conversation_id": conv_id, "user_message_id": user_msg_id, "force_regenerate": True},
+        )
+        assert regen_response.status_code == 200
+        regen_data = regen_response.json()
+        assert regen_data["id"] != first_apparatus_id
+        assert regen_data["parent_message_id"] == user_msg_id
+
