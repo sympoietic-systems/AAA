@@ -421,6 +421,17 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             if resolved_or_provider:
                 build_openrouter_provider_config(body, resolved_or_provider)
 
+        logger.debug(
+            "Outbound LLM request: provider=%s model=%s temp=%s pres_pen=%s freq_pen=%s max_tokens=%s thinking=%s",
+            self.provider_name,
+            body.get("model", self._model),
+            body.get("temperature"),
+            body.get("presence_penalty"),
+            body.get("frequency_penalty"),
+            body.get("max_tokens") or body.get("max_completion_tokens"),
+            body.get("thinking") or body.get("chat_template_kwargs"),
+        )
+
         result = await self._request_with_retry(body)
         forwarded: dict[str, Any] = {}
         unsupported: list[str] = []
