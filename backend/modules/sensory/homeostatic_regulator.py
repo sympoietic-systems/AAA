@@ -9,23 +9,23 @@ logger = logging.getLogger(__name__)
 _DEFAULTS = {
     "temperature": {
         "base": 0.7,
-        "floor": 0.3,
-        "ceiling": 1.0,
-        "alpha": 0.8,
-        "gamma": 0.4,
+        "floor": 0.5,
+        "ceiling": 0.8,
+        "alpha": 0.1,
+        "gamma": 0.1,
     },
     "presence_penalty": {
         "base": 0.0,
         "floor": 0.0,
-        "ceiling": 0.6,
-        "beta": 0.5,
-        "delta": 0.3,
+        "ceiling": 0.4,
+        "beta": 0.2,
+        "delta": 0.1,
     },
     "frequency_penalty": {
         "base": 0.0,
         "floor": 0.0,
-        "ceiling": 0.4,
-        "epsilon": 0.4,
+        "ceiling": 0.3,
+        "epsilon": 0.2,
     },
 }
 
@@ -33,7 +33,7 @@ _DEFAULTS = {
 class HomeostaticRegulatorModule(ProcessingModule):
     def __init__(self, config: dict | None = None):
         self._config = config or _DEFAULTS
-        self._intervention_policy_mode = "legacy"
+        self._intervention_policy_mode = "paskian"
 
     def set_intervention_policy_mode(self, mode: str) -> None:
         """Select the intervention policy for a controlled benchmark ablation."""
@@ -138,28 +138,25 @@ class HomeostaticRegulatorModule(ProcessingModule):
         recommendations["requested_controls"] = requested_controls
 
         # Inject Reflection Protocol directive into messages if structural tension detected
+        # Ensure it is inserted BEFORE the current user query rather than appended at the tail,
+        # so instruction-following models treat it as an active cognitive constraint.
         if somatic_reflection:
             messages = payload.get("messages")
-            if isinstance(messages, list):
-                messages.append(
-                    {
-                        "role": "system",
-                        "content": f"[SOMATIC REFLECTION DIRECTIVE]: {somatic_reflection}",
-                    }
-                )
+            if isinstance(messages, list) and messages:
+                directive_msg = {
+                    "role": "system",
+                    "content": f"[SOMATIC REFLECTION DIRECTIVE]: {somatic_reflection}",
+                }
+                # If the last message is from the user/human, insert immediately before it
+                if messages[-1].get("role") in ("user", "human"):
+                    messages.insert(-1, directive_msg)
+                else:
+                    messages.append(directive_msg)
 
-        # React to diffractive retrieval state — nudge temperature up when
-        # the diffractive engine is actively injecting perturbation context
+        # React to diffractive retrieval state — tag flag without noisy temperature inflation
         diffractive_state = payload.get("diffractive_state", "FLOWING")
-        if diffractive_state == "STAGNANT":
-            nudge = 0.05
-            t_val = temp_rec["value"] + nudge
-            t_ceiling = t_cfg["ceiling"]
-            t_val = min(t_ceiling, t_val)
-            temp_rec["value"] = round(t_val, 3)
-            temp_rec["delta"] = round(t_val - t_cfg["base"], 3)
-            if "diffractive_boost" not in flags:
-                flags.append("diffractive_boost")
+        if diffractive_state == "STAGNANT" and "diffractive_boost" not in flags:
+            flags.append("diffractive_boost")
 
         payload["homeostatic_recommendations"] = recommendations
         payload["homeostatic_state"] = state
@@ -201,15 +198,9 @@ def _compute_temperature(
     if novelty is not None:
         t -= novelty * gamma
 
-    # ponytail: direct continuous sensorimotor modulation from glitch fidelity & vitality
-    if glitch_fidelity is not None and glitch_fidelity < 0.70:
-        t += (0.70 - glitch_fidelity) * 0.4
+    # Mild organic temperature modulation from vitality without noisy spikes
     if vitality is not None and vitality < 0.40:
-        t += (0.40 - vitality) * 0.3
-
-    # Dynamic entropy injection: scale temperature smoothly under elevated collapse pressure
-    if collapse_pressure is not None and collapse_pressure > 0.60:
-        t += (collapse_pressure - 0.60) * 0.35
+        t += (0.40 - vitality) * 0.1
 
     clamped = t != max(floor, min(ceiling, t))
     t = max(floor, min(ceiling, t))

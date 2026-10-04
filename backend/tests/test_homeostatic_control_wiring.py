@@ -95,13 +95,11 @@ async def test_homeostatic_regulator_clamps_presence_and_frequency_penalties():
     recs = result["homeostatic_recommendations"]
     assert recs is not None
 
-    # Presence penalty should be clamped to at most 0.6
-    assert recs["presence_penalty"]["value"] <= 0.6
-    assert recs["presence_penalty"]["clamped"] is True
+    # Presence penalty should be clamped to at most 0.4
+    assert recs["presence_penalty"]["value"] <= 0.4
 
-    # Frequency penalty should be clamped to at most 0.4
-    assert recs["frequency_penalty"]["value"] <= 0.4
-    assert recs["frequency_penalty"]["clamped"] is True
+    # Frequency penalty should be clamped to at most 0.3
+    assert recs["frequency_penalty"]["value"] <= 0.3
 
 
 @pytest.mark.asyncio
@@ -136,4 +134,45 @@ async def test_openai_compatible_provider_safety_clamps_outbound_penalties():
 
     assert captured_body["presence_penalty"] <= 0.6
     assert captured_body["frequency_penalty"] <= 0.4
+
+
+@pytest.mark.asyncio
+async def test_homeostatic_regulator_injects_paskian_directive_before_user_query():
+    from backend.modules.sensory.homeostatic_regulator import HomeostaticRegulatorModule
+
+    regulator = HomeostaticRegulatorModule()
+    # Default is now paskian mode
+    assert regulator._intervention_policy_mode == "paskian"
+
+    payload = {
+        "content": "Why can't we just reboot the database instance every time?",
+        "metrics": {
+            "pairwise_similarity": 0.9,
+            "conceptual_novelty": 0.05,
+            "agent_self_divergence": 0.05,
+            "glitch_fidelity": 0.4,
+            "conversation_vitality": 0.3,
+            "rolling_entropy": 0.2,
+            "collapse_pressure": 0.85,
+            "collapse_pressure_streak": 2,
+            "divergence_resolution_ratio": 0.2,
+        },
+        "max_tokens": 2048,
+        "messages": [
+            {"role": "system", "content": "You are Symbia."},
+            {"role": "user", "content": "Why can't we just reboot the database instance every time?"},
+        ],
+    }
+
+    result = await regulator.process(payload)
+    messages = result["messages"]
+
+    # Directive must be inserted BEFORE the final user query, not appended after it
+    assert len(messages) == 3
+    assert messages[0]["role"] == "system"
+    assert messages[1]["role"] == "system"
+    assert "PASKIAN TEACHBACK & OPERATIONAL FORK DIRECTIVE" in messages[1]["content"]
+    assert messages[2]["role"] == "user"
+    assert messages[2]["content"] == "Why can't we just reboot the database instance every time?"
+
 
