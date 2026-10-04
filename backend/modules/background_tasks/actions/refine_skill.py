@@ -214,9 +214,14 @@ Active Skills already in Symbia's database:
                 # Archive original proposed candidate as a collapsed node (integration trace)
                 try:
                     prop_skill_id = str(uuid.uuid4())
+                    # skill_nodes.name is UNIQUE: the proposal often shares the
+                    # target's name, so suffix the archived trace on collision.
+                    trace_name = skill_data.get("name") or "proposal"
+                    if skill_repo.get_skill_by_name(trace_name) is not None:
+                        trace_name = f"{trace_name}__merged_{prop_skill_id[:8]}"
                     skill_repo.create_skill(
                         id=prop_skill_id,
-                        name=skill_data.get("name"),
+                        name=trace_name,
                         description=skill_data.get("content")[:200]
                         if skill_data.get("content")
                         else skill_data.get("name"),

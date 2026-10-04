@@ -367,7 +367,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             )
         else:
             body = {"model": self._model, "messages": messages}
-            if "max_tokens" in merged_params:
+            if merged_params.get("max_tokens"):
                 body["max_tokens"] = merged_params["max_tokens"]
 
         if use_thinking:
@@ -378,6 +378,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             else:
                 body["thinking"] = {"type": "enabled"}
                 body["reasoning_effort"] = merged_params.pop("reasoning_effort", self._reasoning_effort)
+            body.update(merged_params)
         else:
             if is_openrouter:
                 build_openrouter_thinking_disabled(body)

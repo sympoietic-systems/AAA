@@ -114,6 +114,21 @@ def _parse_json_safely(text: str) -> LLMResult:
         except json.JSONDecodeError:
             pass
 
+    # Repair unescaped inner quotes (e.g. LLM quoting source text inside a value).
+    # On a delimiter error, the last '"' before the error position is typically a
+    # stray quote that prematurely closed the string; escape it and retry.
+    candidate = auto_close(sanitized)
+    for _ in range(50):
+        try:
+            return cast(LLMResult, json.loads(candidate))
+        except json.JSONDecodeError as e:
+            if not e.msg.startswith(("Expecting ',' delimiter", "Expecting ':' delimiter")):
+                break
+            quote_pos = candidate.rfind('"', 0, e.pos)
+            if quote_pos <= 0:
+                break
+            candidate = candidate[:quote_pos] + '\\"' + candidate[quote_pos + 1 :]
+
     return cast(LLMResult, json.loads(cleaned))
 
 

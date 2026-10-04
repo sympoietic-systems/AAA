@@ -60,7 +60,7 @@ async def run_consolidation(
                     expect_json=True,
                     fallback_value={"completeness_score": 0.5, "next_queries": [], "next_direct_urls": []},
                     temperature=prompt_data.get("temperature", 0.5),
-                    max_tokens=prompt_data.get("max_tokens", 2048),
+                    max_tokens=prompt_data.get("max_tokens"),
                 )
                 result = resp.get("json_data") or resp.get("content") or {}
                 if isinstance(result, str):
@@ -210,7 +210,7 @@ async def run_consolidation(
                 expect_json=True,
                 fallback_value={"completeness_score": 0.5, "next_queries": [], "next_direct_urls": []},
                 temperature=prompt_data.get("temperature", 0.5),
-                max_tokens=prompt_data.get("max_tokens", 2048),
+                max_tokens=prompt_data.get("max_tokens"),
             )
             result = resp.get("json_data") or resp.get("content") or {}
             if isinstance(result, str):

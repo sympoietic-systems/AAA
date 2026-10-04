@@ -100,6 +100,10 @@ async def run_synthesis(
                 },
                 step_id=step_id or None,
             )
+            extra_kwargs = {}
+            if getattr(llm, "supports_prefer_primary", False):
+                extra_kwargs["prefer_primary"] = True
+
             resp = await generate_unified(
                 llm,
                 system_prompt=system_text,
@@ -107,7 +111,8 @@ async def run_synthesis(
                 expect_json=True,
                 fallback_value={"answer": fallback},
                 temperature=prompt_data.get("temperature", 0.4),
-                max_tokens=prompt_data.get("max_tokens", 4096),
+                **({"max_tokens": prompt_data["max_tokens"]} if prompt_data.get("max_tokens") else {"max_tokens": 16384}),
+                **extra_kwargs,
             )
             orch._log_llm_response(task_id, "orchestrator_synthesize_response", resp, step_id=step_id or None)
             if step_id:
@@ -207,7 +212,7 @@ class SynthesizeStep(BaseResearchStep):
             and getattr(orch._state.llm_provider, "model_id", "(auto)")
             or "(auto)",
             "temperature": prompt_data.get("temperature", 0.4),
-            "max_tokens": prompt_data.get("max_tokens", 4096),
+            "max_tokens": prompt_data.get("max_tokens"),
             "cached_at": now_utc_str(),
         }
 

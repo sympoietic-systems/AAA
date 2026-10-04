@@ -111,7 +111,7 @@ async def analyze_source_content(
             expect_json=True,
             fallback_value=fallback,
             temperature=prompt_data.get("temperature", 0.3),
-            max_tokens=prompt_data.get("max_tokens", 2048),
+            max_tokens=prompt_data.get("max_tokens"),
         )
         result = resp.get("json_data") or resp.get("content") or {}
         if isinstance(result, str):
@@ -323,7 +323,7 @@ class DigestStep(BaseResearchStep):
             and getattr(orch._state.llm_provider, "model_id", "(auto)")
             or "(auto)",
             "temperature": 0.3,
-            "max_tokens": 2048,
+            "max_tokens": None,
             "cached_at": now_utc_str(),
         }
 

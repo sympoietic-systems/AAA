@@ -257,7 +257,7 @@ async def run_plan_generation(
             "system_prompt": system_text,
             "user_prompt": user_text,
             "temperature": prompt_data.get("temperature", 0.4),
-            "max_tokens": prompt_data.get("max_tokens", 1024),
+            "max_tokens": prompt_data.get("max_tokens"),
             "cached_at": now_utc_str(),
         }
         orch._save_cache(task_id, cache)
@@ -277,7 +277,7 @@ async def run_plan_generation(
             )
             gen_kwargs: dict = {
                 "temperature": prompt_data.get("temperature", 0.4),
-                "max_tokens": prompt_data.get("max_tokens", 1024),
+                "max_tokens": prompt_data.get("max_tokens"),
             }
             thinking_cfg = prompt_data.get("thinking", {})
             if isinstance(thinking_cfg, dict) and thinking_cfg.get("enabled"):
@@ -388,7 +388,7 @@ class PlanStep(BaseResearchStep):
             and getattr(orch._state.llm_provider, "model_id", "(auto)")
             or "(auto)",
             "temperature": prompt_data.get("temperature", 0.4),
-            "max_tokens": prompt_data.get("max_tokens", 1024),
+            "max_tokens": prompt_data.get("max_tokens"),
             "cached_at": now_utc_str(),
         }
 

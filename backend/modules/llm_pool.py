@@ -110,6 +110,12 @@ class ModelPoolProvider(BaseLLMProvider):
             or_keys = [api_key]
         self._openrouter_key_mgr = KeyManager(or_keys, cooldown_seconds=cooldown_seconds)
 
+    supports_prefer_primary = True
+
+    @property
+    def primary_model(self) -> str:
+        return self._models[0] if self._models else self._fallback_model
+
     @property
     def provider_name(self) -> str:
         return f"model_pool({len(self._models)} models)"
@@ -154,11 +160,14 @@ class ModelPoolProvider(BaseLLMProvider):
 
         now = time.time()
         model_override = params.pop("model", None)
+        # prefer_primary: always start from the configured primary model (pool order)
+        # instead of the sticky last-working fallback. Fallback on failure still applies.
+        prefer_primary = bool(params.pop("prefer_primary", False))
         if model_override:
             models_to_try = [model_override]
         else:
             models_to_try = self._all_models()
-            if self._last_model_used and self._last_model_used in models_to_try:
+            if not prefer_primary and self._last_model_used and self._last_model_used in models_to_try:
                 preferred_model = models_to_try[0]
                 if self._last_model_used != preferred_model:
                     if now - self._last_model_time >= self._cooldown_seconds:

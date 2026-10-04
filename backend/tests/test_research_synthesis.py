@@ -420,3 +420,53 @@ async def test_synthesize_compiles_reflection_history():
         assert "Bias 2" in user_prompt
         assert "Glitch Fidelity: 0.9000" in user_prompt
         assert "Glitch Fidelity: 0.8500" in user_prompt
+
+
+@pytest.mark.asyncio
+async def test_synthesize_prefers_primary_and_uses_adequate_tokens():
+    """Invariant test: research synthesis must prioritize the primary main model
+    instead of sticky fallbacks, and must allocate at least 8192 max_tokens to prevent
+    truncation of comprehensive research reports.
+    """
+    state = MockAppState()
+    state.llm_provider.supports_prefer_primary = True
+    orchestrator = SomaticResearchOrchestrator(state)
+
+    task_id = "test_primary_pref"
+    state.research_task_repo.get.return_value = {
+        "id": task_id,
+        "objective": "Test dome synthesis",
+    }
+    state.research_step_result_repo.get_by_task.return_value = []
+
+    mock_resp = {
+        "json_data": {"report_markdown": "# Done", "confidence": 0.9},
+        "content": None,
+        "thinking": "Thinking...",
+        "model": "main-primary-model",
+        "provider_used": "test-provider",
+    }
+
+    with (
+        patch(
+            "backend.services.research.steps.synthesize.generate_unified", AsyncMock(return_value=mock_resp)
+        ) as mock_gen,
+        patch.object(orchestrator, "_build_orchestrator_persona", AsyncMock(return_value="Synthesis Persona")),
+    ):
+        from backend.services.research.steps.synthesize import run_synthesis
+
+        report = await run_synthesis(
+            orchestrator,
+            task_id=task_id,
+            objective="Test dome synthesis",
+            goal="Autonomous research",
+            all_findings=["Finding A"],
+            sources_count=1,
+            step_id="mock_step_id",
+        )
+
+        assert report == "# Done"
+        mock_gen.assert_called_once()
+        args, kwargs = mock_gen.call_args
+        assert kwargs.get("prefer_primary") is True
+        assert kwargs.get("max_tokens", 0) >= 8192

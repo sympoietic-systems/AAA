@@ -180,7 +180,7 @@ async def run_deep_reflection(
             expect_json=True,
             fallback_value=fallback,
             temperature=prompt_data.get("temperature", 0.7),
-            max_tokens=prompt_data.get("max_tokens", 8192),
+            max_tokens=prompt_data.get("max_tokens"),
         )
 
         result_c1 = resp_c1.get("json_data") or resp_c1.get("content") or {}
@@ -252,7 +252,7 @@ async def run_deep_reflection(
             expect_json=True,
             fallback_value=fallback_c2,
             temperature=prompt_data.get("temperature", 0.7),
-            max_tokens=prompt_data.get("max_tokens", 8192),
+            max_tokens=prompt_data.get("max_tokens"),
         )
 
         result_c2 = resp_c2.get("json_data") or resp_c2.get("content") or {}
@@ -301,7 +301,7 @@ async def run_deep_reflection(
             expect_json=True,
             fallback_value=result_c1,
             temperature=prompt_data.get("temperature", 0.7),
-            max_tokens=prompt_data.get("max_tokens", 8192),
+            max_tokens=prompt_data.get("max_tokens"),
         )
 
         result_c3 = resp_c3.get("json_data") or resp_c3.get("content") or {}
@@ -457,7 +457,7 @@ class ReflectionStep(BaseResearchStep):
             and getattr(orch._state.llm_provider, "model_id", "(auto)")
             or "(auto)",
             "temperature": prompt_data.get("temperature", 0.7),
-            "max_tokens": prompt_data.get("max_tokens", 8192),
+            "max_tokens": prompt_data.get("max_tokens"),
             "cached_at": now_utc_str(),
         }
 

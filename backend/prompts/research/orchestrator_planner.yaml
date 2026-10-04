@@ -45,7 +45,6 @@ user_with_context: |
 
 response_format: "json"
 temperature: 0.3
-max_tokens: 4096
 thinking:
   enabled: true
   effort: "high"

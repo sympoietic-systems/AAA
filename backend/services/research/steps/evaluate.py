@@ -94,7 +94,7 @@ async def run_evaluation(
                 "completeness_assessment": completeness,
             },
             temperature=prompt_data.get("temperature", 0.2),
-            max_tokens=prompt_data.get("max_tokens", 1024),
+            max_tokens=prompt_data.get("max_tokens"),
         )
         orch._log_llm_response(task_id, "orchestrator_evaluate_response", resp, step_id=step_id or None)
         if step_id:
@@ -172,7 +172,7 @@ class EvaluateStep(BaseResearchStep):
             and getattr(orch._state.llm_provider, "model_id", "(auto)")
             or "(auto)",
             "temperature": prompt_data.get("temperature", 0.2),
-            "max_tokens": prompt_data.get("max_tokens", 1024),
+            "max_tokens": prompt_data.get("max_tokens"),
             "cached_at": now_utc_str(),
         }
 

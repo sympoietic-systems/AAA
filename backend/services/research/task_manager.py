@@ -243,6 +243,12 @@ class ResearchTaskManager:
         logger.info("Research task %s deleted", task_id)
 
     def complete(self, task_id: str, result_summary: str = "") -> None:
+        # Do not overwrite a rich synthesis result with an empty string or generic placeholder
+        if not result_summary or result_summary == "Research complete.":
+            existing = self.task_repo.get(task_id)
+            if existing and existing.get("result_summary"):
+                result_summary = existing["result_summary"]
+
         self.task_repo.update(task_id, result_summary=result_summary)
         self.transition(task_id, "completed")
 

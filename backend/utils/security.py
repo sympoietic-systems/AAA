@@ -327,17 +327,20 @@ def validate_safe_url(
         raise ValueError(f"Access to local hostname '{hostname}' is forbidden")
 
     if not allow_private:
+        def _is_restricted(target_ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+            return bool(
+                target_ip.is_loopback
+                or target_ip.is_private
+                or target_ip.is_link_local
+                or target_ip.is_multicast
+                or target_ip.is_unspecified
+                or (target_ip.is_reserved and not getattr(target_ip, "is_global", False))
+            )
+
         # Check if the hostname is a direct IP literal
         try:
             ip = ipaddress.ip_address(cleaned_host)
-            if (
-                ip.is_loopback
-                or ip.is_private
-                or ip.is_link_local
-                or ip.is_multicast
-                or ip.is_reserved
-                or ip.is_unspecified
-            ):
+            if _is_restricted(ip):
                 raise ValueError(f"Access to private or restricted IP address '{ip}' is forbidden")
         except ValueError as e:
             if "Access to private or restricted" in str(e):
@@ -348,14 +351,7 @@ def validate_safe_url(
                 for _family, _, _, _, sockaddr in addr_infos:
                     ip_str = sockaddr[0]
                     resolved_ip = ipaddress.ip_address(ip_str)
-                    if (
-                        resolved_ip.is_loopback
-                        or resolved_ip.is_private
-                        or resolved_ip.is_link_local
-                        or resolved_ip.is_multicast
-                        or resolved_ip.is_reserved
-                        or resolved_ip.is_unspecified
-                    ):
+                    if _is_restricted(resolved_ip):
                         raise ValueError(
                             f"URL destination '{hostname}' resolves to restricted IP address '{resolved_ip}'"
                         )

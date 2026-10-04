@@ -131,13 +131,12 @@ async def execute_step(
                 orch.ensure_state(task_id)  # already loaded, no-op
             else:
                 await rerun_research_task(manager, task_id)
-                task = await run_research_sync(manager.get_task, task_id)  # refresh after rerun
-                await run_research_sync(manager.transition, task_id, "active")
+                await run_research_sync(manager.task_repo.update, task_id, status="active")
                 manager.orchestrator.init_task(task_id)
         elif task["status"] == "queued":
             orch_config = state.config.get("research_orchestrator", {})
             if orch_config.get("enabled") and manager.config.get("manual_mode", False):
-                await run_research_sync(manager.transition, task_id, "active")
+                await run_research_sync(manager.task_repo.update, task_id, status="active")
                 manager.orchestrator.init_task(task_id)
 
     try:
