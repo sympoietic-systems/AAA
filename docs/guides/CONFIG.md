@@ -355,6 +355,7 @@ belief_ecosystem:
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
 | `AAA_PASSWORD` | String | — | Enables protected API access and browser login; unset/empty disables authentication |
+| `AAA_SESSION_TTL` | Integer (seconds) | `604800` (7 days) | Lifetime of browser session cookie in seconds |
 
 
 Browser login exchanges the password for an opaque `aaa_session` cookie. The password is not stored in browser storage; old `aaa_password` localStorage entries are removed. API clients can continue using `Authorization: Bearer <AAA_PASSWORD>`. Credentials are never accepted in query strings.
@@ -365,7 +366,7 @@ Browser login exchanges the password for an opaque `aaa_session` cookie. The pas
 | POST | `/api/auth/session` | Validates the password in the Authorization header and issues a browser session |
 | DELETE | `/api/auth/session` | Revokes the current session and clears its cookie |
 
-The session cookie is HttpOnly, SameSite=Strict, and scoped to `/api`. Sessions expire eight hours after issuance and are stored in memory, with a maximum of 1,024 per app process. Logout revokes the current session; restart loses all sessions, and password changes invalidate existing sessions when checked. At capacity, issuing a session evicts the oldest one. These limits are code defaults, not environment settings.
+The session cookie is HttpOnly, SameSite=Strict, and scoped to `/api`. Sessions expire seven days after issuance by default (configurable via `AAA_SESSION_TTL`) and are stored in memory, with a maximum of 1,024 per app process. Logout revokes the current session; restart loses all sessions, and password changes invalidate existing sessions when checked. At capacity, issuing a session evicts the oldest one.
 
 Session creation and deletion require the exact public Origin and `X-AAA-CSRF: 1`. Other cookie-authenticated mutations require the same checks; protected cookie reads reject an explicitly foreign Origin. The frontend's `apiFetch` supplies the custom header, while the browser supplies Origin where required. Bearer-only API requests retain their existing behavior.
 

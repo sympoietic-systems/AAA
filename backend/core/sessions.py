@@ -1,6 +1,7 @@
 """Bounded, process-local browser sessions; no persistent credentials."""
 
 import hashlib
+import os
 import secrets
 import time
 from collections import OrderedDict
@@ -8,15 +9,30 @@ from collections import OrderedDict
 from backend.core.auth import get_auth_password
 
 SESSION_COOKIE = "aaa_session"
-SESSION_TTL = 8 * 60 * 60
+DEFAULT_SESSION_TTL = 7 * 24 * 60 * 60
+
+
+def get_session_ttl() -> int:
+    """Return configured session TTL in seconds. Default: 7 days."""
+    raw = os.environ.get("AAA_SESSION_TTL", "").strip()
+    if not raw:
+        return DEFAULT_SESSION_TTL
+    try:
+        val = int(raw)
+        return val if val > 0 else DEFAULT_SESSION_TTL
+    except ValueError:
+        return DEFAULT_SESSION_TTL
+
+
+SESSION_TTL = DEFAULT_SESSION_TTL
 
 
 class SessionStore:
     """Each app owns one store. Restart and password rotation invalidate sessions."""
 
-    def __init__(self, capacity: int = 1024, ttl: int = SESSION_TTL) -> None:
+    def __init__(self, capacity: int = 1024, ttl: int | None = None) -> None:
         self.capacity = capacity
-        self.ttl = ttl
+        self.ttl = ttl if ttl is not None else get_session_ttl()
         self._sessions: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
 
     def issue(self) -> str:

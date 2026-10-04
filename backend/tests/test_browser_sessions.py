@@ -66,3 +66,18 @@ def test_v36_session_expiry_capacity_and_rotation(monkeypatch):
     third = store.issue()
     monkeypatch.setenv("AAA_PASSWORD", "two")
     assert not store.valid(third)
+
+
+def test_session_ttl_env_and_default(monkeypatch):
+    from backend.core.sessions import DEFAULT_SESSION_TTL, get_session_ttl
+
+    monkeypatch.delenv("AAA_SESSION_TTL", raising=False)
+    assert get_session_ttl() == 7 * 24 * 60 * 60
+    assert SessionStore().ttl == DEFAULT_SESSION_TTL
+
+    monkeypatch.setenv("AAA_SESSION_TTL", "3600")
+    assert get_session_ttl() == 3600
+    assert SessionStore().ttl == 3600
+
+    monkeypatch.setenv("AAA_SESSION_TTL", "invalid")
+    assert get_session_ttl() == DEFAULT_SESSION_TTL

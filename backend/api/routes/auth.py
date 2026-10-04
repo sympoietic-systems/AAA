@@ -3,7 +3,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response
 from backend.api.deps import get_session_store, require_session_origin
 from backend.api.schemas import AuthStatusResponse
 from backend.core.auth import auth_enabled, bearer_token, credentials_valid
-from backend.core.sessions import SESSION_COOKIE, SESSION_TTL
+from backend.core.sessions import SESSION_COOKIE
 
 router = APIRouter()
 
@@ -41,7 +41,7 @@ async def create_session(
         response.set_cookie(
             SESSION_COOKIE,
             store.issue(),
-            max_age=SESSION_TTL,
+            max_age=store.ttl,
             httponly=True,
             secure=request.url.scheme == "https" or request.url.hostname not in {"localhost", "127.0.0.1", "::1"},
             samesite="strict",

@@ -13,7 +13,7 @@ Symbia consultation was unavailable: no `consult_aaa` tool was exposed in this s
 ## Decision
 
 - Browser login uses `POST /api/auth/session` with the password in an Authorization header for that request only. The response sets an opaque HttpOnly, SameSite=Strict cookie scoped to `/api`. Existing bearer API clients retain their contract.
-- Sessions live in a bounded, app-owned process-local store: at most 1,024 sessions, eight-hour absolute expiry, hashed token lookup, logout revocation, and password-rotation invalidation. Restart requires login again. Capacity pressure evicts the oldest issued session.
+- Sessions live in a bounded, app-owned process-local store: at most 1,024 sessions, seven-day default absolute expiry (configurable via `AAA_SESSION_TTL`), hashed token lookup, logout revocation, and password-rotation invalidation. Restart requires login again. Capacity pressure evicts the oldest issued session.
 - HTTPS cookies are Secure. Plain HTTP is supported only for the loopback hostnames `localhost`, `127.0.0.1`, and `::1`; remote deployments must use HTTPS. Session mutations require an exact matching Origin and `X-AAA-CSRF: 1`. Cookie-authenticated reads reject an explicitly foreign Origin, even when legacy CORS settings allow it.
 - `/api/auth/verify` remains a status endpoint. The frontend validates its response shape and requires an explicit disabled-auth response. Invalid responses fail closed. Old localStorage passwords are deleted rather than migrated.
 - `apiFetch` is explicit, validates normalized same-origin API URLs, preserves cancellation and headers, and rejects redirects. It does not replace global fetch. A protected 401 ends the UI session and clears notification state.
