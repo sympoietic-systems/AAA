@@ -141,6 +141,7 @@ async def get_metrics(
         state=raw_diff.get("state", "FLOWING"),
         previous_state=raw_diff.get("previous_state", "FLOWING"),
         p_diffract=raw_diff.get("p_diffract", 0.0),
+        activation_reason=raw_diff.get("activation_reason", ""),
         stagnation_index=raw_diff.get("stagnation_index", 0.0),
         r_context=raw_diff.get("r_context", 0.0),
         dynamic_max=raw_diff.get("dynamic_max", 0),

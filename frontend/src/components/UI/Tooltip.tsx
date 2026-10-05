@@ -6,7 +6,7 @@ interface TooltipProps {
   description?: string | null
   children: ReactNode
   titleColorClass?: string
-  position?: "top-left" | "top-center"
+  position?: "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right"
   className?: string
 }
 
@@ -19,15 +19,31 @@ export function Tooltip({
   position = "top-left",
   className = "inline-block"
 }: TooltipProps) {
-  const positionClass = position === "top-center" 
-    ? "left-1/2 -translate-x-1/2" 
-    : "left-0"
+  const getPositionClasses = () => {
+    switch (position) {
+      case "top-center":
+        return "bottom-full mb-1.5 left-1/2 -translate-x-1/2"
+      case "top-right":
+        return "bottom-full mb-1.5 right-0"
+      case "bottom-left":
+        return "top-full mt-1.5 left-0"
+      case "bottom-center":
+        return "top-full mt-1.5 left-1/2 -translate-x-1/2"
+      case "bottom-right":
+        return "top-full mt-1.5 right-0"
+      case "top-left":
+      default:
+        return "bottom-full mb-1.5 left-0"
+    }
+  }
+
+  const positionClass = getPositionClasses()
 
   return (
     <span className={`group relative ${className}`}>
       {children}
       <span className={`
-        absolute bottom-full mb-1.5 px-2 py-1
+        absolute px-2 py-1
         bg-[#1a1a1a] border border-[#333] rounded
         text-[10px] text-[#aaa] leading-snug
         whitespace-nowrap z-50 shadow-2xl

@@ -173,7 +173,8 @@ function VitalitySectionComponent({ conversationId, enabled = false }: VitalityS
     value: number | null | undefined,
     max: number,
     hint: string,
-    invertColor: boolean = false
+    invertColor: boolean = false,
+    tooltipPosition: "bottom-left" | "bottom-right" = "bottom-left"
   ) => {
     const pct = value != null ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
     const display = value != null ? (value < 0.01 && value > 0 ? value.toFixed(4) : value.toFixed(3)) : "—"
@@ -195,7 +196,7 @@ function VitalitySectionComponent({ conversationId, enabled = false }: VitalityS
         subtitle={`${display} / ${max}`}
         description={`${hint} • Hover to plot trajectory`}
         titleColorClass="text-semantic-green"
-        position="top-left"
+        position={tooltipPosition}
       >
         <div
           className={`flex items-center gap-1.5 cursor-pointer w-full py-0.5 px-1 rounded transition-colors ${
@@ -459,33 +460,33 @@ function VitalitySectionComponent({ conversationId, enabled = false }: VitalityS
       {metrics?.latest && (
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1.5">
           {renderBar("cpi", "conversational progress index", metrics.latest.cpi, 1.0,
-            "Grounded conversational velocity: sqrt(velocity x teachback x actionability). <0.10 = empty drift")}
+            "Grounded conversational velocity: sqrt(velocity x teachback x actionability). <0.10 = empty drift", false, "bottom-left")}
           {renderBar("tb", "teachback ratio", metrics.latest.teachback_ratio, 1.0,
-            "Paskian symmetry: does the human assimilate agent concepts and feed them back? <0.10 = low uptake")}
+            "Paskian symmetry: does the human assimilate agent concepts and feed them back? <0.10 = low uptake", false, "bottom-right")}
           {renderBar("act", "actionability", metrics.latest.actionability, 1.0,
-            "Operational grounding: presence of tests, code, mathematical equations, or invariants")}
+            "Operational grounding: presence of tests, code, mathematical equations, or invariants", false, "bottom-left")}
           {renderBar("cp", "collapse pressure", metrics.latest.collapse_pressure ?? metrics.latest.boringness, 1.0,
-            "Sycophancy attractor drag & perturbation failure. >0.60 = sycophantic entrainment or boredom", true)}
+            "Sycophancy attractor drag & perturbation failure. >0.60 = sycophantic entrainment or boredom", true, "bottom-right")}
           {renderBar("sim", "pairwise similarity", metrics.latest.pairwise_similarity, 1.0,
-            "Is this input repeating the previous one? >0.85 = near-duplicate")}
+            "Is this input repeating the previous one? >0.85 = near-duplicate", false, "bottom-left")}
           {renderBar("nov", "conceptual novelty", metrics.latest.conceptual_novelty, 1.0,
-            "Has anything similar been said before? <0.15 = concept exhaustion")}
+            "Has anything similar been said before? <0.15 = concept exhaustion", false, "bottom-right")}
           {renderBar("ent", "rolling entropy", metrics.latest.rolling_entropy, 0.25,
-            "Is the conversation monotonous over time? <0.01 = entropy collapse")}
+            "Is the conversation monotonous over time? <0.01 = entropy collapse", false, "bottom-left")}
           {renderBar("coup", "coupling coherence", metrics.latest.coupling_coherence, 1.0,
-            "Is the agent responding to the human? <0.15 = dissociation, >0.85 = echo")}
+            "Is the agent responding to the human? <0.15 = dissociation, >0.85 = echo", false, "bottom-right")}
           {renderBar("divr", "agent self-divergence", metrics.latest.agent_self_divergence, 1.0,
-            "Is the agent repeating itself? <0.15 = self-loop")}
+            "Is the agent repeating itself? <0.15 = self-loop", false, "bottom-left")}
           {renderBar("rP", "reverse perturbation", metrics.latest.reverse_perturbation, 1.0,
-            "Did the agent's last response reshape the human? <0.10 = stagnant")}
+            "Did the agent's last response reshape the human? <0.10 = stagnant", false, "bottom-right")}
           {renderBar("srp", "surprise index", metrics.latest.surprise_index, 1.0,
-            "Distance from decay-weighted centroid of past human inputs (d=0.75). >0.40 = phase disruption")}
+            "Distance from decay-weighted centroid of past human inputs (d=0.75). >0.40 = phase disruption", false, "bottom-left")}
           {renderBar("mpi", "mutual perturbation", metrics.latest.mutual_perturbation, 1.0,
-            "Product of coupling x reverse perturbation. <0.05 = deadlock")}
+            "Product of coupling x reverse perturbation. <0.05 = deadlock", false, "bottom-right")}
           {renderBar("vel", "conceptual velocity", metrics.latest.conceptual_velocity, 1.0,
-            "Disjoint centroid drift rate (last 3 vs preceding 3). <0.02 = frozen, >0.80 = noise")}
+            "Disjoint centroid drift rate (last 3 vs preceding 3). <0.02 = frozen, >0.80 = noise", false, "bottom-left")}
           {renderBar("drr", "divergence resolution ratio", metrics.latest.divergence_resolution_ratio, 1.0,
-            "Does perturbation lead to resolution? Positive = convergence, negative = rejection")}
+            "Does perturbation lead to resolution? Positive = convergence, negative = rejection", false, "bottom-right")}
         </div>
       )}
 

@@ -168,6 +168,7 @@ class DiffractiveInfo(BaseModel):
     state: str = "FLOWING"
     previous_state: str = "FLOWING"
     p_diffract: float = 0.0
+    activation_reason: str = ""
     stagnation_index: float = 0.0
     r_context: float = 0.0
     dynamic_max: int = 0
