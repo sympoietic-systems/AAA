@@ -1,6 +1,5 @@
 """Model-pool routing, API-key rotation, and cooldown policy."""
 
-import asyncio
 import logging
 import time
 from typing import Any, cast
@@ -14,6 +13,14 @@ from backend.modules.llm_protocol import (
     LLMResult,
     ProviderResponseError,
     RateLimitError,
+)
+from backend.modules.provider_attempts import (
+    AttemptBudgetExceeded,
+    attempt_scope,
+    current_scope,
+    invoke_attempt,
+    new_request_scope,
+    retry_delay,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,6 +118,7 @@ class ModelPoolProvider(BaseLLMProvider):
         self._openrouter_key_mgr = KeyManager(or_keys, cooldown_seconds=cooldown_seconds)
 
     supports_prefer_primary = True
+    supports_attempt_observation = True
 
     @property
     def primary_model(self) -> str:
@@ -156,6 +164,17 @@ class ModelPoolProvider(BaseLLMProvider):
         return f"{key[:4]}...{key[-4:]}"
 
     async def generate(self, messages: list[LLMMessage], **params: Any) -> LLMResult:
+        scope = new_request_scope() if current_scope() is None else None
+        if scope is not None:
+            with attempt_scope(scope):
+                try:
+                    return await self._generate(messages, **params)
+                except BaseException:
+                    scope.on_failure()
+                    raise
+        return await self._generate(messages, **params)
+
+    async def _generate(self, messages: list[LLMMessage], **params: Any) -> LLMResult:
         errors = []
 
         now = time.time()
@@ -246,7 +265,7 @@ class ModelPoolProvider(BaseLLMProvider):
                     provider_name=f"model_pool_{provider_type}",
                     thinking=self._thinking if provider_type in {"deepseek", "nvidia"} else False,
                     reasoning_effort=self._reasoning_effort,
-                    max_retries=self._max_retries_per_model,
+                    max_retries=0 if current_scope() is not None else self._max_retries_per_model,
                     default_params=self._default_params,
                     timeout=self._timeout,
                     openrouter_provider=self._openrouter_provider,
@@ -254,12 +273,14 @@ class ModelPoolProvider(BaseLLMProvider):
                 )
 
                 try:
-                    result = await provider.generate(messages, **params)
+                    result = await invoke_attempt(provider, messages, **params)
                     if self._last_model_used != model:
                         self._last_model_used = model
                         self._last_model_time = time.time()
                     success = True
                     break
+                except AttemptBudgetExceeded:
+                    raise
                 except RateLimitError as e:
                     key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model}: rate limited - {e}")
@@ -292,14 +313,16 @@ class ModelPoolProvider(BaseLLMProvider):
                             retry_num + 1,
                             timeout_retries,
                         )
-                        await asyncio.sleep(10)
+                        await retry_delay(0.1 if current_scope() is not None else 10)
                         try:
-                            result = await provider.generate(messages, **params)
+                            result = await invoke_attempt(provider, messages, **params)
                             if self._last_model_used != model:
                                 self._last_model_used = model
                                 self._last_model_time = time.time()
                             success = True
                             break
+                        except AttemptBudgetExceeded:
+                            raise
                         except (httpx.RequestError, TimeoutError):
                             continue
                         except ProviderResponseError as retry_e:

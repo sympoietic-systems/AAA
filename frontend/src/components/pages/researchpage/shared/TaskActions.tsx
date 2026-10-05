@@ -88,7 +88,7 @@ export const TaskActions = memo(function TaskActions({
           <TerminalButton onClick={doDelete} intent="delete">✕ delete</TerminalButton>
         </>
       )}
-      {taskStatus === "completed" && (
+      {(taskStatus === "completed" || taskStatus === "partial") && (
         <>
           <TerminalButton onClick={() => doActionAndReload(() => rerunTask(taskId))} intent="edit">⟳ rerun</TerminalButton>
           <TerminalButton onClick={() => doActionAndReload(() => retryTask(taskId))} intent="save">↻ retry (clone)</TerminalButton>

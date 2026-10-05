@@ -15,6 +15,11 @@ export const InfoTab = memo(function InfoTab({ task, orchPhase, onRefreshTask }:
   const metrics = [
     { key: "id", value: task.id.slice(0, 12) + "…" },
     { key: "status", value: task.status, valueColor: color },
+    ...(task.provider_delivery ? [
+      { key: "provider", value: task.provider_delivery.pending_attempts > 0 ? "waiting" : task.provider_delivery.degraded ? "degraded" : "observed" },
+      { key: "attempts", value: `${task.provider_delivery.attempts} (${task.provider_delivery.pending_attempts} pending)` },
+      { key: "deadline", value: task.provider_delivery.deadline },
+    ] : []),
     { key: "trigger", value: task.trigger_source },
     { key: "depth", value: task.max_depth },
     { key: "breadth", value: task.max_breadth },

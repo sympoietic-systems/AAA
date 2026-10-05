@@ -32,6 +32,7 @@ export interface ResearchTask {
   branches?: any[]
   assets?: { id: string; url: string; relevance_score: number; novelty_score: number; diffractive_score: number; created_at: string | null }[]
   asset_count?: number
+  provider_delivery?: { coverage: string; pending_attempts: number; attempts: number; degraded: boolean; deadline: string }
 }
 
 export interface ResearchSummary {

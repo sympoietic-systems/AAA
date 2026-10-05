@@ -16,6 +16,7 @@ from backend.modules.llm_protocol import (
     ProviderResponseError,
     RateLimitError,
 )
+from backend.modules.provider_attempts import current_scope
 from backend.modules.providers.anthropic_utils import (
     build_anthropic_body,
     get_anthropic_endpoint,
@@ -191,6 +192,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             "raw_message": message,
             "truncated": truncated,
             "finish_reason": finish_reason,
+            "usage": data.get("usage") if isinstance(data.get("usage"), dict) else None,
+            "request_id": request_id if request_id != "unavailable" else None,
         }
 
     async def _request_with_retry(self, body: LLMResult) -> LLMResult:
@@ -199,7 +202,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         headers = get_anthropic_headers(self._api_key) if is_anthropic else get_openai_headers(self._api_key)
 
         last_error = None
-        for attempt in range(self._max_retries + 1):
+        max_retries = 0 if current_scope() is not None else self._max_retries
+        for attempt in range(max_retries + 1):
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 try:
                     response = await client.post(
@@ -209,7 +213,7 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                     )
                 except httpx.RequestError as e:
                     last_error = e
-                    if attempt < self._max_retries:
+                    if attempt < max_retries:
                         await asyncio.sleep(min(2**attempt, 30))
                         continue
                     raise
@@ -221,12 +225,12 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                         retry_after = min(2**attempt, 30)
 
                     logger.warning(
-                        f"Rate limited (attempt {attempt + 1}/{self._max_retries + 1}). "
+                        f"Rate limited (attempt {attempt + 1}/{max_retries + 1}). "
                         f"Remaining: {rate_info['remaining']}/{rate_info['limit']}. "
                         f"Retry after: {retry_after}s"
                     )
 
-                    if attempt < self._max_retries:
+                    if attempt < max_retries:
                         await asyncio.sleep(retry_after)
                         continue
 

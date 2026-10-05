@@ -127,7 +127,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
   const [navigateStepId, setNavigateStepId] = useState<string | null>(null)
   const reportRef = useRef<HTMLDivElement>(null)
 
-  const defaultTab: SubTabId = task.status === "completed" && task.result_summary ? "report" : "info"
+  const defaultTab: SubTabId = (task.status === "completed" || task.status === "partial") && task.result_summary ? "report" : "info"
   const [tab, setTab] = useState<SubTabId>(defaultTab)
 
   const [steps, setSteps] = useState<ResearchStep[]>([])

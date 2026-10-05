@@ -356,7 +356,7 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["content"], "fallback response")
         self.assertEqual(provider._openrouter_key_mgr.get_available_key(), "or_key1")
 
-    @patch("backend.modules.llm_pool.asyncio.sleep", new_callable=AsyncMock)
+    @patch("backend.modules.llm_pool.retry_delay", new_callable=AsyncMock)
     @patch("backend.modules.llm_pool.OpenAICompatibleProvider.generate", autospec=True)
     async def test_v67_retry_provider_error_falls_back_without_exhausting_key(self, mock_generate, _mock_sleep):
         provider = ModelPoolProvider(

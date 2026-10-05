@@ -186,6 +186,9 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         logger.info("Shutting down.")
+        from backend.modules.provider_attempts import shutdown_attempts
+
+        await shutdown_attempts()
         if services.startup_scheduler is not None:
             await services.startup_scheduler.aclose()
         if services.dream_daemon is not None:

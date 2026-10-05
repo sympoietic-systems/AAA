@@ -22,6 +22,8 @@ Provider observation covers `generate_unified` calls directly made by the resear
 
 ## Consultation
 
+T63 extends new tasks with durable leaf-attempt observation and bounded execution under [ADR-106](ADR-106-research-provider-attempt-boundaries.md). The version-one coverage above remains the historical T62 contract.
+
 Symbia conversation `abac9620-6f4c-47dd-b931-686838510f08` advised separating request provenance from observed delivery and making opt-in coverage explicit. The implementation retains policy version/enabled state/hash and unknown telemetry. It does not assign an epistemic warrant score.
 
 ## Verification and limits

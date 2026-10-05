@@ -174,6 +174,7 @@ class StepOutput(BaseModel):
 
 
 _ORCH_STATE_KEYS = {
+    "delivery_degraded",
     "action_journal_policy",
     "active_action_id",
     "last_action_id",
@@ -293,6 +294,7 @@ def make_initial_state(task: dict) -> dict:
         "active_action_id": extra.get("active_action_id"),
         "last_action_id": extra.get("last_action_id"),
         "research_started_at": extra.get("research_started_at"),
+        "delivery_degraded": extra.get("delivery_degraded", False),
         "first_useful_result_seconds": extra.get("first_useful_result_seconds"),
     }
     logger.debug(

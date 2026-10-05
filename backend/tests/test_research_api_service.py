@@ -4,6 +4,40 @@ import threading
 from backend.services.research.api import continue_task, queue_task, rerun_task, run_research_sync
 
 
+async def test_partial_task_can_retry_as_a_new_task(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from backend.api.routes.research import tasks
+
+    source = {
+        "id": "partial",
+        "status": "partial",
+        "objective": "Recover evidence",
+        "title": "Partial",
+        "trigger_source": "user_console",
+        "priority": 1,
+        "max_depth": 1,
+        "max_breadth": 1,
+        "is_agonistic": 0,
+        "budget_limit_usd": 1,
+    }
+    created = []
+
+    def create_task(**fields):
+        created.append(fields)
+        return "new-task"
+
+    manager = SimpleNamespace(get_task=lambda task_id: source, create_task=create_task)
+    queued = AsyncMock()
+    monkeypatch.setattr(tasks, "queue_task", queued)
+    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(research_task_manager=manager)))
+    result = await tasks.retry_task("partial", request)
+    assert result == {"task_id": "new-task", "status": "queued", "retried_from": "partial"}
+    assert created[0]["objective"] == source["objective"]
+    queued.assert_awaited_once_with(manager, "new-task")
+
+
 async def test_run_research_sync_uses_worker_thread():
     event_loop_thread = threading.get_ident()
 

@@ -49,3 +49,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 031: Next actions delivery](031-next-actions-delivery-report.md)
 - [Report 032: Main release and remaining gates](032-main-release-and-remaining-gates.md)
 - [Report 033: Research receipt contracts and offline baseline](033-research-receipt-baseline/README.md)
+- [Report 034: Research provider reliability](034-research-provider-reliability/README.md)

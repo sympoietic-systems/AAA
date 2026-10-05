@@ -5,12 +5,15 @@ import contextlib
 import json
 import logging
 import time
+from datetime import UTC, datetime
 from typing import Any, cast
 
+from backend.modules.provider_attempts import bounded_call
 from backend.services.research.action_journal import ResearchActionJournal
-from backend.services.research.provider_observation import observe_provider_calls
+from backend.services.research.provider_observation import ProviderObservations, observe_provider_calls
 from backend.services.research.steps.base import ResearchStepRegistry
 from backend.services.research.task_state import StepOutput
+from backend.storage.repositories.research.provider_attempt import ResearchProviderAttemptRepository
 from backend.storage.research_receipts import ActionStatus, ResearchActionReceipt
 
 logger = logging.getLogger("aaa.research_orchestrator")
@@ -107,7 +110,9 @@ class ResearchStepExecutor:
                             "force-transitioning to completed to break stuck loop",
                             task_id[:8],
                         )
-                        orchestrator.task_repo.transition_status(task_id, "completed")
+                        orchestrator.task_repo.transition_status(
+                            task_id, "partial" if s.get("delivery_degraded") else "completed"
+                        )
                         result_summary = s.get("result_summary") or db_task.get("result_summary") or ""
                         orchestrator.task_repo.update(task_id, result_summary=result_summary)
                 except Exception as e:
@@ -138,14 +143,24 @@ class ResearchStepExecutor:
             output_refs: tuple[str, ...] = ()
             action_status: ActionStatus = "failed"
             useful = False
-            provider_attempts = []
+            provider_attempts = ProviderObservations()
 
             try:
                 # 2. Retrieve step from ResearchStepRegistry and execute
                 step_processor = ResearchStepRegistry.get_step(phase)
                 logger.info("Executing modular step: %s", phase)
-                with observe_provider_calls(receipt) as provider_attempts:
-                    output: StepOutput = await step_processor.execute(orchestrator, envelope)
+                policy = (s.get("action_journal_policy") or {}).get("provider_policy")
+                attempt_repo = (
+                    ResearchProviderAttemptRepository(journal.repo._db_path) if receipt and journal and policy else None
+                )
+                with observe_provider_calls(receipt, attempt_repo, policy) as provider_attempts:
+                    if receipt is not None and policy:
+                        remaining = (datetime.fromisoformat(policy["deadline"]) - datetime.now(UTC)).total_seconds()
+                        output: StepOutput = await bounded_call(
+                            lambda: step_processor.execute(orchestrator, envelope), remaining
+                        )
+                    else:
+                        output = await step_processor.execute(orchestrator, envelope)
                 output_refs = tuple(output.step_ids)
                 action_status = (
                     "complete"
@@ -159,10 +174,13 @@ class ResearchStepExecutor:
                 )
 
                 # Merge findings
-                if action_status == "complete" and any(
-                    a.truncated or a.outcome in {"failed", "cancelled", "partial"} for a in provider_attempts
+                if action_status == "complete" and (
+                    getattr(provider_attempts, "delivery_failed", False)
+                    or any(a.truncated or a.outcome in {"failed", "cancelled", "partial"} for a in provider_attempts)
                 ):
                     action_status = "partial"
+                if receipt is not None and action_status == "partial":
+                    s["delivery_degraded"] = True
                 if output.new_findings:
                     s["all_findings"].extend(output.new_findings)
 
@@ -330,6 +348,11 @@ class ResearchStepExecutor:
                 orchestrator.task_repo.update(task_id, status="failed", result_summary=f"Step '{phase}' failed: {e}")
 
             result["next_phase"] = s["phase"]
+            if receipt is not None and s.get("delivery_degraded"):
+                result["delivery_status"] = "partial"
+                if s["phase"] == "complete" and action_status != "failed":
+                    action_status = "partial"
+                    result["status"] = "partial"
             result["accumulated_findings"] = len(s.get("all_findings", []))
 
             # Persist state to DB after every step

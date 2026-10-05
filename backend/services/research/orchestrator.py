@@ -18,6 +18,7 @@ from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.research.action_journal import ResearchActionJournal, input_hash
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
+from backend.services.research.provider_policy import ProviderPolicy
 from backend.services.research.sedimentation_queue import SedimentationPacketQueue
 from backend.services.research.step_executor import ResearchStepExecutor
 from backend.services.research.steps.base import ResearchStepRegistry
@@ -433,9 +434,10 @@ class SomaticResearchOrchestrator:
         state = self._state_mgr.init_task(task_id)
         if state.get("action_journal_policy") is None:
             state["action_journal_policy"] = {
-                "version": 1,
+                "version": 2,
                 "enabled": self.config.get("action_receipts_enabled", False) is True,
-                "coverage": "public_provider_calls_and_phases",
+                "coverage": "durable_leaf_provider_attempts_and_phases",
+                "provider_policy": ProviderPolicy.model_validate(self.config.get("provider_limits", {})).freeze(),
                 "policy_hash": input_hash(self.config),
                 "contract_hash": input_hash({key: state.get(key) for key in ("objective", "max_depth", "budget")}),
             }

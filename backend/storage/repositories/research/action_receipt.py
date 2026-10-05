@@ -4,7 +4,7 @@ import json
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
-from backend.storage.research_receipts import ActionStatus, ResearchActionReceipt
+from backend.storage.research_receipts import ActionStatus, ProviderAttemptReceipt, ResearchActionReceipt
 
 
 class ReceiptConflictError(ValueError):
@@ -41,6 +41,9 @@ class ResearchActionReceiptRepository(BaseRepository):
             if task is None:
                 raise ReceiptConflictError("Task disappeared during checkpoint")
             previous = json.loads(task[0]) if task[0] else {}
+            frozen_policy = previous.get("action_journal_policy")
+            if frozen_policy is not None and json.loads(state_json).get("action_journal_policy") != frozen_policy:
+                raise ReceiptConflictError("Task execution policy is immutable after initialization")
             active_id = previous.get("active_action_id")
             last_id = previous.get("last_action_id")
             if starting:
@@ -59,6 +62,7 @@ class ResearchActionReceiptRepository(BaseRepository):
             else:
                 if active_id != receipt.action_id and not (active_id is None and last_id == receipt.action_id):
                     raise ReceiptConflictError("Late action cannot overwrite a newer task checkpoint")
+                receipt = self._close_pending_attempts(receipt)
                 self.transition(receipt, expected_status="running")
             cursor = self._conn().execute(
                 "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ?",
@@ -66,6 +70,53 @@ class ResearchActionReceiptRepository(BaseRepository):
             )
             if cursor.rowcount != 1:
                 raise ReceiptConflictError("Task disappeared during checkpoint")
+            state = json.loads(state_json)
+            if (
+                not starting
+                and state.get("phase") == "complete"
+                and state.get("delivery_degraded")
+                and receipt.status == "partial"
+            ):
+                self._conn().execute(
+                    "UPDATE research_tasks SET status='partial' WHERE id=? AND status NOT IN ('cancelled','failed')",
+                    (receipt.task_id,),
+                )
+
+    def _close_pending_attempts(self, receipt: ResearchActionReceipt) -> ResearchActionReceipt:
+        rows = (
+            self._conn()
+            .execute(
+                "SELECT receipt_json FROM research_provider_attempts WHERE task_id=? AND action_id=? AND outcome='pending'",
+                (receipt.task_id, receipt.action_id),
+            )
+            .fetchall()
+        )
+        if not rows:
+            return receipt
+        if receipt.status == "complete" or receipt.completed_at is None or receipt.observation is None:
+            raise ReceiptConflictError("Action cannot complete with pending provider delivery")
+        closed = []
+        for row in rows:
+            pending = ProviderAttemptReceipt.model_validate_json(row[0])
+            terminal = ProviderAttemptReceipt.model_validate(
+                {
+                    **pending.model_dump(),
+                    "outcome": "cancelled",
+                    "cancelled": True,
+                    "completed_at": receipt.completed_at,
+                    "error_category": "action_ended",
+                    "elapsed_seconds": max(0, (receipt.completed_at - pending.started_at).total_seconds()),
+                }
+            )
+            self._conn().execute(
+                "UPDATE research_provider_attempts SET receipt_json=?, outcome='cancelled' WHERE attempt_id=? AND outcome='pending'",
+                (terminal.model_dump_json(), terminal.attempt_id),
+            )
+            closed.append(terminal)
+        observation = receipt.observation.model_copy(
+            update={"provider_attempts": receipt.observation.provider_attempts + tuple(closed)}
+        )
+        return receipt.model_copy(update={"observation": observation})
 
     @with_connection
     def create(self, receipt: ResearchActionReceipt) -> ResearchActionReceipt:

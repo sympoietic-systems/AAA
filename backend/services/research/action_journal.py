@@ -44,6 +44,7 @@ class ResearchActionJournal:
             dependency_ids=(state["last_action_id"],) if state.get("last_action_id") else (),
             rationale="Execute registered legacy phase under recorded journal policy",
             budget_reserved=0,
+            deadline=policy.get("provider_policy", {}).get("deadline"),
             contract_hash=policy["contract_hash"],
             policy_hash=policy["policy_hash"],
         ).transition("running", now)

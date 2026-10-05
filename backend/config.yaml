@@ -356,6 +356,11 @@ research_tasks:
 # See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8
 research_orchestrator:
   action_receipts_enabled: false                   # New tasks only; persisted policy survives restart
+  provider_limits:
+    task_timeout_seconds: 600
+    attempt_timeout_seconds: 60
+    max_request_attempts: 4
+    max_task_attempts: 64
   enabled: true                                    # Use orchestrator instead of legacy engine
   max_reflect_rounds: 3                            # Reflection rounds per iteration
   default_top_n: 3                                 # Sources to fetch per search query

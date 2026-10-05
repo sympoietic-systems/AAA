@@ -11,6 +11,7 @@ import { TerminalButton, KeyValueGrid, HeaderContainer, HeaderIndicator, HeaderL
 import SearchTab from "../../panels/leftpanel/SearchTab"
 
 const STATUS_GROUPS: { key: string; label: string; icon: string; color: string; defaultOpen: boolean }[] = [
+  { key: "partial", label: "Partial", icon: "●", color: CSS_VARS.semanticGold, defaultOpen: true },
   { key: "proposed",  label: "Pending Proposals",   icon: "●", color: CSS_VARS.semanticGold,   defaultOpen: true },
   { key: "active",    label: "Active",               icon: "●", color: CSS_VARS.semanticGreen,  defaultOpen: true },
   { key: "queued",    label: "Queued",               icon: "●", color: CSS_VARS.semanticPurple, defaultOpen: true },

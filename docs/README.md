@@ -128,3 +128,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 031: Next actions delivery](reports/031-next-actions-delivery-report.md)
 
 - [Report 032: Main release and remaining gates](reports/032-main-release-and-remaining-gates.md)
+- [Report 034: Research provider reliability](reports/034-research-provider-reliability/README.md)

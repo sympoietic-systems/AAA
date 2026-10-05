@@ -51,6 +51,11 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/modules/provider_attempts.py",
+    "backend/services/research/attempt_sink.py",
+    "backend/services/research/provider_policy.py",
+    "backend/storage/repositories/research/provider_attempt.py",
+    "backend/storage/migrations/m054_research_provider_attempts.py",
     "backend/services/research/provider_observation.py",
     "backend/services/research/action_journal.py",
     "backend/storage/research_receipts.py",

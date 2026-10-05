@@ -326,7 +326,7 @@ function ActionsTab({
               <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
             </>
           )}
-          {task.status === "completed" && (
+          {(task.status === "completed" || task.status === "partial") && (
             <>
               <TerminalButton onClick={retry} intent="save">↻ retry research</TerminalButton>
               <TerminalButton onClick={continueResearch} intent="cyan">▶ continue deeper</TerminalButton>
@@ -344,7 +344,7 @@ function ActionsTab({
               <TerminalButton onClick={() => window.dispatchEvent(new CustomEvent("research-delete", { detail: task }))} intent="delete">✕ delete</TerminalButton>
             </>
           )}
-          {["completed", "failed"].includes(task.status) && (
+          {["completed", "partial", "failed"].includes(task.status) && (
             <TerminalButton onClick={() => window.dispatchEvent(new CustomEvent("research-delete", { detail: task }))} intent="delete">✕ delete</TerminalButton>
           )}
         </div>

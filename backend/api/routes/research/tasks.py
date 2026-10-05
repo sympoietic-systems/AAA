@@ -355,7 +355,7 @@ async def cancel_task(task_id: str, request: Request):
     task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] in ("completed", "failed", "cancelled", "rejected", "expired"):
+    if task["status"] in ("completed", "partial", "failed", "cancelled", "rejected", "expired"):
         raise HTTPException(status_code=400, detail="Task is already terminal")
 
     await cancel_research_task(manager, task_id)
@@ -386,8 +386,8 @@ async def retry_task(task_id: str, request: Request):
     task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] not in ("failed", "completed", "cancelled"):
-        raise HTTPException(status_code=400, detail="Only failed, completed, or cancelled tasks can be retried")
+    if task["status"] not in ("failed", "completed", "partial", "cancelled"):
+        raise HTTPException(status_code=400, detail="Only terminal research tasks can be retried")
 
     # Create a new task with same parameters
     new_id = await run_research_sync(
@@ -440,7 +440,7 @@ async def rerun_task(task_id: str, request: Request):
     task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task["status"] not in ("completed", "failed", "cancelled"):
+    if task["status"] not in ("completed", "partial", "failed", "cancelled"):
         raise HTTPException(status_code=400, detail=f"Can only rerun terminal tasks, got: {task['status']}")
 
     await rerun_research_task(manager, task_id)

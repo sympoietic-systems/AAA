@@ -10,10 +10,12 @@ Priority: 1=user-inline, 2=user-console, 3=symbia-conversation, 4=symbia-daemon
 
 import asyncio
 import contextlib
+import json
 import logging
 import uuid
 from typing import Any
 
+from backend.storage.repositories.research.provider_attempt import ResearchProviderAttemptRepository
 from backend.utils.concurrency import ensure_semaphore
 from backend.utils.research_logger import now_utc_str
 
@@ -25,6 +27,7 @@ VALID_STATUSES = {
     "queued",
     "active",
     "completed",
+    "partial",
     "failed",
     "cancelled",
     "rejected",
@@ -35,10 +38,10 @@ VALID_TRANSITIONS = {
     "proposed": {"approved", "rejected", "expired", "cancelled"},
     "approved": {"queued", "active", "cancelled"},
     "queued": {"active", "cancelled"},
-    "active": {"completed", "failed", "cancelled"},
+    "active": {"completed", "partial", "failed", "cancelled"},
 }
 
-TERMINAL_STATUSES = {"completed", "failed", "cancelled", "rejected", "expired"}
+TERMINAL_STATUSES = {"completed", "partial", "failed", "cancelled", "rejected", "expired"}
 
 
 def _extract_task_depth(task: dict) -> int:
@@ -243,6 +246,9 @@ class ResearchTaskManager:
         logger.info("Research task %s deleted", task_id)
 
     def complete(self, task_id: str, result_summary: str = "") -> None:
+        existing = self.task_repo.get(task_id)
+        if existing and existing.get("status") == "partial":
+            return
         # Do not overwrite a rich synthesis result with an empty string or generic placeholder
         if not result_summary or result_summary == "Research complete.":
             existing = self.task_repo.get(task_id)
@@ -441,7 +447,7 @@ class ResearchTaskManager:
         task = self.task_repo.get(task_id)
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
-        if task["status"] not in ("completed", "failed", "cancelled"):
+        if task["status"] not in ("completed", "partial", "failed", "cancelled"):
             raise ValueError(f"Can only rerun terminal tasks, got: {task['status']}")
 
         # Reset counters
@@ -499,7 +505,7 @@ class ResearchTaskManager:
         task = self.task_repo.get(task_id)
         if task is None:
             raise ValueError(f"Task not found: {task_id}")
-        if task["status"] not in ("completed", "failed", "cancelled"):
+        if task["status"] not in ("completed", "partial", "failed", "cancelled"):
             raise ValueError(f"Can only continue terminal tasks, got: {task['status']}")
 
         new_objective = adjusted_objective or task["objective"]
@@ -516,6 +522,11 @@ class ResearchTaskManager:
                 old_orch = {}
 
             carry_keys = (
+                "action_journal_policy",
+                "last_action_id",
+                "research_started_at",
+                "first_useful_result_seconds",
+                "delivery_degraded",
                 "plan",
                 "all_findings",
                 "last_reflection",
@@ -691,7 +702,24 @@ class ResearchTaskManager:
     # ── Query ─────────────────────────────────────────────────────
 
     def get_task(self, task_id: str) -> dict | None:
-        return self.task_repo.get(task_id)
+        task = self.task_repo.get(task_id)
+        return self._with_delivery(task) if task else None
+
+    def _with_delivery(self, task: dict) -> dict:
+        raw = task.get("orchestrator_state")
+        state = json.loads(raw) if isinstance(raw, str) and raw else raw or {}
+        policy = state.get("action_journal_policy") or {}
+        provider_policy = policy.get("provider_policy")
+        if policy.get("enabled") and provider_policy and hasattr(self.task_repo, "_db_path"):
+            counts = ResearchProviderAttemptRepository(self.task_repo._db_path).summary(task["id"])
+            task["provider_delivery"] = {
+                "coverage": policy.get("coverage"),
+                "pending_attempts": counts.get("pending", 0),
+                "attempts": sum(counts.values()),
+                "degraded": bool(state.get("delivery_degraded")),
+                "deadline": provider_policy["deadline"],
+            }
+        return task
 
     def list_tasks(
         self,
@@ -700,12 +728,13 @@ class ResearchTaskManager:
         conversation_id: str | None = None,
         limit: int = 50,
     ) -> list[dict]:
-        return self.task_repo.list_all(
+        tasks = self.task_repo.list_all(
             status=status,
             trigger_source=trigger_source,
             conversation_id=conversation_id,
             limit=limit,
         )
+        return [self._with_delivery(task) for task in tasks]
 
     def get_active_summary(self) -> dict:
         """Lightweight summary for frontend polling."""

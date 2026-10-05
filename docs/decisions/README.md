@@ -139,6 +139,7 @@ What becomes easier/harder?
 | [103](ADR-103-disable-metric-triggered-thinking-escalation.md) | Disable Metric-Triggered Thinking Escalation | accepted | 2026-10-03 |
 | [104](ADR-104-epistemic-phase-transition-triad-protocol.md) | Epistemic Phase Transition Triad Protocol and Inscriptional Rendering | accepted | 2026-10-05 |
 | [105](ADR-105-research-action-journal.md) | Research Action Journal and Observation Coverage | accepted for opt-in implementation | 2026-10-05 |
+| [106](ADR-106-research-provider-attempt-boundaries.md) | Research Provider Attempt Boundaries | accepted for opt-in implementation | 2026-10-05 |
 
 
 

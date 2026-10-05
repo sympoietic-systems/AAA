@@ -251,7 +251,7 @@ T59|.|define geometry coordinate/antagonism contract; audit live evidence before
 T60|.|retry timed-out representative skill probes; review before lifecycle changes|V101,V23
 T61|x|remove metric-triggered chat thinking escalation; preserve provider-configured and explicit-call modes|V109
 T62|x|define Research V2 action/evidence/provider receipts; persist versions, dependencies, budgets and status; add restart contract tests|V110,V114,V117,I.internal
-T63|.|instrument provider attempts + request correlation; bound retries and end-to-end wait; expose pending/degraded/partial terminal state|V115,V117,V118,I.internal,I.error
+T63|x|instrument provider attempts + request correlation; bound retries and end-to-end wait; expose pending/degraded/partial terminal state|V115,V117,V118,I.internal,I.error
 T64|.|build source/version/span evidence substrate + parser quality contract; preserve late evidence, exclusions and claim support|V112,V114,I.internal,I.domain
 T65|.|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
 T66|.|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
@@ -360,3 +360,7 @@ B85|2026-10-05|T62 pytest setup denied default Windows temp/cache access; explic
 B86|2026-10-05|overlapping legacy pytest runs shared test DB and cleanup; initial full-run results invalid|serial verification; 73 focused tests pass; fail-fast backend failure reproduced on untouched HEAD
 B87|2026-10-05|offline baseline DB cached connections blocked Windows temporary-directory cleanup|baseline_test.db closes connection scopes; three isolated baseline samples rerun successfully; V18
 B88|2026-10-05|optional journal inference failed strict typing; policy initially persisted only after first action; independent executors could start from stale state|typed optional boundary; initialization checkpoint; atomic ownership checks + restart/race/rollback tests; V30,V110,V116
+B89|2026-10-05|timeout handler cancelled a detached provider twice; second cancellation prevented exercising late-result rejection|single cancellation per timeout; durable failed receipt survives cancellation-resistant late completion test; V117,V118
+B90|2026-10-05|standalone provider probe omitted migration switch; test conftest had masked it|explicit AAA_RUN_MIGRATIONS for isolated probe DB; no runtime invariant change
+B91|2026-10-05|T63 retry hook moved; old mock patched removed asyncio import; fallback test passed unsupported fallback keyword|patch retry_delay behavioral seam; use fallback_value; strict helper typing; V117,V118 tests retained
+B92|2026-10-05|pending-closure fixture omitted immutable policy; new API test omitted pytest import and expected incomplete response shape|preserve checkpoint policy; use configured automatic asyncio mode; assert retried_from; V117,V118; no new invariant

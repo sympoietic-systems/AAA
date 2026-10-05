@@ -14,6 +14,7 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  partial: "#eab308",
   proposed: "#f59e0b",
   approved: "#3b82f6",
   queued: "#8b5cf6",
@@ -139,7 +140,7 @@ export const TaskCard = memo(function TaskCard({ task, onApprove, onReject, onCa
           )}
 
           {/* Terminal actions: rerun */}
-          {(task.status === "completed" || task.status === "failed" || task.status === "cancelled") && (
+          {(task.status === "completed" || task.status === "partial" || task.status === "failed" || task.status === "cancelled") && (
             <div className="flex gap-2 mt-1">
               <button onClick={doRerun} disabled={acting}
                 className="text-[#f59e0b] hover:text-[#fbbf24] text-[10px] disabled:text-[#333]"

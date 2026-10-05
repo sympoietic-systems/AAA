@@ -11,9 +11,11 @@ class ReceiptModel(BaseModel):
 
 
 class ProviderAttemptReceipt(ReceiptModel):
+    attempt_id: str | None = None
     task_id: str
     action_id: str
     request_id: str
+    provider_request_id: str | None = None
     provider: str
     model: str
     attempt_number: int = Field(ge=1)

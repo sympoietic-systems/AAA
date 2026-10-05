@@ -18,7 +18,7 @@ from backend.storage.repositories.research.research_task import ResearchTaskRepo
 
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, request):
     path = str(tmp_path / "journal.db")
     init_db(path).close()
     repo = ResearchTaskRepository(path)
@@ -36,7 +36,9 @@ def setup(tmp_path):
         }
     )
     app = SimpleNamespace(
-        config={"research_orchestrator": {"action_receipts_enabled": True}},
+        config={
+            "research_orchestrator": {"action_receipts_enabled": True, "provider_limits": getattr(request, "param", {})}
+        },
         research_task_repo=repo,
         research_plan_repo=None,
         research_step_repo=None,
@@ -51,6 +53,76 @@ def setup(tmp_path):
 def install_step(monkeypatch, execute):
     processor = SimpleNamespace(execute=execute)
     monkeypatch.setattr(ResearchStepRegistry, "get_step", lambda phase: processor)
+
+
+@pytest.mark.asyncio
+async def test_truncated_synthesis_finishes_partial_and_manager_cannot_complete(setup, monkeypatch):
+    from backend.services.research.task_manager import ResearchTaskManager
+
+    orch, repo, app = setup
+    state = orch._get_state("task")
+    state["phase"] = "synthesizing"
+
+    class Provider:
+        async def generate(self, messages, **params):
+            return {"content": "partial", "finish_reason": "length", "truncated": True}
+
+    async def execute(_, envelope):
+        await generate_unified(Provider(), user_prompt="fixture")
+        return StepOutput(payload=PlanPayload(), step_ids=["partial:1"])
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    assert result["status"] == "partial" and result["next_phase"] == "complete"
+    assert repo.get("task")["status"] == "partial"
+    manager = ResearchTaskManager(app)
+    manager.complete("task", "late success claim")
+    assert repo.get("task")["status"] == "partial"
+    delivery = manager.get_task("task")["provider_delivery"]
+    assert delivery["degraded"] and delivery["pending_attempts"] == 0 and delivery["attempts"] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("setup", [{"max_task_attempts": 1}], indirect=True)
+async def test_exhausted_provider_fallback_cannot_become_complete(setup, monkeypatch):
+    orch, repo, _ = setup
+    state = orch._get_state("task")
+    calls = 0
+
+    class Provider:
+        async def generate(self, messages, **params):
+            nonlocal calls
+            calls += 1
+            assert calls == 1
+            return {"content": "first", "finish_reason": "stop"}
+
+    async def execute(_, envelope):
+        response = await generate_unified(
+            Provider(), user_prompt="fixture", fallback_value={"answer": "Research complete"}
+        )
+        assert response.get("error") or response["content"] == "first"
+        return StepOutput(payload=PlanPayload())
+
+    install_step(monkeypatch, execute)
+    await orch.execute_step("task")
+    state["phase"] = "synthesizing"
+    result = await orch.execute_step("task")
+    assert result["status"] == "partial"
+    assert repo.get("task")["status"] == "partial"
+    assert calls == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("setup", [{"task_timeout_seconds": 0.02}], indirect=True)
+async def test_expired_task_deadline_ends_without_executing_phase(setup, monkeypatch):
+    orch, repo, _ = setup
+    execute = AsyncMock()
+    install_step(monkeypatch, execute)
+    await asyncio.sleep(0.03)
+    result = await orch.execute_step("task")
+    assert result["status"] == "error" and result["next_phase"] == "complete"
+    execute.assert_not_awaited()
+    assert repo.get("task")["status"] == "failed"
 
 
 @pytest.mark.asyncio

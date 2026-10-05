@@ -4,6 +4,7 @@
 import { CSS_VARS } from "../../../../config/colors"
 
 export const STATUS_COLORS: Record<string, string> = {
+  partial: CSS_VARS.semanticGold,
   proposed: CSS_VARS.semanticGold,
   approved: CSS_VARS.semanticBlue,
   queued: CSS_VARS.semanticPurple,
