@@ -51,6 +51,9 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/storage/research_receipts.py",
+    "backend/storage/repositories/research/action_receipt.py",
+    "backend/storage/migrations/m052_research_action_receipts.py",
     "backend/services/belief_triage.py",
     "backend/modules/sensory/evidence_triage.py",
     "backend/contracts.py",
