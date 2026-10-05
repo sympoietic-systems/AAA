@@ -22,6 +22,12 @@ class MetricsInfo(BaseModel):
     paskian_health: float | None = None
     collapse_pressure_streak: int = 0
     phase_shifts: list[dict[str, object]] | None = None
+    # ADR-098 & Paskian extensions
+    cpi: float | None = None
+    teachback_ratio: float | None = None
+    actionability: float | None = None
+    collapse_pressure: float | None = None
+    phase_transition_magnitude: float | None = None
 
 
 class HomeostaticRecommendations(BaseModel):
@@ -34,6 +40,8 @@ class HomeostaticRecommendations(BaseModel):
     requested_controls: dict[str, object] | None = None
     applied_controls: dict[str, object] | None = None
     intervention: dict[str, object] | None = None
+    somatic_reflection_prompt: str | None = None
+    consecutive_stagnant_turns: int = 0
 
 
 class HistoryMessage(BaseModel):

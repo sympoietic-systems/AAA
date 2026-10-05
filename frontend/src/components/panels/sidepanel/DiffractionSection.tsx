@@ -97,7 +97,7 @@ function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProp
             <DiffractiveTooltip
               title="Diffraction Probability (P)"
               value={`Value: ${diff.p_diffract.toFixed(4)}`}
-              desc="The calculated chance of triggering diffractive context injection, driven by boringness (+), low entropy (+), and low vitality (-)."
+              desc="The calculated chance of triggering diffractive context injection, driven by collapse pressure/boringness (+), low entropy (+), and low vitality (-)."
             />
           </span>
           <span className="group relative cursor-help text-[#888]">
@@ -105,7 +105,7 @@ function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProp
             <DiffractiveTooltip
               title="Stagnation Index (S)"
               value={`Value: ${diff.stagnation_index.toFixed(4)}`}
-              desc="Ratio between boringness and vitality. Reflects the presence and intensity of conversational loops."
+              desc="Ratio between collapse pressure (boringness) and vitality. Reflects conversational loop and sycophancy attractor drag."
             />
           </span>
           <span className="group relative cursor-help text-[#888]">

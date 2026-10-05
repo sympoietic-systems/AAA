@@ -37,6 +37,7 @@ Deep-dive specifications for individual subsystems.
 - [VECTOR_SYSTEMS.md](systems/VECTOR_SYSTEMS.md) — Embedding, structural scoring, and isomorphic retrieval.
 - [CYBERNETIC_METRICS_SYSTEM.md](systems/CYBERNETIC_METRICS_SYSTEM.md) — Proprioceptive sensor suite: mathematical formulations, sliding window dynamics, and homeostatic sensorimotor loops (14 calibrated metrics, ADR-073 to ADR-084, plus ADR-098 Paskian metrics).
 - [AUTONOMOUS_RESEARCH_ARCHITECTURE.md](systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md) — Deep-dive on the autonomous research engine orchestrator (phases, state machine, persistence, manual mode).
+- [RESEARCH_V2_PROPOSAL.md](systems/RESEARCH_V2_PROPOSAL.md) — Proposed evidence contracts, Jev decision routing, parsing strategy, and staged evaluation gates for Research v2.
 
 ### guides/
 Step-by-step operational guides for setting up, configuring, and extending the system.

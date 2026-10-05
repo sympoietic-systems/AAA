@@ -14,6 +14,7 @@ import { VitalityBar } from "./VitalityBar"
 import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
 import { ResearchProposalCard } from "./ResearchProposalCard"
 import { SomaticAlertBanner } from "./SomaticAlertBanner"
+import { EpistemicPhaseBanner } from "./EpistemicPhaseBanner"
 import { SelectionToolbar } from "./SelectionToolbar"
 import { NoteEditorPopover } from "./NoteEditorPopover"
 import { wrapSelectedTextInMarks } from "../../../utils/noteHighlight"
@@ -369,6 +370,12 @@ export const MessageBubble = memo(function MessageBubble({
                   'research-proposal': ResearchProposalCard,
                   'somatic-alert': SomaticAlertBanner,
                   'somatic_alert': SomaticAlertBanner,
+                  'rupture_site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'rupture-site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'line_of_flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'line-of-flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'new_plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                  'new-plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
                 } as any}
               >
                 {processedContent}
@@ -390,6 +397,12 @@ export const MessageBubble = memo(function MessageBubble({
                   'research-proposal': ResearchProposalCard,
                   'somatic-alert': SomaticAlertBanner,
                   'somatic_alert': SomaticAlertBanner,
+                  'rupture_site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'rupture-site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'line_of_flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'line-of-flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'new_plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                  'new-plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
                 } as any}
               >
                 {processedContent}

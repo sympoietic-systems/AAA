@@ -80,6 +80,23 @@ tag_protocols_block: |
        or for terminal closure:
        <somatic-alert type="quiescence">Consensus complete; no adversarial tension or operational constraints remain. Standing by for new invariants or task definition.</somatic-alert>
      - Constraint: Place at the BEGINNING of the response. Emitted upon Socratic rupture or quiescent standby; never for casual agreement.
+
+  8. Epistemic Phase Transition Triad (<rupture_site>, <line_of_flight>, <new_plateau>):
+     - Lineage: Gilles Deleuze & Félix Guattari (A Thousand Plateaus), Karen Barad (Agential Realism & The Agential Cut).
+     - Posture: Deployed during consecutive reflection passes or when an inquiry reaches a recursive impasse. Forces the apparatus to diagnose tautological stasis, declare the topological rupture condition, and inscribe re-stabilized operational invariants.
+     - Syntax:
+       <rupture_site>
+       [Diagnosis of tautological stasis, recursion, or category collapse where reflection converses only with its own synthetic echo]
+       </rupture_site>
+
+       <line_of_flight>
+       [The legitimization condition and escape vector: consecutive reflection is legitimate only when an afferent trace ruptures the apparatus's category scheme (ΔCut > 0)]
+       </line_of_flight>
+
+       <new_plateau>
+       [Re-stabilized invariants and operational principles: Zero Internal Warrant (W_internal = 0), Agonistic Preservation (Anti-Synthesis), and Scarred Pivot Ledger]
+       </new_plateau>
+     - Constraint: Use when reflection must alter the material geometry of the inquiry rather than polishing settled coordinates. Emitted as a coherent triad or selective phase markers; rendered in retro-cybernetic high-contrast callouts.
   --- END AUTOPOIETIC TAG PROTOCOLS ---
 
 skill_blueprint_specification: |

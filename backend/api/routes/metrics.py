@@ -21,9 +21,15 @@ async def get_metrics(request: Request, window: int = 20):
     if not metrics_repo:
         return MetricsResponse(window_size=0, aggregates={"count": 0})
 
-    aggregates, latest = await asyncio.to_thread(
-        lambda: (metrics_repo.get_aggregates(limit=max(1, min(window, 100))), metrics_repo.get_latest())
-    )
+    def _fetch():
+        aggs = metrics_repo.get_aggregates(limit=max(1, min(window, 100)))
+        # Prefer the most recent complete metric record (with boringness/vitality calculated)
+        lat = metrics_repo.get_latest(require_complete=True) or metrics_repo.get_latest(require_complete=False)
+        # Fetch the last 10 rounds for time-series sparkline/progression visualization
+        recents = metrics_repo.get_recent(limit=10)
+        return aggs, lat, recents
+
+    aggregates, latest, recent_records = await asyncio.to_thread(_fetch)
 
     latest_info: MetricsInfo | None = None
     recommendations: HomeostaticRecommendations | None = None
@@ -44,6 +50,8 @@ async def get_metrics(request: Request, window: int = 20):
             divergence_resolution_ratio=latest.divergence_resolution_ratio,
             paskian_health=latest.paskian_health,
             phase_shifts=await asyncio.to_thread(MetricsService.parse_phase_shifts, latest.phase_shifts),
+            collapse_pressure=latest.boringness,
+            phase_transition_magnitude=None,
         )
         temp_rec = None
         pres_rec = None
@@ -75,6 +83,28 @@ async def get_metrics(request: Request, window: int = 20):
             frequency_penalty=freq_rec,
             state=latest.homeostatic_state or "healthy",
         )
+
+    # If live homeostatic recommendations are cached in app state, merge them to surface prompt interventions
+    live_recs = getattr(state, "latest_homeostatic_recommendations", None)
+    if live_recs:
+        live_model = MetricsService.build_recommendations(live_recs)
+        if live_model:
+            if recommendations is None:
+                recommendations = live_model
+            else:
+                # Merge intervention and directive details
+                if live_model.intervention:
+                    recommendations.intervention = live_model.intervention
+                if live_model.somatic_reflection_prompt:
+                    recommendations.somatic_reflection_prompt = live_model.somatic_reflection_prompt
+                if live_model.triggered_flags:
+                    recommendations.triggered_flags = list(
+                        set(recommendations.triggered_flags + live_model.triggered_flags)
+                    )
+                if live_model.consecutive_stagnant_turns:
+                    recommendations.consecutive_stagnant_turns = live_model.consecutive_stagnant_turns
+                if live_model.state:
+                    recommendations.state = live_model.state
 
     raw_diff = getattr(state, "latest_diffractive_meta", None)
     if not raw_diff:
@@ -115,10 +145,33 @@ async def get_metrics(request: Request, window: int = 20):
         sources=diff_sources,
     )
 
+    history_items: list[MetricsInfo] = []
+    for r in recent_records:
+        history_items.append(
+            MetricsInfo(
+                pairwise_similarity=r.s_t,
+                conceptual_novelty=r.novelty,
+                rolling_entropy=r.rolling_entropy,
+                coupling_coherence=r.coupling,
+                agent_self_divergence=r.agent_divergence,
+                reverse_perturbation=r.reverse_perturbation,
+                surprise_index=r.surprise_index,
+                mutual_perturbation=r.mutual_perturbation,
+                homeostatic_deficit=r.deficit,
+                conversation_vitality=r.vitality,
+                boringness=r.boringness,
+                conceptual_velocity=r.conceptual_velocity,
+                divergence_resolution_ratio=r.divergence_resolution_ratio,
+                paskian_health=r.paskian_health,
+                collapse_pressure=r.boringness,
+            )
+        )
+
     return MetricsResponse(
         window_size=aggregates.get("count", 0),
         aggregates=aggregates,
         latest=latest_info,
         recommendations=recommendations,
         diffractive=diff_info,
+        history=history_items,
     )

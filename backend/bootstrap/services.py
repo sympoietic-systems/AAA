@@ -102,6 +102,7 @@ class AppServices:
     dream_daemon: AutopoieticDreamDaemon | None = None
     db_backup_task: asyncio.Task[None] | None = None
     latest_diffractive_meta: dict[str, object] | None = None
+    latest_homeostatic_recommendations: dict[str, object] | None = None
 
 
 def bind_legacy_state_aliases(state: State, services: AppServices) -> None:

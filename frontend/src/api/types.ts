@@ -17,6 +17,11 @@ export interface MetricsInfo {
   divergence_resolution_ratio: number | null
   paskian_health: number | null
   phase_shifts: Array<{ metric: string; event: string; delta: number; direction: string; from: number; to: number }> | null
+  cpi?: number | null
+  teachback_ratio?: number | null
+  actionability?: number | null
+  collapse_pressure?: number | null
+  phase_transition_magnitude?: number | null
 }
 
 export interface HomeostaticRecommendations {
@@ -25,6 +30,14 @@ export interface HomeostaticRecommendations {
   frequency_penalty: { value: number; base: number; delta: number; clamped: boolean } | null
   state: string
   triggered_flags: string[]
+  somatic_reflection_prompt?: string | null
+  consecutive_stagnant_turns?: number
+  intervention?: {
+    mode: string
+    reason: string
+    directive: string | null
+    observed_outcome?: { uptake: number; task_progress: number; joint: number }
+  } | null
 }
 
 export interface AttachmentInfo {
@@ -58,7 +71,7 @@ export interface DbSkillInfo { id: string; name: string; description: string; al
 export interface DbSkillsResponse { always_active: DbSkillInfo[]; on_demand: DbSkillInfo[]; collapsed?: DbSkillInfo[]; proposed?: DbSkillInfo[]; all: DbSkillInfo[] }
 export interface WorkshopResponse { status: string; message?: string; skill_id?: string; name?: string; content?: string; description?: string; confidence?: number; version?: number; approval_tier?: string; lifecycle_stage?: string; anti_mastery_assessment?: Record<string, unknown>; skills?: Record<string, unknown>[]; count?: number; skill?: Record<string, unknown>; events?: Record<string, unknown>[] }
 
-export interface MetricsResponse { window_size: number; aggregates: Record<string, number | null>; latest: MetricsInfo | null; recommendations: HomeostaticRecommendations | null; diffractive: DiffractiveInfo | null }
+export interface MetricsResponse { window_size: number; aggregates: Record<string, number | null>; latest: MetricsInfo | null; recommendations: HomeostaticRecommendations | null; diffractive: DiffractiveInfo | null; history?: MetricsInfo[] }
 export interface DiffractiveSourceInfo { type: string; source_title: string; similarity: number }
 export interface DiffractiveInfo { state: string; previous_state: string; p_diffract: number; stagnation_index: number; r_context: number; dynamic_max: number; cohesion_timer: number; similarity_range_memory: number[]; similarity_range_files: number[]; candidates_searched: number; items_injected: number; tokens_used: number; token_budget: number; duration_ms: number; sources: DiffractiveSourceInfo[] }
 

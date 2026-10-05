@@ -12,6 +12,7 @@ class AppState:
     system_prompt_tokens: int = 0
     pipeline_order: list[str] = field(default_factory=list)
     latest_diffractive_meta: dict | None = None
+    latest_homeostatic_recommendations: dict | None = None
 
     # Repositories
     message_repo: Any = None

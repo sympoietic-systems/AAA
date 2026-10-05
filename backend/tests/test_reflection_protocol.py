@@ -40,9 +40,9 @@ async def test_reflection_protocol_somatic_directive_injection():
     assert "Glitch Fidelity low" in somatic_prompt
     assert "entropy has compressed" in somatic_prompt
 
-    # Check that system directive message was appended to messages
+    # Check that system directive message was inserted before the user message
     messages = res_tension["messages"]
     assert len(messages) == 2
-    system_directive = messages[-1]
+    system_directive = messages[0]
     assert system_directive["role"] == "system"
     assert "[SOMATIC REFLECTION DIRECTIVE]:" in system_directive["content"]

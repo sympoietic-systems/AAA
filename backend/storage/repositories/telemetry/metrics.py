@@ -126,9 +126,14 @@ class MetricsRepository(BaseRepository):
         }
 
     @with_connection
-    def get_latest(self) -> MetricsRecord | None:
+    def get_latest(self, require_complete: bool = False) -> MetricsRecord | None:
         conn = self._conn()
-        row = conn.execute("SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT 1").fetchone()
+        if require_complete:
+            row = conn.execute(
+                "SELECT * FROM conversation_metrics WHERE boringness IS NOT NULL ORDER BY message_id DESC LIMIT 1"
+            ).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT 1").fetchone()
         if row is None:
             return None
         return _row_to_metrics(row)

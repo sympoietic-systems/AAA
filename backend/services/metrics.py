@@ -88,6 +88,11 @@ class MetricsService:
             paskian_health=metrics.get("paskian_health"),
             collapse_pressure_streak=int(metrics.get("collapse_pressure_streak", 0)),
             phase_shifts=metrics.get("phase_shifts"),
+            cpi=metrics.get("cpi") if metrics.get("cpi") is not None else metrics.get("conversational_progress_index"),
+            teachback_ratio=metrics.get("teachback_ratio"),
+            actionability=metrics.get("actionability"),
+            collapse_pressure=metrics.get("collapse_pressure") if metrics.get("collapse_pressure") is not None else metrics.get("boringness"),
+            phase_transition_magnitude=metrics.get("phase_transition_magnitude"),
         )
 
     @staticmethod
@@ -110,6 +115,11 @@ class MetricsService:
             divergence_resolution_ratio=row.get("divergence_resolution_ratio"),
             paskian_health=row.get("paskian_health"),
             phase_shifts=None,
+            cpi=row.get("cpi"),
+            teachback_ratio=row.get("teachback_ratio"),
+            actionability=row.get("actionability"),
+            collapse_pressure=row.get("collapse_pressure") if row.get("collapse_pressure") is not None else row.get("boringness"),
+            phase_transition_magnitude=row.get("phase_transition_magnitude"),
         )
 
     @staticmethod
@@ -126,6 +136,8 @@ class MetricsService:
             requested_controls=recs.get("requested_controls"),
             applied_controls=recs.get("applied_controls"),
             intervention=recs.get("intervention"),
+            somatic_reflection_prompt=recs.get("somatic_reflection_prompt"),
+            consecutive_stagnant_turns=int(recs.get("consecutive_stagnant_turns", 0)),
         )
 
     @staticmethod

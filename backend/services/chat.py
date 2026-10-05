@@ -655,6 +655,9 @@ class ChatService:
             if diff_meta:
                 state.latest_diffractive_meta = diff_meta
 
+            if recommendations:
+                state.latest_homeostatic_recommendations = recommendations
+
             should_compact = False
             if result.payload.get("trigger_consolidation") or diff_meta and diff_meta.get("state") == "STAGNANT":
                 should_compact = True

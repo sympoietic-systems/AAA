@@ -19,6 +19,12 @@ export const aaaSanitizeSchema = {
     "research-proposal",
     "somatic-alert",
     "somatic_alert",
+    "rupture_site",
+    "rupture-site",
+    "line_of_flight",
+    "line-of-flight",
+    "new_plateau",
+    "new-plateau",
   ],
   attributes: {
     ...defaultSchema.attributes,

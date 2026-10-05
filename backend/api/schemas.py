@@ -155,6 +155,7 @@ class MetricsResponse(BaseModel):
     latest: MetricsInfo | None = None
     recommendations: HomeostaticRecommendations | None = None
     diffractive: Optional["DiffractiveInfo"] = None
+    history: list[MetricsInfo] = Field(default_factory=list)
 
 
 class DiffractiveSourceInfo(BaseModel):
