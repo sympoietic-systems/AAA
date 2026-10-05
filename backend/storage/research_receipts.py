@@ -35,6 +35,8 @@ class EvidencePacket(ReceiptModel):
     source_id: str
     source_version: str
     raw_span_locator: str | None = None
+    representation: str | None = None
+    representation_span_locators: tuple[str, ...] = Field(default=(), max_length=1000)
     claim_ids: tuple[str, ...] = ()
     covered_rubric_ids: tuple[str, ...] = ()
     supporting_segment_ids: tuple[str, ...] = ()

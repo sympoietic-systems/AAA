@@ -4,6 +4,7 @@ import json
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
+from backend.storage.research_evidence import ResearchContract
 from backend.storage.research_receipts import ActionStatus, ProviderAttemptReceipt, ResearchActionReceipt
 
 
@@ -13,13 +14,21 @@ class ReceiptConflictError(ValueError):
 
 class ResearchActionReceiptRepository(BaseRepository):
     @with_connection
-    def initialize_task_state(self, task_id: str, state_json: str) -> str:
+    def initialize_task_state(self, task_id: str, state_json: str, contract: ResearchContract | None = None) -> str:
         """Freeze policy before the first action; a competing initializer wins once."""
         with self.atomic():
-            self._conn().execute(
+            cursor = self._conn().execute(
                 "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ? AND (orchestrator_state IS NULL OR orchestrator_state = '')",
                 (state_json, task_id),
             )
+            if cursor.rowcount == 1 and contract is not None:
+                policy = json.loads(state_json)["action_journal_policy"]
+                if contract.task_id != task_id or contract.content_hash() != policy["contract_hash"]:
+                    raise ReceiptConflictError("Initial contract differs from the frozen task policy")
+                self._conn().execute(
+                    "INSERT INTO research_contracts VALUES (?, ?, ?, ?)",
+                    (task_id, contract.revision, contract.content_hash(), contract.model_dump_json()),
+                )
             row = (
                 self._conn()
                 .execute("SELECT orchestrator_state FROM research_tasks WHERE id = ?", (task_id,))

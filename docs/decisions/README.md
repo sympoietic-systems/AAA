@@ -140,6 +140,7 @@ What becomes easier/harder?
 | [104](ADR-104-epistemic-phase-transition-triad-protocol.md) | Epistemic Phase Transition Triad Protocol and Inscriptional Rendering | accepted | 2026-10-05 |
 | [105](ADR-105-research-action-journal.md) | Research Action Journal and Observation Coverage | accepted for opt-in implementation | 2026-10-05 |
 | [106](ADR-106-research-provider-attempt-boundaries.md) | Research Provider Attempt Boundaries | accepted for opt-in implementation | 2026-10-05 |
+| [107](ADR-107-research-evidence-substrate.md) | Research Evidence Substrate | accepted for opt-in implementation | 2026-10-06 |
 
 
 

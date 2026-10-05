@@ -73,6 +73,7 @@ async def parallel_parse_grouped(
                             "title": r.get("title", url),
                             "content": cached_content,
                             "query_group": q_group,
+                            "reused": True,
                         }
                     )
                 except Exception as e:
@@ -216,6 +217,30 @@ class ParseStep(BaseResearchStep):
             search_cache,
             plan_id,
         )
+        store = orch.evidence_store_for(task_id) if hasattr(orch, "evidence_store_for") else None
+        evidence_packets = []
+        if store is not None:
+            for source in parsed:
+                artifact, segments = await asyncio.to_thread(
+                    store.record_text,
+                    task_id,
+                    source["url"],
+                    source.get("content", ""),
+                    reused=source.get("reused", False),
+                )
+                source.update(
+                    source_id=artifact.source_id,
+                    source_version=artifact.source_version,
+                    segment_ids=[segment.segment_id for segment in segments],
+                )
+                evidence_packets.append(store.packet(artifact, segments=segments))
+            available_urls = {source["url"] for source in parsed}
+            missing_urls = {source["url"] for source in search_cache} - available_urls
+            for url in sorted(missing_urls):
+                artifact, _ = await asyncio.to_thread(
+                    store.record_text, task_id, url, "", unavailable_reason="no_available_extracted_text"
+                )
+                evidence_packets.append(store.packet(artifact))
 
         if orch.step_repo:
             for q_group, step_id in group_steps.items():
@@ -248,5 +273,6 @@ class ParseStep(BaseResearchStep):
             payload=out_payload,
             signal_flags=signal_flags,
             step_ids=all_step_ids,
+            evidence_packets=tuple(evidence_packets),
             transition_rationale=rationale,
         )

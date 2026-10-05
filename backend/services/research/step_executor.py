@@ -14,7 +14,7 @@ from backend.services.research.provider_observation import ProviderObservations,
 from backend.services.research.steps.base import ResearchStepRegistry
 from backend.services.research.task_state import StepOutput
 from backend.storage.repositories.research.provider_attempt import ResearchProviderAttemptRepository
-from backend.storage.research_receipts import ActionStatus, ResearchActionReceipt
+from backend.storage.research_receipts import ActionStatus, EvidencePacket, ResearchActionReceipt
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -144,6 +144,7 @@ class ResearchStepExecutor:
             action_status: ActionStatus = "failed"
             useful = False
             provider_attempts = ProviderObservations()
+            evidence_packets: tuple[EvidencePacket, ...] = ()
 
             try:
                 # 2. Retrieve step from ResearchStepRegistry and execute
@@ -162,6 +163,7 @@ class ResearchStepExecutor:
                     else:
                         output = await step_processor.execute(orchestrator, envelope)
                 output_refs = tuple(output.step_ids)
+                evidence_packets = output.evidence_packets
                 action_status = (
                     "complete"
                     if output.status == "completed"
@@ -316,6 +318,7 @@ class ResearchStepExecutor:
                         time.perf_counter() - phase_started,
                         useful,
                         tuple(provider_attempts),
+                        evidence_packets,
                     )
                 raise
             except Exception as e:
@@ -367,6 +370,7 @@ class ResearchStepExecutor:
                     time.perf_counter() - phase_started,
                     useful,
                     tuple(provider_attempts),
+                    evidence_packets,
                 )
             else:
                 orchestrator._persist_state(task_id)

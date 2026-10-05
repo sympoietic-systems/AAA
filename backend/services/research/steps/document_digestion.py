@@ -98,6 +98,8 @@ class DocumentDigestionStep(BaseResearchStep):
             return StepOutput(status="completed", message="no documents to digest", payload=payload)
 
         s = orch._get_state(task_id)
+        store = orch.evidence_store_for(task_id) if hasattr(orch, "evidence_store_for") else None
+        evidence_packets = []
         step_id = orch._create_or_update_step(s, task_id, "document_digestion")
 
         task_row = orch.task_repo.get(task_id) if orch.task_repo else None
@@ -160,6 +162,12 @@ class DocumentDigestionStep(BaseResearchStep):
                 max_depth,
                 step_id=step_id,
             )
+            if store is not None:
+                artifact, segments = await asyncio.to_thread(
+                    store.record_document, task_id, f"{effective_conv_id}:{doc.file_id}", combined_content
+                )
+                claims = await asyncio.to_thread(store.record_interpretation, task_id, dict(s), artifact, analysis)
+                evidence_packets.append(store.packet(artifact, claims, segments))
 
             if orch.step_result_repo:
                 orch.step_result_repo.create(
@@ -196,6 +204,8 @@ class DocumentDigestionStep(BaseResearchStep):
         for doc, res in zip(documents, results, strict=False):
             if isinstance(res, Exception):
                 logger.error("Error digesting document %s: %s", doc.file_id, res, exc_info=res)
+                if store is not None:
+                    raise res
                 continue
             file_id = res["file_id"]
             learnings = res["learnings"]
@@ -273,5 +283,6 @@ class DocumentDigestionStep(BaseResearchStep):
             payload=out_payload,
             new_findings=new_findings,
             step_ids=[step_id],
+            evidence_packets=tuple(evidence_packets),
             transition_rationale=rationale,
         )

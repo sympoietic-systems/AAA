@@ -5,6 +5,7 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
+from backend.storage.research_receipts import EvidencePacket
 from backend.utils.research_logger import log_research_meta
 
 logger = logging.getLogger("aaa.research_orchestrator")
@@ -171,9 +172,11 @@ class StepOutput(BaseModel):
     routing_patches: list[RoutingPatch] = Field(default_factory=list)
     transition_rationale: str | None = None
     step_ids: list[str] = Field(default_factory=list)
+    evidence_packets: tuple[EvidencePacket, ...] = ()
 
 
 _ORCH_STATE_KEYS = {
+    "contract_revision",
     "delivery_degraded",
     "action_journal_policy",
     "active_action_id",
@@ -294,6 +297,7 @@ def make_initial_state(task: dict) -> dict:
         "active_action_id": extra.get("active_action_id"),
         "last_action_id": extra.get("last_action_id"),
         "research_started_at": extra.get("research_started_at"),
+        "contract_revision": extra.get("contract_revision", 1),
         "delivery_degraded": extra.get("delivery_degraded", False),
         "first_useful_result_seconds": extra.get("first_useful_result_seconds"),
     }

@@ -10,6 +10,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
+from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
+from backend.storage.research_evidence import EvidenceBundle
+
 logger = logging.getLogger("aaa.research.import_service")
 
 
@@ -44,6 +47,13 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         return result
 
     old_task_id = task_data.get("id", "")
+    evidence = EvidenceBundle.model_validate(payload["evidence"]) if payload.get("evidence") is not None else None
+    if (
+        evidence is not None
+        and evidence.task_id != old_task_id
+        and not payload.get("evidence_origin_task_id") == evidence.task_id
+    ):
+        raise ValueError("Imported evidence does not belong to the exported task")
 
     # ── Generate new IDs ────────────────────────────────────────────
     new_task_id = str(uuid.uuid4())
@@ -115,6 +125,11 @@ def import_research_task(payload: dict, app_state: Any) -> ImportResult:
         "approved_by": task_data.get("approved_by"),
     }
     task_repo.create(new_task)
+    if evidence is not None:
+        ResearchEvidenceRepository(task_repo._db_path).preserve_import(new_task_id, evidence)
+        warnings.append(
+            "Imported evidence is archived provenance; semantic review and action authority are not adopted"
+        )
 
     # create() only inserts core columns — update the rest
     extra_fields = {}

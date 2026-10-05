@@ -4,7 +4,62 @@ import json
 import logging
 from datetime import UTC, datetime
 
+from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
+from backend.storage.repositories.research.research_task import ResearchTaskRepository
+from backend.storage.research_evidence import EvidenceBundle
+
 logger = logging.getLogger(__name__)
+
+
+def research_evidence_bundle(app_state, task_id: str) -> dict | None:
+    task_repo = getattr(app_state, "research_task_repo", None)
+    if not isinstance(task_repo, ResearchTaskRepository):
+        return None
+    repo = ResearchEvidenceRepository(task_repo._db_path)
+    if repo.get_contract(task_id, 1) is None:
+        imported = repo.imported_bundle(task_id)
+        return imported.model_dump(mode="json") if imported is not None else None
+    return EvidenceBundle.model_validate(repo.export_bundle(task_id)).model_dump(mode="json")
+
+
+def evidence_appendix(evidence: dict | None) -> str:
+    if evidence is None:
+        return ""
+    bundle = EvidenceBundle.model_validate(evidence)
+    parts = ["## EVIDENCE PROVENANCE", "", "Citation resolution and semantic support are separate observations.", ""]
+    parts.extend([f"Origin task: `{bundle.task_id}`. Imported snapshots confer no local action authority.", ""])
+    for source in bundle.sources:
+        artifact = source.artifact
+        parts.extend(
+            [
+                f"- Source `{artifact.source_id}` version `{artifact.source_version}`: {artifact.fetch_status}; representation `{artifact.representation}`; parser quality {artifact.quality.score if artifact.quality.score is not None else 'unknown'}."
+            ]
+        )
+        if artifact.quality.warnings:
+            parts.append("  Extraction limitations: " + "; ".join(artifact.quality.warnings))
+        if artifact.unavailable_reason:
+            parts.append("  Unavailable: " + artifact.unavailable_reason)
+    for claim in bundle.claims:
+        parts.extend(
+            [
+                "",
+                f"### Claim `{claim.claim_id}`",
+                claim.text,
+                f"Citation: {claim.citation_status}; semantic support: {claim.support_status}; inference: {claim.inference_label}.",
+            ]
+        )
+        for label, ids in (("Supporting", claim.supporting_segment_ids), ("Contrary", claim.contrary_segment_ids)):
+            for segment_id in ids:
+                _, segment = bundle.resolve(segment_id)
+                parts.append(
+                    f"{label} locator: `{segment.locator()}` ({segment.representation}, characters {segment.start}:{segment.end})."
+                )
+        if claim.unresolved_objections:
+            parts.append("Unresolved: " + "; ".join(claim.unresolved_objections))
+    for decision in bundle.decisions:
+        for exclusion in decision.exclusions:
+            parts.append(f"Excluded `{exclusion.candidate_id}`: {exclusion.reason}; {exclusion.explanation}.")
+    return "\n".join(parts)
 
 
 class ResearchExportBuilder:
@@ -42,6 +97,7 @@ class ResearchExportBuilder:
                 step_results=step_results,
                 plan=plan,
                 notes=notes,
+                evidence=research_evidence_bundle(app_state, task_id),
             )
 
             if markdown and markdown.strip():
@@ -64,6 +120,7 @@ class ResearchExportBuilder:
         plan: dict | None,
         results_by_step: dict,
         notes: list[dict],
+        evidence: dict | None = None,
     ) -> str:
         parts: list[str] = []
 
@@ -196,6 +253,8 @@ class ResearchExportBuilder:
                         parts.append(f"> {line}")
                 parts.append("")
 
+        if evidence is not None:
+            parts.append(evidence_appendix(evidence))
         parts.append("## EXPORT METADATA\n")
         parts.append("| Field | Value |")
         parts.append("|---|---|")
@@ -220,10 +279,11 @@ class ResearchExportBuilder:
         step_results: list[dict],
         notes: list[dict],
         meta_log: list[dict],
+        evidence: dict | None = None,
     ) -> dict:
         """Build a structured JSON export for re-import."""
-        return {
-            "export_format_version": "2.0",
+        result = {
+            "export_format_version": "2.1" if evidence is not None else "2.0",
             "exported_at": datetime.now(UTC).isoformat(),
             "task": task,
             "branches": branches,
@@ -234,6 +294,10 @@ class ResearchExportBuilder:
             "meta_log": meta_log,
             "notes": notes,
         }
+        if evidence is not None:
+            result["evidence"] = EvidenceBundle.model_validate(evidence).model_dump(mode="json")
+            result["evidence_origin_task_id"] = evidence["task_id"]
+        return result
 
     # ── Research Stages Export ────────────────────────────────────────────
 
@@ -281,6 +345,7 @@ class ResearchExportBuilder:
         step_results: list[dict],
         plan: dict | None,
         notes: list[dict],
+        evidence: dict | None = None,
     ) -> str:
         """Build a clean markdown export of research stages and findings,
         organized by cycle. Excludes raw source materials — only links[names].
@@ -629,6 +694,9 @@ class ResearchExportBuilder:
                 if comment:
                     parts.append(f"- **Comment:**\n{comment}")
                 parts.append("")
+
+        if evidence is not None:
+            parts.extend([evidence_appendix(evidence), ""])
 
         # ── Export Metadata ──
         parts.append("## EXPORT METADATA\n")

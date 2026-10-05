@@ -50,3 +50,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 032: Main release and remaining gates](032-main-release-and-remaining-gates.md)
 - [Report 033: Research receipt contracts and offline baseline](033-research-receipt-baseline/README.md)
 - [Report 034: Research provider reliability](034-research-provider-reliability/README.md)
+- [Report 035: Research evidence substrate](035-research-evidence-substrate/README.md)

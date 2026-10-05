@@ -18,6 +18,7 @@ from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.research.action_journal import ResearchActionJournal, input_hash
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
+from backend.services.research.evidence_store import ResearchEvidenceStore
 from backend.services.research.provider_policy import ProviderPolicy
 from backend.services.research.sedimentation_queue import SedimentationPacketQueue
 from backend.services.research.step_executor import ResearchStepExecutor
@@ -30,6 +31,7 @@ from backend.services.research.task_state import (
     serialize_research_state,
 )
 from backend.storage.repositories.research.action_receipt import ResearchActionReceiptRepository
+from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
 from backend.storage.repositories.research.research_task import ResearchTaskRepository
 from backend.utils.concurrency import ensure_semaphore
 from backend.utils.research_logger import log_research_meta, now_utc_str
@@ -152,6 +154,11 @@ class SomaticResearchOrchestrator:
         self._sedimentation_sink = SedimentationPacketQueue()
         self._action_journal = (
             ResearchActionJournal(ResearchActionReceiptRepository(app_state.research_task_repo._db_path))
+            if isinstance(app_state.research_task_repo, ResearchTaskRepository)
+            else None
+        )
+        self._evidence_store = (
+            ResearchEvidenceStore(ResearchEvidenceRepository(app_state.research_task_repo._db_path))
             if isinstance(app_state.research_task_repo, ResearchTaskRepository)
             else None
         )
@@ -433,16 +440,26 @@ class SomaticResearchOrchestrator:
     def init_task(self, task_id: str) -> dict[str, Any]:
         state = self._state_mgr.init_task(task_id)
         if state.get("action_journal_policy") is None:
+            enabled = self.config.get("action_receipts_enabled", False) is True
+            contract = ResearchEvidenceStore.initial_contract(task_id, state, 3) if enabled else None
+            state["contract_revision"] = 1
             state["action_journal_policy"] = {
-                "version": 2,
-                "enabled": self.config.get("action_receipts_enabled", False) is True,
+                "version": 3,
+                "evidence_substrate_version": 1,
+                "enabled": enabled,
                 "coverage": "durable_leaf_provider_attempts_and_phases",
                 "provider_policy": ProviderPolicy.model_validate(self.config.get("provider_limits", {})).freeze(),
                 "policy_hash": input_hash(self.config),
-                "contract_hash": input_hash({key: state.get(key) for key in ("objective", "max_depth", "budget")}),
+                "contract_hash": contract.content_hash()
+                if contract
+                else input_hash({key: state.get(key) for key in ("objective", "max_depth", "budget")}),
             }
             if self._action_journal is not None:
-                persisted = self._action_journal.repo.initialize_task_state(task_id, serialize_research_state(state))
+                persisted = self._action_journal.repo.initialize_task_state(
+                    task_id,
+                    serialize_research_state(state),
+                    contract if state["action_journal_policy"]["enabled"] else None,
+                )
                 stored = json.loads(persisted)
                 state["action_journal_policy"] = stored.get("action_journal_policy") or {
                     "version": 0,
@@ -457,6 +474,10 @@ class SomaticResearchOrchestrator:
             state.get("phase"),
         )
         return cast(dict[str, Any], state)
+
+    def evidence_store_for(self, task_id: str) -> ResearchEvidenceStore | None:
+        policy = self._get_state(task_id).get("action_journal_policy") or {}
+        return self._evidence_store if policy.get("enabled") and policy.get("evidence_substrate_version") == 1 else None
 
     def resume_task(self, task_id: str) -> dict[str, Any] | None:
         return cast(dict[str, Any] | None, self._state_mgr.resume_task(task_id))

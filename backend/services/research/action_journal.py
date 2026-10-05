@@ -11,6 +11,7 @@ from backend.storage.repositories.research.action_receipt import ResearchActionR
 from backend.storage.research_receipts import (
     ActionObservation,
     ActionStatus,
+    EvidencePacket,
     ProviderAttemptReceipt,
     ResearchActionReceipt,
 )
@@ -66,6 +67,7 @@ class ResearchActionJournal:
         elapsed: float,
         useful: bool,
         provider_attempts: tuple[ProviderAttemptReceipt, ...] = (),
+        evidence_packets: tuple[EvidencePacket, ...] = (),
     ) -> None:
         now = datetime.now(UTC)
         checkpoint = {**state, "active_action_id": None, "last_action_id": receipt.action_id}
@@ -79,6 +81,7 @@ class ResearchActionJournal:
                 output_refs=output_refs,
                 phase_elapsed_seconds=elapsed,
                 provider_attempts=provider_attempts,
+                evidence_packets=evidence_packets,
             ),
         )
         self.repo.checkpoint(terminal, serialize_research_state(checkpoint))

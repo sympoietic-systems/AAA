@@ -5,6 +5,7 @@ import logging
 from backend.services.research.provider_observation import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import DigestPayload, StepEnvelope, StepOutput
+from backend.storage.research_receipts import EvidencePacket
 from backend.utils.anti_mastery import apply_anti_mastery_filter
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import now_utc_str
@@ -151,6 +152,7 @@ async def parallel_digest_grouped(
     Migrated from legacy tools._tool_parallel_digest_grouped.
     """
     sem = orch._get_semaphore()
+    store = orch.evidence_store_for(task_id) if hasattr(orch, "evidence_store_for") else None
 
     async def digest_one(source: dict) -> dict | None:
         async with sem:
@@ -171,6 +173,21 @@ async def parallel_digest_grouped(
                     max_depth,
                     step_id=step_id,
                 )
+                packet = None
+                if store is not None:
+                    stored = await asyncio.to_thread(
+                        store.repo.get_source, task_id, source.get("source_id", ""), source.get("source_version", "")
+                    )
+                    if stored is None:
+                        artifact, _ = await asyncio.to_thread(
+                            store.record_text, task_id, source["url"], source.get("content", ""), reused=True
+                        )
+                    else:
+                        artifact = stored[0]
+                    claims = await asyncio.to_thread(
+                        store.record_interpretation, task_id, dict(orch._get_state(task_id)), artifact, result
+                    )
+                    packet = store.packet(artifact, claims)
 
                 # Update the step_result row with analysis results
                 try:
@@ -211,9 +228,12 @@ async def parallel_digest_grouped(
                     "source_title": source.get("title"),
                     "result": result,
                     "query_group": q_group,
+                    "evidence_packet": packet.model_dump(mode="json") if packet else None,
                 }
             except Exception as e:
                 logger.warning("Digest failed for %s: %s", source.get("url", "")[:80], e)
+                if store is not None:
+                    raise
                 return None
 
     tasks = [digest_one(s) for s in parsed_sources]
@@ -435,5 +455,10 @@ class DigestStep(BaseResearchStep):
             payload=out_payload,
             new_findings=new_findings,
             step_ids=all_step_ids,
+            evidence_packets=tuple(
+                EvidencePacket.model_validate(dr["evidence_packet"])
+                for dr in digest_results
+                if dr.get("evidence_packet")
+            ),
             transition_rationale=rationale,
         )

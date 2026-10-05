@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from backend.api.routes.research.tasks import _extract_depth
+from backend.services.export.research import research_evidence_bundle
 from backend.services.research.api import run_research_sync
 
 router = APIRouter()
@@ -60,6 +61,7 @@ async def export_research_task(task_id: str, request: Request):
         plan=plan,
         results_by_step=results_by_step,
         notes=notes,
+        evidence=await run_research_sync(research_evidence_bundle, state, task_id),
     )
 
     safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
@@ -109,6 +111,7 @@ async def export_research_stages(task_id: str, request: Request):
         step_results=step_results,
         plan=plan,
         notes=notes,
+        evidence=await run_research_sync(research_evidence_bundle, state, task_id),
     )
 
     safe_title = (task.get("title") or "research").strip().replace(" ", "_").replace("/", "_")[:80]
@@ -189,6 +192,7 @@ def _build_task_export(task_id: str, state: Any) -> dict | None:
         step_results=result_repo.get_by_task(task_id) if result_repo else [],
         notes=note_repo.get_notes_by_task_with_steps(task_id) if note_repo else [],
         meta_log=meta_repo.get_by_task(task_id) if meta_repo else [],
+        evidence=research_evidence_bundle(state, task_id),
     )
 
 
