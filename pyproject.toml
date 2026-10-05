@@ -51,6 +51,8 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/research/provider_observation.py",
+    "backend/services/research/action_journal.py",
     "backend/storage/research_receipts.py",
     "backend/storage/repositories/research/action_receipt.py",
     "backend/storage/migrations/m052_research_action_receipts.py",

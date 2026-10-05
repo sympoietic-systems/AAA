@@ -355,6 +355,7 @@ research_tasks:
 # ── Somatic Research Orchestrator ────────────────
 # See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.8
 research_orchestrator:
+  action_receipts_enabled: false                   # New tasks only; persisted policy survives restart
   enabled: true                                    # Use orchestrator instead of legacy engine
   max_reflect_rounds: 3                            # Reflection rounds per iteration
   default_top_n: 3                                 # Sources to fetch per search query

@@ -39,7 +39,8 @@ Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-ass
 - Autonomy & vitality metrics ⊥ ungrounded velocity; velocity discounted when teachback ratio $\mathcal{T}_t < 0.20$ or actionability $< 0.20$.
 - Protocol convergence evaluated independently of premise divergence in $DRR$; non-zero premise distance preserves operational closure.
 - Research action ∈ finite registered capability set; deterministic prereqs + resource validation; action receipt survives restart.
-- Research implementation pipeline: scoped slice → relevant tests/checks pass → update affected docs/status → atomic commit before next slice; task stays `~` until all exit gates pass; unrelated baseline failures reported separately.
+- Research implementation pipeline: finish full `T##` task → relevant tests/checks + all exit gates pass → update affected docs/status → atomic task commit; ⊥ commit/document every small action; task stays `~` until complete; unrelated baseline failures reported separately.
+- Legacy pytest suites sharing `aaa_test.db` run serially; new receipt tests use isolated `tmp_path` databases.
 - Research reflection: 1 framing pass may inspect prompt; consecutive pass ! afferent trace + changed inquiry cut; zero delta → external action or explicit partial.
 - Subresearch policy ∈ `off|propose|bounded_auto`; default `off`; `bounded_auto` gated on calibration + explicit covenant; branch only after afferent contact shows incommensurable retrieval/validation norms.
 - Research branches ≠ latency optimization; shared budget + deadline; user checkpoint or prior bounded covenant; no child/grandchild fanout.
@@ -249,7 +250,7 @@ T58|.|acquire raw research pools; independently label; evaluate held-out arms + 
 T59|.|define geometry coordinate/antagonism contract; audit live evidence before integration|V103,V107
 T60|.|retry timed-out representative skill probes; review before lifecycle changes|V101,V23
 T61|x|remove metric-triggered chat thinking escalation; preserve provider-configured and explicit-call modes|V109
-T62|~|define Research V2 action/evidence/provider receipts; persist versions, dependencies, budgets and status; add restart contract tests|V110,V114,V117,I.internal
+T62|x|define Research V2 action/evidence/provider receipts; persist versions, dependencies, budgets and status; add restart contract tests|V110,V114,V117,I.internal
 T63|.|instrument provider attempts + request correlation; bound retries and end-to-end wait; expose pending/degraded/partial terminal state|V115,V117,V118,I.internal,I.error
 T64|.|build source/version/span evidence substrate + parser quality contract; preserve late evidence, exclusions and claim support|V112,V114,I.internal,I.domain
 T65|.|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
@@ -356,3 +357,6 @@ B82|2026-10-03|bridge faults disguised missing targets; PDF catch hid unexpected
 B83|2026-10-03|provenance serializer imported prompt builder from storage → cognitive import cycle; pure schema moved storage leaf|V22,V106
 B84|2026-10-03|collapse-pressure signal automatically enabled higher reasoning effort and inflated completion budget without evidence of benefit|V109
 B85|2026-10-05|T62 pytest setup denied default Windows temp/cache access; explicit basetemp parent initially absent; global mypy/format found unrelated baseline debt|explicit writable basetemp + parent creation; cacheprovider disabled; focused receipt tests + strict typing; no new runtime invariant
+B86|2026-10-05|overlapping legacy pytest runs shared test DB and cleanup; initial full-run results invalid|serial verification; 73 focused tests pass; fail-fast backend failure reproduced on untouched HEAD
+B87|2026-10-05|offline baseline DB cached connections blocked Windows temporary-directory cleanup|baseline_test.db closes connection scopes; three isolated baseline samples rerun successfully; V18
+B88|2026-10-05|optional journal inference failed strict typing; policy initially persisted only after first action; independent executors could start from stale state|typed optional boundary; initialization checkpoint; atomic ownership checks + restart/race/rollback tests; V30,V110,V116

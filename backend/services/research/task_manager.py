@@ -382,7 +382,7 @@ class ResearchTaskManager:
         """Run one orchestrator step as a background task, handling completion."""
         try:
             if first_step:
-                self.orchestrator.init_task(task_id)
+                await asyncio.to_thread(self.orchestrator.init_task, task_id)
 
             result = await self.orchestrator.execute_step(task_id)
             phase = self.orchestrator.get_task_phase(task_id)

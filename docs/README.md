@@ -38,6 +38,7 @@ Deep-dive specifications for individual subsystems.
 - [CYBERNETIC_METRICS_SYSTEM.md](systems/CYBERNETIC_METRICS_SYSTEM.md) — Proprioceptive sensor suite: mathematical formulations, sliding window dynamics, and homeostatic sensorimotor loops (14 calibrated metrics, ADR-073 to ADR-084, plus ADR-098 Paskian metrics).
 - [AUTONOMOUS_RESEARCH_ARCHITECTURE.md](systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md) — Deep-dive on the autonomous research engine orchestrator (phases, state machine, persistence, manual mode).
 - [RESEARCH_V2_PROPOSAL.md](systems/RESEARCH_V2_PROPOSAL.md) — Proposed evidence contracts, Jev decision routing, parsing strategy, and staged evaluation gates for Research v2.
+- [ADR-105](decisions/ADR-105-research-action-journal.md) — T62 receipt journaling, policy persistence and observation coverage; [Report 033](reports/033-research-receipt-baseline/README.md) records verification and the offline baseline.
 
 ### guides/
 Step-by-step operational guides for setting up, configuring, and extending the system.

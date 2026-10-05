@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 
-from backend.modules.llm_client import generate_unified
+from backend.services.research.provider_observation import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import DigestPayload, StepEnvelope, StepOutput
 from backend.utils.anti_mastery import apply_anti_mastery_filter

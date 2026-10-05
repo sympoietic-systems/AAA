@@ -1,5 +1,7 @@
 """Atomic receipt writes; callers offload synchronous repository operations."""
 
+import json
+
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
 from backend.storage.research_receipts import ActionStatus, ResearchActionReceipt
@@ -10,6 +12,61 @@ class ReceiptConflictError(ValueError):
 
 
 class ResearchActionReceiptRepository(BaseRepository):
+    @with_connection
+    def initialize_task_state(self, task_id: str, state_json: str) -> str:
+        """Freeze policy before the first action; a competing initializer wins once."""
+        with self.atomic():
+            self._conn().execute(
+                "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ? AND (orchestrator_state IS NULL OR orchestrator_state = '')",
+                (state_json, task_id),
+            )
+            row = (
+                self._conn()
+                .execute("SELECT orchestrator_state FROM research_tasks WHERE id = ?", (task_id,))
+                .fetchone()
+            )
+            if row is None:
+                raise ReceiptConflictError("Task disappeared during initialization")
+            return str(row[0])
+
+    @with_connection
+    def checkpoint(self, receipt: ResearchActionReceipt, state_json: str, *, starting: bool = False) -> None:
+        """Commit an action transition and task checkpoint as one short transaction."""
+        with self.atomic():
+            task = (
+                self._conn()
+                .execute("SELECT orchestrator_state FROM research_tasks WHERE id = ?", (receipt.task_id,))
+                .fetchone()
+            )
+            if task is None:
+                raise ReceiptConflictError("Task disappeared during checkpoint")
+            previous = json.loads(task[0]) if task[0] else {}
+            active_id = previous.get("active_action_id")
+            last_id = previous.get("last_action_id")
+            if starting:
+                expected_last = receipt.dependency_ids[-1] if receipt.dependency_ids else None
+                if active_id or last_id != expected_last:
+                    raise ReceiptConflictError("Another executor already advanced this task")
+                pending = ResearchActionReceipt.model_validate(
+                    {
+                        **receipt.model_dump(),
+                        "status": "pending",
+                        "started_at": None,
+                    }
+                )
+                self.create(pending)
+                self.transition(receipt, expected_status="pending")
+            else:
+                if active_id != receipt.action_id and not (active_id is None and last_id == receipt.action_id):
+                    raise ReceiptConflictError("Late action cannot overwrite a newer task checkpoint")
+                self.transition(receipt, expected_status="running")
+            cursor = self._conn().execute(
+                "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ?",
+                (state_json, receipt.task_id),
+            )
+            if cursor.rowcount != 1:
+                raise ReceiptConflictError("Task disappeared during checkpoint")
+
     @with_connection
     def create(self, receipt: ResearchActionReceipt) -> ResearchActionReceipt:
         if receipt.status != "pending" or receipt.observation is not None or receipt.started_at or receipt.completed_at:

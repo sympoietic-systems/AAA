@@ -26,6 +26,7 @@ class ProviderAttemptReceipt(ReceiptModel):
     error_category: str | None = None
     usage: dict[str, int] | None = None
     known_cost_usd: float | None = Field(default=None, ge=0)
+    elapsed_seconds: float | None = Field(default=None, ge=0)
 
 
 class EvidencePacket(ReceiptModel):
@@ -53,6 +54,7 @@ class ActionObservation(ReceiptModel):
     output_refs: tuple[str, ...] = ()
     provider_attempts: tuple[ProviderAttemptReceipt, ...] = ()
     evidence_packets: tuple[EvidencePacket, ...] = ()
+    phase_elapsed_seconds: float | None = Field(default=None, ge=0)
 
 
 class ResearchActionReceipt(ReceiptModel):

@@ -132,12 +132,12 @@ async def execute_step(
             else:
                 await rerun_research_task(manager, task_id)
                 await run_research_sync(manager.task_repo.update, task_id, status="active")
-                manager.orchestrator.init_task(task_id)
+                await run_research_sync(manager.orchestrator.init_task, task_id)
         elif task["status"] == "queued":
             orch_config = state.config.get("research_orchestrator", {})
             if orch_config.get("enabled") and manager.config.get("manual_mode", False):
                 await run_research_sync(manager.task_repo.update, task_id, status="active")
-                manager.orchestrator.init_task(task_id)
+                await run_research_sync(manager.orchestrator.init_task, task_id)
 
     try:
         result = await manager.orchestrator_step(task_id)

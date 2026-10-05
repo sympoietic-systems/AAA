@@ -3,8 +3,8 @@ import logging
 import re
 import uuid
 
-from backend.modules.llm_client import generate_unified
 from backend.modules.sensory.evidence_triage import EvidenceTriage
+from backend.services.research.provider_observation import generate_unified
 from backend.services.research.search_tool import web_search
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import SearchPayload, StepEnvelope, StepOutput

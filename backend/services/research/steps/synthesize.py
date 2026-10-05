@@ -3,7 +3,7 @@ import json
 import logging
 import re
 
-from backend.modules.llm_client import generate_unified
+from backend.services.research.provider_observation import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import StepEnvelope, StepOutput, SynthesizePayload
 from backend.utils.anti_mastery import apply_anti_mastery_filter
@@ -111,7 +111,11 @@ async def run_synthesis(
                 expect_json=True,
                 fallback_value={"answer": fallback},
                 temperature=prompt_data.get("temperature", 0.4),
-                **({"max_tokens": prompt_data["max_tokens"]} if prompt_data.get("max_tokens") else {"max_tokens": 16384}),
+                **(
+                    {"max_tokens": prompt_data["max_tokens"]}
+                    if prompt_data.get("max_tokens")
+                    else {"max_tokens": 16384}
+                ),
                 **extra_kwargs,
             )
             orch._log_llm_response(task_id, "orchestrator_synthesize_response", resp, step_id=step_id or None)

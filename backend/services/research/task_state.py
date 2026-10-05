@@ -174,6 +174,13 @@ class StepOutput(BaseModel):
 
 
 _ORCH_STATE_KEYS = {
+    "action_journal_policy",
+    "active_action_id",
+    "last_action_id",
+    "research_started_at",
+    "first_useful_result_seconds",
+    "result_summary",
+    "_failed_phase",
     "triage_receipts",
     "phase",
     "objective",
@@ -220,6 +227,10 @@ _ORCH_STATE_KEYS = {
     "sub_sequence",
     "last_block",
 }
+
+
+def serialize_research_state(state: dict[str, Any]) -> str:
+    return json.dumps({k: v for k, v in state.items() if k in _ORCH_STATE_KEYS}, default=str, ensure_ascii=False)
 
 
 def make_initial_state(task: dict) -> dict:
@@ -277,6 +288,12 @@ def make_initial_state(task: dict) -> dict:
         "phase_group": extra.get("phase_group", 0),
         "sub_sequence": extra.get("sub_sequence", 0),
         "last_block": extra.get("last_block", ""),
+        "action_journal_policy": extra.get("action_journal_policy")
+        or ({"version": 0, "enabled": False, "coverage": "legacy_unknown"} if orch_state_raw else None),
+        "active_action_id": extra.get("active_action_id"),
+        "last_action_id": extra.get("last_action_id"),
+        "research_started_at": extra.get("research_started_at"),
+        "first_useful_result_seconds": extra.get("first_useful_result_seconds"),
     }
     logger.debug(
         "make_initial_state: step_number=%s, current_depth=%s", state["step_number"], state.get("current_depth")

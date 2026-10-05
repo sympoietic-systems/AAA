@@ -4,10 +4,14 @@ import asyncio
 import contextlib
 import json
 import logging
-from typing import Any
+import time
+from typing import Any, cast
 
+from backend.services.research.action_journal import ResearchActionJournal
+from backend.services.research.provider_observation import observe_provider_calls
 from backend.services.research.steps.base import ResearchStepRegistry
 from backend.services.research.task_state import StepOutput
+from backend.storage.research_receipts import ActionStatus, ResearchActionReceipt
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -38,7 +42,7 @@ class ResearchStepExecutor:
             orchestrator._state_mgr.locks[task_id] = asyncio.Lock()
 
         async with orchestrator._state_mgr.locks[task_id]:
-            s = orchestrator._get_state(task_id)
+            s = await asyncio.to_thread(orchestrator._get_state, task_id)
             phase = s["phase"]
             logger.info(
                 "execute_step: phase=%s, depth=%s, phase_group=%s", phase, s.get("current_depth"), s.get("phase_group")
@@ -120,13 +124,45 @@ class ResearchStepExecutor:
                 "current_depth": s.get("current_depth", 0),
             }
 
+            journal = cast(ResearchActionJournal | None, getattr(orchestrator, "_action_journal", None))
+            receipt: ResearchActionReceipt | None = None
+            journal_enabled = bool((s.get("action_journal_policy") or {}).get("enabled", False))
+            if journal_enabled:
+                if journal is None:
+                    raise RuntimeError("Receipt-enabled task requires a durable action journal")
+                # Validate capability before recording or executing any action.
+                ResearchStepRegistry.get_step(phase)
+                receipt = await asyncio.to_thread(journal.begin, task_id, s, phase, envelope.model_dump(mode="json"))
+                result["action_id"] = receipt.action_id
+            phase_started = time.perf_counter()
+            output_refs: tuple[str, ...] = ()
+            action_status: ActionStatus = "failed"
+            useful = False
+            provider_attempts = []
+
             try:
                 # 2. Retrieve step from ResearchStepRegistry and execute
                 step_processor = ResearchStepRegistry.get_step(phase)
                 logger.info("Executing modular step: %s", phase)
-                output: StepOutput = await step_processor.execute(orchestrator, envelope)
+                with observe_provider_calls(receipt) as provider_attempts:
+                    output: StepOutput = await step_processor.execute(orchestrator, envelope)
+                output_refs = tuple(output.step_ids)
+                action_status = (
+                    "complete"
+                    if output.status == "completed"
+                    else "partial"
+                    if output.status == "partial"
+                    else "failed"
+                )
+                useful = (phase in {"digesting", "document_digestion"} and bool(output.new_findings)) or (
+                    phase == "parsing" and output.signal_flags.get("has_parsed_content", False)
+                )
 
                 # Merge findings
+                if action_status == "complete" and any(
+                    a.truncated or a.outcome in {"failed", "cancelled", "partial"} for a in provider_attempts
+                ):
+                    action_status = "partial"
                 if output.new_findings:
                     s["all_findings"].extend(output.new_findings)
 
@@ -250,7 +286,22 @@ class ResearchStepExecutor:
                         except Exception as ex:
                             logger.warning("Failed to update transition rationale for step %s: %s", sid, ex)
 
+            except asyncio.CancelledError:
+                if receipt is not None:
+                    assert journal is not None
+                    await asyncio.to_thread(
+                        journal.finish,
+                        receipt,
+                        s,
+                        "cancelled",
+                        output_refs,
+                        time.perf_counter() - phase_started,
+                        useful,
+                        tuple(provider_attempts),
+                    )
+                raise
             except Exception as e:
+                action_status = "failed"
                 logger.exception("Step %s failed for task %s", phase, task_id)
 
                 # Mark running steps as failed so they're visible in the UI for rerun
@@ -282,7 +333,20 @@ class ResearchStepExecutor:
             result["accumulated_findings"] = len(s.get("all_findings", []))
 
             # Persist state to DB after every step
-            orchestrator._persist_state(task_id)
+            if receipt is not None:
+                assert journal is not None
+                await asyncio.to_thread(
+                    journal.finish,
+                    receipt,
+                    s,
+                    action_status,
+                    output_refs,
+                    time.perf_counter() - phase_started,
+                    useful,
+                    tuple(provider_attempts),
+                )
+            else:
+                orchestrator._persist_state(task_id)
 
             return result
 

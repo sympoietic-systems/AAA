@@ -15,6 +15,7 @@ import uuid
 from typing import Any, cast
 
 from backend.modules.structural_engine import CompositeStructuralScorer
+from backend.services.research.action_journal import ResearchActionJournal, input_hash
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
 from backend.services.research.sedimentation_queue import SedimentationPacketQueue
@@ -25,7 +26,10 @@ from backend.services.research.task_state import (
     StepEnvelope,
     StepOutput,
     TaskStateManager,
+    serialize_research_state,
 )
+from backend.storage.repositories.research.action_receipt import ResearchActionReceiptRepository
+from backend.storage.repositories.research.research_task import ResearchTaskRepository
 from backend.utils.concurrency import ensure_semaphore
 from backend.utils.research_logger import log_research_meta, now_utc_str
 
@@ -145,6 +149,11 @@ class SomaticResearchOrchestrator:
             llm_provider=getattr(app_state, "structural_provider", None)
         )
         self._sedimentation_sink = SedimentationPacketQueue()
+        self._action_journal = (
+            ResearchActionJournal(ResearchActionReceiptRepository(app_state.research_task_repo._db_path))
+            if isinstance(app_state.research_task_repo, ResearchTaskRepository)
+            else None
+        )
         self._step_executor = ResearchStepExecutor(
             self,
             pipeline_graph=PIPELINE_GRAPH,
@@ -422,6 +431,22 @@ class SomaticResearchOrchestrator:
 
     def init_task(self, task_id: str) -> dict[str, Any]:
         state = self._state_mgr.init_task(task_id)
+        if state.get("action_journal_policy") is None:
+            state["action_journal_policy"] = {
+                "version": 1,
+                "enabled": self.config.get("action_receipts_enabled", False) is True,
+                "coverage": "public_provider_calls_and_phases",
+                "policy_hash": input_hash(self.config),
+                "contract_hash": input_hash({key: state.get(key) for key in ("objective", "max_depth", "budget")}),
+            }
+            if self._action_journal is not None:
+                persisted = self._action_journal.repo.initialize_task_state(task_id, serialize_research_state(state))
+                stored = json.loads(persisted)
+                state["action_journal_policy"] = stored.get("action_journal_policy") or {
+                    "version": 0,
+                    "enabled": False,
+                    "coverage": "legacy_unknown",
+                }
         logger.info(
             "INIT_TASK called: task=%s step_number=%s current_depth=%s phase=%s",
             task_id[:8],
@@ -668,7 +693,7 @@ class SomaticResearchOrchestrator:
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
-        self.init_task(task_id)
+        await asyncio.to_thread(self.init_task, task_id)
         s = self._state_mgr.states[task_id]
 
         logger.info(
