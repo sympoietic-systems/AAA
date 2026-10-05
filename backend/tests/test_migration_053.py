@@ -50,6 +50,13 @@ def test_migration_053_applies_to_existing_production_db():
                 homeostatic_state TEXT
             )
         """)
+        # Insert a historical message and metric row before m053 runs
+        conn.execute("INSERT INTO conversation_log (id, speaker, content, embedding, embedding_model, embedding_dim) VALUES (10, 'human', 'let us design and test the plan', X'00', 'test', 1)")
+        conn.execute("""
+            INSERT INTO conversation_metrics (
+                message_id, s_t, novelty, deficit, boringness, conceptual_velocity
+            ) VALUES (10, 0.4, 0.5, 0.2, 0.38, 0.60)
+        """)
         conn.commit()
 
         # Verify m053 is NOT applied yet
@@ -71,7 +78,14 @@ def test_migration_053_applies_to_existing_production_db():
         assert "collapse_pressure" in cols
         assert "phase_transition_magnitude" in cols
 
-        # 3. Assert insert with new columns works
+        # 3. Assert historical row 10 was automatically backfilled!
+        backfilled_row = conn.execute("SELECT collapse_pressure, actionability, teachback_ratio, cpi FROM conversation_metrics WHERE message_id = 10").fetchone()
+        assert backfilled_row[0] == 0.38  # collapse_pressure backfilled from boringness
+        assert backfilled_row[1] == 0.85  # actionability backfilled from content keywords
+        assert backfilled_row[2] == 0.50  # teachback_ratio default
+        assert backfilled_row[3] is not None and backfilled_row[3] > 0  # cpi computed
+
+        # 4. Assert new insert with new columns works
         conn.execute("INSERT INTO conversation_log (id, speaker, content, embedding, embedding_model, embedding_dim) VALUES (1, 'human', 'hi', X'00', 'test', 1)")
         conn.execute("""
             INSERT INTO conversation_metrics (
@@ -84,7 +98,7 @@ def test_migration_053_applies_to_existing_production_db():
         assert row[2] == 0.70
         assert row[3] == 0.15
 
-        # 4. Assert idempotency
+        # 5. Assert idempotency
         run_all_migrations(conn)
     finally:
         conn.close()
