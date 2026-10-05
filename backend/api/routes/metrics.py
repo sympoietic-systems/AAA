@@ -60,8 +60,11 @@ async def get_metrics(
             divergence_resolution_ratio=latest.divergence_resolution_ratio,
             paskian_health=latest.paskian_health,
             phase_shifts=await asyncio.to_thread(MetricsService.parse_phase_shifts, latest.phase_shifts),
-            collapse_pressure=latest.boringness,
-            phase_transition_magnitude=None,
+            collapse_pressure=latest.collapse_pressure if latest.collapse_pressure is not None else latest.boringness,
+            phase_transition_magnitude=latest.phase_transition_magnitude,
+            cpi=latest.cpi,
+            teachback_ratio=latest.teachback_ratio,
+            actionability=latest.actionability,
         )
         temp_rec = None
         pres_rec = None
@@ -174,7 +177,11 @@ async def get_metrics(
                 conceptual_velocity=r.conceptual_velocity,
                 divergence_resolution_ratio=r.divergence_resolution_ratio,
                 paskian_health=r.paskian_health,
-                collapse_pressure=r.boringness,
+                collapse_pressure=r.collapse_pressure if r.collapse_pressure is not None else r.boringness,
+                phase_transition_magnitude=r.phase_transition_magnitude,
+                cpi=r.cpi,
+                teachback_ratio=r.teachback_ratio,
+                actionability=r.actionability,
             )
         )
 

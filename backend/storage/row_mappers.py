@@ -87,29 +87,37 @@ def _row_to_conversation(row: sqlite3.Row) -> Conversation:
 
 
 def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
+    keys = row.keys()
     return MetricsRecord(
         message_id=row["message_id"],
         s_t=row["s_t"],
-        rolling_entropy=row["rolling_entropy"] if "rolling_entropy" in row.keys() else None,
-        novelty=row["novelty"] if "novelty" in row.keys() else 0.0,
-        coupling=row["coupling"] if "coupling" in row.keys() else None,
-        agent_divergence=row["agent_divergence"] if "agent_divergence" in row.keys() else None,
-        deficit=row["deficit"] if "deficit" in row.keys() else 0.0,
-        reverse_perturbation=row["reverse_perturbation"] if "reverse_perturbation" in row.keys() else None,
-        surprise_index=row["surprise_index"] if "surprise_index" in row.keys() else None,
-        mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in row.keys() else None,
-        vitality=row["vitality"] if "vitality" in row.keys() else None,
-        phase_shifts=row["phase_shifts"] if "phase_shifts" in row.keys() else None,
-        boringness=row["boringness"] if "boringness" in row.keys() else None,
-        conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in row.keys() else None,
+        rolling_entropy=row["rolling_entropy"] if "rolling_entropy" in keys else None,
+        novelty=row["novelty"] if "novelty" in keys else 0.0,
+        coupling=row["coupling"] if "coupling" in keys else None,
+        agent_divergence=row["agent_divergence"] if "agent_divergence" in keys else None,
+        deficit=row["deficit"] if "deficit" in keys else 0.0,
+        reverse_perturbation=row["reverse_perturbation"] if "reverse_perturbation" in keys else None,
+        surprise_index=row["surprise_index"] if "surprise_index" in keys else None,
+        mutual_perturbation=row["mutual_perturbation"] if "mutual_perturbation" in keys else None,
+        vitality=row["vitality"] if "vitality" in keys else None,
+        phase_shifts=row["phase_shifts"] if "phase_shifts" in keys else None,
+        boringness=row["boringness"] if "boringness" in keys else None,
+        conceptual_velocity=row["conceptual_velocity"] if "conceptual_velocity" in keys else None,
         divergence_resolution_ratio=row["divergence_resolution_ratio"]
-        if "divergence_resolution_ratio" in row.keys()
+        if "divergence_resolution_ratio" in keys
         else None,
-        paskian_health=row["paskian_health"] if "paskian_health" in row.keys() else None,
-        temperature_rec=row["temperature_rec"] if "temperature_rec" in row.keys() else None,
-        presence_penalty_rec=row["presence_penalty_rec"] if "presence_penalty_rec" in row.keys() else None,
-        frequency_penalty_rec=row["frequency_penalty_rec"] if "frequency_penalty_rec" in row.keys() else None,
-        homeostatic_state=row["homeostatic_state"] if "homeostatic_state" in row.keys() else None,
+        paskian_health=row["paskian_health"] if "paskian_health" in keys else None,
+        temperature_rec=row["temperature_rec"] if "temperature_rec" in keys else None,
+        presence_penalty_rec=row["presence_penalty_rec"] if "presence_penalty_rec" in keys else None,
+        frequency_penalty_rec=row["frequency_penalty_rec"] if "frequency_penalty_rec" in keys else None,
+        homeostatic_state=row["homeostatic_state"] if "homeostatic_state" in keys else None,
+        cpi=row["cpi"] if "cpi" in keys else None,
+        teachback_ratio=row["teachback_ratio"] if "teachback_ratio" in keys else None,
+        actionability=row["actionability"] if "actionability" in keys else None,
+        collapse_pressure=row["collapse_pressure"] if "collapse_pressure" in keys else None,
+        phase_transition_magnitude=row["phase_transition_magnitude"]
+        if "phase_transition_magnitude" in keys
+        else None,
     )
 
 

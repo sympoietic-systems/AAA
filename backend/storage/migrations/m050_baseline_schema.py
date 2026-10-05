@@ -222,7 +222,12 @@ CREATE TABLE conversation_metrics (
             temperature_rec   REAL,
             presence_penalty_rec REAL,
             frequency_penalty_rec REAL,
-            homeostatic_state TEXT
+            homeostatic_state TEXT,
+            cpi               REAL,
+            teachback_ratio   REAL,
+            actionability     REAL,
+            collapse_pressure REAL,
+            phase_transition_magnitude REAL
         );
 
 CREATE TABLE conversation_tags (

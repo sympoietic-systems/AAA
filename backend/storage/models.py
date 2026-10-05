@@ -104,6 +104,11 @@ class MetricsRecord:
     presence_penalty_rec: float | None
     frequency_penalty_rec: float | None
     homeostatic_state: str | None
+    cpi: float | None = None
+    teachback_ratio: float | None = None
+    actionability: float | None = None
+    collapse_pressure: float | None = None
+    phase_transition_magnitude: float | None = None
 
 
 @dataclass
