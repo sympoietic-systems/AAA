@@ -25,9 +25,7 @@ function flushPromises() {
 }
 
 beforeEach(() => {
-  metricsState.data = null
-  metricsState.loading = false
-  metricsState.error = null
+  delete metricsState['conv-1']
   daemonState.data = null
   daemonState.loading = false
   daemonState.error = null
@@ -40,14 +38,12 @@ afterEach(async () => {
 
 describe('telemetryStore', () => {
   it('exports initial state', () => {
-    expect(metricsState.data).toBeNull()
-    expect(metricsState.loading).toBe(false)
-    expect(metricsState.error).toBeNull()
+    expect(metricsState['conv-1']).toBeUndefined()
   })
 
   it('subscribe returns an unsubscribe function', async () => {
     const listener = vi.fn()
-    const unsub = subscribeMetrics(listener)
+    const unsub = subscribeMetrics('conv-1', listener)
     expect(typeof unsub).toBe('function')
     unsub()
     await flushPromises()
@@ -55,8 +51,8 @@ describe('telemetryStore', () => {
 
   it('starts polling and sets loading true on subscribe', async () => {
     const listener = vi.fn()
-    const unsub = subscribeMetrics(listener)
-    expect(metricsState.loading).toBe(true)
+    const unsub = subscribeMetrics('conv-1', listener)
+    expect(metricsState['conv-1']?.loading).toBe(true)
     await flushPromises()
     unsub()
   })
@@ -71,7 +67,7 @@ describe('telemetryStore', () => {
   })
 
   it('refreshMetricsForce triggers a fetch', async () => {
-    await refreshMetricsForce()
-    expect(metricsState.loading).toBe(false)
+    await refreshMetricsForce('conv-1')
+    expect(metricsState['conv-1']?.loading).toBe(false)
   })
 })

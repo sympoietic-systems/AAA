@@ -158,7 +158,7 @@ export const SidePanel = memo(function SidePanel({
               <SectionHeader label="Vitality" open={sections.health} onToggle={() => toggleSection("health")} />
               {sections.health && (
                 <div className="pl-3">
-                  <VitalitySection enabled={panelOpen && sections.health} messageCount={messageCount} />
+                  <VitalitySection conversationId={conversationId} enabled={panelOpen && sections.health} messageCount={messageCount} />
                 </div>
               )}
             </div>
@@ -167,7 +167,7 @@ export const SidePanel = memo(function SidePanel({
               <SectionHeader label="Diffraction" open={sections.diffractive} onToggle={() => toggleSection("diffractive")} />
               {sections.diffractive && (
                 <div className="pl-3">
-                  <DiffractionSection enabled={panelOpen && sections.diffractive} messageCount={messageCount} />
+                  <DiffractionSection conversationId={conversationId} enabled={panelOpen && sections.diffractive} messageCount={messageCount} />
                 </div>
               )}
             </div>

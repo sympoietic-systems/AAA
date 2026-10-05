@@ -71,19 +71,39 @@ class MetricsRepository(BaseRepository):
         return _row_to_metrics(row)
 
     @with_connection
-    def get_recent(self, limit: int = 50) -> list[MetricsRecord]:
+    def get_recent(self, limit: int = 50, conversation_id: str | None = None) -> list[MetricsRecord]:
         conn = self._conn()
-        rows = conn.execute(
-            "SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+        if conversation_id:
+            rows = conn.execute(
+                """SELECT cm.* FROM conversation_metrics cm
+                   JOIN conversation_log cl ON cm.message_id = cl.id
+                   WHERE cl.conversation_id = ?
+                   ORDER BY cm.message_id DESC LIMIT ?""",
+                (conversation_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
         return [_row_to_metrics(r) for r in reversed(rows)]
 
     @with_connection
-    def get_aggregates(self, limit: int = 20) -> dict:
+    def get_aggregates(self, limit: int = 20, conversation_id: str | None = None) -> dict:
         conn = self._conn()
+        if conversation_id:
+            inner_query = """SELECT cm.* FROM conversation_metrics cm
+                             JOIN conversation_log cl ON cm.message_id = cl.id
+                             WHERE cl.conversation_id = ?
+                             ORDER BY cm.message_id DESC LIMIT ?"""
+            params: tuple = (conversation_id, limit)
+        else:
+            inner_query = """SELECT * FROM conversation_metrics
+                             ORDER BY message_id DESC LIMIT ?"""
+            params = (limit,)
+
         row = conn.execute(
-            """SELECT
+            f"""SELECT
                  AVG(s_t) as avg_s_t,
                  AVG(novelty) as avg_novelty,
                  AVG(rolling_entropy) as avg_entropy,
@@ -100,10 +120,9 @@ class MetricsRepository(BaseRepository):
                  AVG(paskian_health) as avg_pask_health,
                  COUNT(*) as count
                FROM (
-                 SELECT * FROM conversation_metrics
-                 ORDER BY message_id DESC LIMIT ?
+                 {inner_query}
                )""",
-            (limit,),
+            params,
         ).fetchone()
         if row is None or row["count"] == 0:
             return {"count": 0}
@@ -126,14 +145,34 @@ class MetricsRepository(BaseRepository):
         }
 
     @with_connection
-    def get_latest(self, require_complete: bool = False) -> MetricsRecord | None:
+    def get_latest(
+        self, require_complete: bool = False, conversation_id: str | None = None
+    ) -> MetricsRecord | None:
         conn = self._conn()
-        if require_complete:
-            row = conn.execute(
-                "SELECT * FROM conversation_metrics WHERE boringness IS NOT NULL ORDER BY message_id DESC LIMIT 1"
-            ).fetchone()
+        if conversation_id:
+            if require_complete:
+                row = conn.execute(
+                    """SELECT cm.* FROM conversation_metrics cm
+                       JOIN conversation_log cl ON cm.message_id = cl.id
+                       WHERE cl.conversation_id = ? AND cm.boringness IS NOT NULL
+                       ORDER BY cm.message_id DESC LIMIT 1""",
+                    (conversation_id,),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    """SELECT cm.* FROM conversation_metrics cm
+                       JOIN conversation_log cl ON cm.message_id = cl.id
+                       WHERE cl.conversation_id = ?
+                       ORDER BY cm.message_id DESC LIMIT 1""",
+                    (conversation_id,),
+                ).fetchone()
         else:
-            row = conn.execute("SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT 1").fetchone()
+            if require_complete:
+                row = conn.execute(
+                    "SELECT * FROM conversation_metrics WHERE boringness IS NOT NULL ORDER BY message_id DESC LIMIT 1"
+                ).fetchone()
+            else:
+                row = conn.execute("SELECT * FROM conversation_metrics ORDER BY message_id DESC LIMIT 1").fetchone()
         if row is None:
             return None
         return _row_to_metrics(row)

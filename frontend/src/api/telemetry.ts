@@ -6,8 +6,12 @@ export { type MetricsResponse, type HomeostaticRecommendations, type MetricsInfo
 export { type DaemonStatusResponse, type SchedulerStatusResponse, type DreamEntry, type DreamHistoryResponse }
 export { type AgentInfo, type ConversationTokenInfo, type TokenResponse }
 
-export async function getMetrics(window = 20): Promise<MetricsResponse> {
-  const res = await apiFetch(`${BASE}/metrics?window=${window}`)
+export async function getMetrics(window = 20, conversationId?: string, limit = 30): Promise<MetricsResponse> {
+  const params = new URLSearchParams({ window: String(window), limit: String(limit) })
+  if (conversationId) {
+    params.set("conversation_id", conversationId)
+  }
+  const res = await apiFetch(`${BASE}/metrics?${params.toString()}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

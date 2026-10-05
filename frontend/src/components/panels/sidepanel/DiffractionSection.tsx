@@ -3,6 +3,7 @@ import { useTelemetryMetrics } from "../../../hooks/useTelemetry"
 import type { DiffractiveInfo } from "../../../api/client"
 
 interface DiffractionSectionProps {
+  conversationId?: string | null
   enabled?: boolean
   messageCount?: number
 }
@@ -26,8 +27,8 @@ const DiffractiveTooltip = memo(function DiffractiveTooltip({ title, value, desc
   )
 })
 
-function DiffractionSectionComponent({ enabled = false }: DiffractionSectionProps) {
-  const { metrics, metricsLoading: loading, metricsError: error } = useTelemetryMetrics(enabled)
+function DiffractionSectionComponent({ conversationId, enabled = false }: DiffractionSectionProps) {
+  const { metrics, metricsLoading: loading, metricsError: error } = useTelemetryMetrics(conversationId, enabled)
 
   if (error && !metrics) {
     return (

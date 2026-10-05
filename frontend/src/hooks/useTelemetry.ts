@@ -34,18 +34,32 @@ const EMPTY_SCHEDULER: TelemetryStateSlice<SchedulerStatusResponse> = { data: nu
 const NOOP_SUBSCRIBE = () => () => {}
 
 // 1. Metrics Hook
-export function useTelemetryMetrics(enabled: boolean) {
+export function useTelemetryMetrics(conversationId?: string | null, enabled: boolean = true) {
+  const activeId = conversationId || "global"
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!enabled) return NOOP_SUBSCRIBE()
+      return subscribeMetrics(activeId, onStoreChange)
+    },
+    [enabled, activeId]
+  )
+
   const state = useSyncExternalStore(
-    enabled ? subscribeMetrics : NOOP_SUBSCRIBE,
-    () => metricsState
+    subscribe,
+    () => metricsState[activeId] || EMPTY_METRICS
   )
   const effectiveState = enabled ? state : EMPTY_METRICS
+
+  const refresh = useCallback(() => {
+    return refreshMetricsForce(activeId)
+  }, [activeId])
 
   return {
     metrics: effectiveState.data,
     metricsLoading: effectiveState.loading,
     metricsError: effectiveState.error,
-    refreshMetrics: refreshMetricsForce
+    refreshMetrics: refresh
   }
 }
 

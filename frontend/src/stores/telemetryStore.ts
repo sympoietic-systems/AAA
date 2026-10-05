@@ -211,22 +211,30 @@ function createKeyedPollingChannel<T>(
 }
 
 // --- Metrics ---
-export let metricsState: TelemetryStateSlice<MetricsResponse> = { data: null, loading: false, error: null }
+export const metricsState: Record<string, TelemetryStateSlice<MetricsResponse>> = {}
 
-const metricsChan = createPollingChannel<MetricsResponse>("metrics", getMetrics, 15000)
+const metricsChan = createKeyedPollingChannel<MetricsResponse>(
+  "metrics",
+  (key) => getMetrics(20, key && key !== "global" ? key : undefined, 30),
+  15000,
+)
 
-export function subscribeMetrics(listener: Listener) {
+export function subscribeMetrics(convId: string, listener: Listener) {
+  const key = convId || "global"
   return metricsChan.subscribe(
-    () => metricsState,
-    (v) => { metricsState = v },
+    key,
+    (k) => metricsState[k] || { data: null, loading: false, error: null },
+    (k, v) => { metricsState[k] = v },
     listener,
   )
 }
 
-export function refreshMetricsForce() {
+export function refreshMetricsForce(convId: string) {
+  const key = convId || "global"
   return metricsChan.refresh(
-    () => metricsState,
-    (v) => { metricsState = v },
+    key,
+    (k) => metricsState[k] || { data: null, loading: false, error: null },
+    (k, v) => { metricsState[k] = v },
   )
 }
 

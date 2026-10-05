@@ -15,18 +15,28 @@ router = APIRouter()
 
 
 @router.get("/metrics", response_model=MetricsResponse)
-async def get_metrics(request: Request, window: int = 20):
+async def get_metrics(
+    request: Request,
+    window: int = 20,
+    limit: int = 30,
+    conversation_id: str | None = None,
+):
     state = request.app.state
     metrics_repo = getattr(state, "metrics_repo", None)
     if not metrics_repo:
         return MetricsResponse(window_size=0, aggregates={"count": 0})
 
+    fetch_limit = max(1, min(limit, 100))
+    conv_id = conversation_id if conversation_id and conversation_id.strip() else None
+
     def _fetch():
-        aggs = metrics_repo.get_aggregates(limit=max(1, min(window, 100)))
+        aggs = metrics_repo.get_aggregates(limit=max(1, min(window, 100)), conversation_id=conv_id)
         # Prefer the most recent complete metric record (with boringness/vitality calculated)
-        lat = metrics_repo.get_latest(require_complete=True) or metrics_repo.get_latest(require_complete=False)
-        # Fetch the last 10 rounds for time-series sparkline/progression visualization
-        recents = metrics_repo.get_recent(limit=10)
+        lat = metrics_repo.get_latest(require_complete=True, conversation_id=conv_id) or metrics_repo.get_latest(
+            require_complete=False, conversation_id=conv_id
+        )
+        # Fetch recent rounds for time-series sparkline/progression visualization
+        recents = metrics_repo.get_recent(limit=fetch_limit, conversation_id=conv_id)
         return aggs, lat, recents
 
     aggregates, latest, recent_records = await asyncio.to_thread(_fetch)
