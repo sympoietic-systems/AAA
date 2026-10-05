@@ -28,6 +28,11 @@ class MetricsRepository(BaseRepository):
         presence_penalty_rec: float | None = None,
         frequency_penalty_rec: float | None = None,
         homeostatic_state: str | None = None,
+        cpi: float | None = None,
+        teachback_ratio: float | None = None,
+        actionability: float | None = None,
+        collapse_pressure: float | None = None,
+        phase_transition_magnitude: float | None = None,
     ) -> MetricsRecord:
         conn = self._conn()
         conn.execute(
@@ -38,8 +43,9 @@ class MetricsRepository(BaseRepository):
                 boringness, conceptual_velocity, divergence_resolution_ratio,
                 paskian_health,
                 temperature_rec, presence_penalty_rec, frequency_penalty_rec,
-                homeostatic_state)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                homeostatic_state,
+                cpi, teachback_ratio, actionability, collapse_pressure, phase_transition_magnitude)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 message_id,
                 s_t,
@@ -61,6 +67,11 @@ class MetricsRepository(BaseRepository):
                 presence_penalty_rec,
                 frequency_penalty_rec,
                 homeostatic_state,
+                cpi,
+                teachback_ratio,
+                actionability,
+                collapse_pressure,
+                phase_transition_magnitude,
             ),
         )
         conn.commit()
@@ -118,6 +129,10 @@ class MetricsRepository(BaseRepository):
                  AVG(conceptual_velocity) as avg_velocity,
                  AVG(divergence_resolution_ratio) as avg_drr,
                  AVG(paskian_health) as avg_pask_health,
+                 AVG(cpi) as avg_cpi,
+                 AVG(teachback_ratio) as avg_teachback_ratio,
+                 AVG(actionability) as avg_actionability,
+                 AVG(collapse_pressure) as avg_collapse_pressure,
                  COUNT(*) as count
                FROM (
                  {inner_query}
@@ -142,6 +157,10 @@ class MetricsRepository(BaseRepository):
             "avg_conceptual_velocity": round(row["avg_velocity"], 4) if row["avg_velocity"] is not None else None,
             "avg_drr": round(row["avg_drr"], 4) if row["avg_drr"] is not None else None,
             "avg_paskian_health": round(row["avg_pask_health"], 4) if row["avg_pask_health"] is not None else None,
+            "avg_cpi": round(row["avg_cpi"], 4) if row["avg_cpi"] is not None else None,
+            "avg_teachback_ratio": round(row["avg_teachback_ratio"], 4) if row["avg_teachback_ratio"] is not None else None,
+            "avg_actionability": round(row["avg_actionability"], 4) if row["avg_actionability"] is not None else None,
+            "avg_collapse_pressure": round(row["avg_collapse_pressure"], 4) if row["avg_collapse_pressure"] is not None else None,
         }
 
     @with_connection

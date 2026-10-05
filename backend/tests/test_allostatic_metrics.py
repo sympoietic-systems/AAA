@@ -235,9 +235,77 @@ def test_deficit_vitality_spectral_entropy_calibration():
         reverse_perturbation=0.5,
         surprise=0.5,
     )
+    assert v_high is not None and v_mid is not None
     assert v_high > v_mid, f"Expected v_high ({v_high}) > v_mid ({v_mid}) without / 0.25 saturation"
+
+
+def test_cpi_teachback_actionability_persistence():
+    db_path = str(get_db_path("data/aaa_metrics_persist_test.db"))
+    conn = init_db(db_path)
+
+    # Clear test DB
+    conn.execute("DELETE FROM conversation_metrics")
+    conn.execute("DELETE FROM conversation_log")
+    conn.commit()
+
+    repo = MessageRepository(db_path)
+    metrics_repo = MetricsRepository(db_path)
+
+    emb_bytes = np.zeros(384, dtype="float32").tobytes()
+    msg = repo.insert("human", "test message", emb_bytes, "test", 384, conversation_id="conv_persist")
+
+    rec = metrics_repo.insert(
+        message_id=msg.id,
+        s_t=0.35,
+        novelty=0.45,
+        deficit=0.20,
+        rolling_entropy=0.60,
+        coupling=0.75,
+        agent_divergence=0.50,
+        reverse_perturbation=0.40,
+        surprise_index=0.30,
+        mutual_perturbation=0.42,
+        vitality=0.80,
+        boringness=0.15,
+        conceptual_velocity=0.55,
+        divergence_resolution_ratio=0.70,
+        paskian_health=0.85,
+        cpi=0.482,
+        teachback_ratio=0.650,
+        actionability=0.720,
+        collapse_pressure=0.150,
+        phase_transition_magnitude=0.120,
+    )
+
+    assert rec.cpi == 0.482
+    assert rec.teachback_ratio == 0.650
+    assert rec.actionability == 0.720
+    assert rec.collapse_pressure == 0.150
+    assert rec.phase_transition_magnitude == 0.120
+
+    # Test retrieval from repo
+    recent = metrics_repo.get_recent(1, conversation_id="conv_persist")
+    assert len(recent) == 1
+    assert recent[0].cpi == 0.482
+    assert recent[0].teachback_ratio == 0.650
+    assert recent[0].actionability == 0.720
+
+    # Test aggregates
+    aggs = metrics_repo.get_aggregates(10, conversation_id="conv_persist")
+    assert aggs["avg_cpi"] == 0.482
+    assert aggs["avg_teachback_ratio"] == 0.65
+    assert aggs["avg_actionability"] == 0.72
+
+    conn.close()
+    for p in [db_path, db_path + "-wal", db_path + "-shm"]:
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except PermissionError:
+            pass
 
 
 if __name__ == "__main__":
     asyncio.run(test_allostatic_metrics())
     test_deficit_vitality_spectral_entropy_calibration()
+    test_cpi_teachback_actionability_persistence()

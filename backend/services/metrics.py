@@ -32,6 +32,9 @@ class MetricsService:
         phase_shifts = metrics.get("phase_shifts")
         phase_shifts_json = json.dumps(phase_shifts) if phase_shifts else None
 
+        cpi_val = metrics.get("cpi") if metrics.get("cpi") is not None else metrics.get("conversational_progress_index")
+        cp_val = metrics.get("collapse_pressure") if metrics.get("collapse_pressure") is not None else metrics.get("boringness")
+
         metrics_repo.insert(
             message_id=message_id,
             s_t=float(s_t),
@@ -65,6 +68,13 @@ class MetricsService:
             presence_penalty_rec=float(pres_rec) if pres_rec is not None else None,
             frequency_penalty_rec=float(freq_rec) if freq_rec is not None else None,
             homeostatic_state=homeo_state,
+            cpi=float(cpi_val) if cpi_val is not None else None,
+            teachback_ratio=float(metrics["teachback_ratio"]) if metrics.get("teachback_ratio") is not None else None,
+            actionability=float(metrics["actionability"]) if metrics.get("actionability") is not None else None,
+            collapse_pressure=float(cp_val) if cp_val is not None else None,
+            phase_transition_magnitude=float(metrics["phase_transition_magnitude"])
+            if metrics.get("phase_transition_magnitude") is not None
+            else None,
         )
 
     @staticmethod
