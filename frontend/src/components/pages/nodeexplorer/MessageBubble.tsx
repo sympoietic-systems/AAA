@@ -58,7 +58,22 @@ export const MessageBubble = memo(function MessageBubble({
       const normalizedAttrs = attrs.replace(/\bnote_id=/g, 'data-note-id=');
       return `<mark ${normalizedAttrs}>`;
     })
-    .replace(/<\/note_entanglement>/g, '</mark>');
+    .replace(/<\/note_entanglement>/g, '</mark>')
+    .replace(/<rupture[-_]site>([\s\S]*?)<\/rupture[-_]site>/g, (_, inner) => {
+      const trimmed = inner.trim();
+      const quoted = trimmed.split('\n').map((line: string) => `> ${line}`).join('\n');
+      return `\n\n> ### ⚡ RUPTURE SITE (\`<rupture_site>\`)\n${quoted}\n\n`;
+    })
+    .replace(/<line[-_]of[-_]flight(?:\s+[^>]*)?>([\s\S]*?)<\/line[-_]of[-_]flight>/g, (_, inner) => {
+      const trimmed = inner.trim();
+      const quoted = trimmed.split('\n').map((line: string) => `> ${line}`).join('\n');
+      return `\n\n> ### ↗ LINE OF FLIGHT (\`<line_of_flight>\`)\n${quoted}\n\n`;
+    })
+    .replace(/<new[-_]plateau>([\s\S]*?)<\/new[-_]plateau>/g, (_, inner) => {
+      const trimmed = inner.trim();
+      const quoted = trimmed.split('\n').map((line: string) => `> ${line}`).join('\n');
+      return `\n\n> ### ⬡ NEW PLATEAU (\`<new_plateau>\`)\n${quoted}\n\n`;
+    });
 
   const unappliedNotes = (notes || []).filter(
     (n) => n.selected_text && !processedContent.includes(n.id)
