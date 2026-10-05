@@ -137,6 +137,7 @@ What becomes easier/harder?
 | [101](ADR-101-activation-provenance.md) | Assembly-Owned Activation Provenance | accepted for implementation | 2026-10-03 |
 | [102](ADR-102-belief-context-and-calibration.md) | Explicit Belief Context and Independent Calibration | accepted for implementation | 2026-10-03 |
 | [103](ADR-103-disable-metric-triggered-thinking-escalation.md) | Disable Metric-Triggered Thinking Escalation | accepted | 2026-10-03 |
+| [104](ADR-104-epistemic-phase-transition-triad-protocol.md) | Epistemic Phase Transition Triad Protocol and Inscriptional Rendering | accepted | 2026-10-05 |
 
 
 

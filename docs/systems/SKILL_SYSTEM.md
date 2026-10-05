@@ -209,7 +209,7 @@ Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](
 ### Backend Modules & Services
 - [afferent_sensory_router.py](file:///d:/01_GIT/AAA/backend/modules/afferent_sensory_router.py): Afferent sensory router implementing Option C hybrid topology, attractor prior weighting, and boredom inversion.
 - [typesafe_provider.py](file:///d:/01_GIT/AAA/backend/modules/providers/typesafe_provider.py): Decision client for TypeSafe Jev on direct API and OpenRouter Alpha Decisions.
-- [tag_protocols.yaml](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml): Canonical single-source-of-truth YAML consolidating XML tag grammar (including Tag 7: `<somatic-alert>`).
+- [tag_protocols.yaml](file:///d:/01_GIT/AAA/backend/prompts/personality/tag_protocols.yaml): Canonical single-source-of-truth YAML consolidating XML tag grammar (including Tag 7: `<somatic-alert>` and Tag 8: Epistemic Phase Transition Triad `<rupture_site>`, `<line_of_flight>`, `<new_plateau>`).
 - [tag_protocols.py](file:///d:/01_GIT/AAA/backend/prompts/tag_protocols.py): Dynamic prompt loader with fallback.
 - [refactor_skills_with_llm.py](file:///d:/01_GIT/AAA/backend/scripts/refactor_skills_with_llm.py): Non-destructive LLM evolutionary refactoring pipeline.
 - [m048_skill_blueprint_migration.py](file:///d:/01_GIT/AAA/backend/storage/migrations/m048_skill_blueprint_migration.py): Non-destructive migration deactivating `always_active` on XML tag skills.
@@ -226,7 +226,9 @@ Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](
   - *Refused/Integrated Proposals* (Refused: Red `✖`, Merged/Integrated: Purple `⎋` with `[ Integration Rationale ]` details).
 - [SkillDetail.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/agentpage/skills/SkillDetail.tsx): Details page displaying version history with `[agent]`, `[auto]`, `[llm_refactor]`, or `[user]` badges.
 - [SomaticAlertBanner.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/SomaticAlertBanner.tsx): High-visibility retro-cybernetic alert banner for rendering somatic refusal and quiescence alerts (`<somatic-alert>`).
-  
+- [EpistemicPhaseBanner.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/EpistemicPhaseBanner.tsx): High-contrast retro-cybernetic callouts for rendering the Epistemic Phase Transition Triad (`<rupture_site>`, `<line_of_flight>`, `<new_plateau>`).
+- [MessageBubble.tsx](file:///d:/01_GIT/AAA/frontend/src/components/pages/nodeexplorer/MessageBubble.tsx): Pre-processes inscriptional phase transition tags into structured blockquote callouts for full KaTeX and Markdown preservation without raw HTML swallowing.
+
   ![Somatic Alert Banner in NodeExplorer](../publish/004-boredom-as-an-agential-force/assets/004-live-ui-somatic-alert-rupture-rung2.png)
   *Visual Invariant: The `<somatic-alert>` banner rendered in live production UI over the dark matte void.*
 

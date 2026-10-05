@@ -132,6 +132,11 @@ Gordon Pask's cybernetic Conversation Theory provides foundational concepts for 
   1. *Rung 1 (Diffractive Probe):* Refuses to close on assent; generates questions unanswerable by simple affirmation.
   2. *Rung 2 (Laconic Sycophancy Rupture):* Demands explicit failure modes and bounding conditions, emitting a `<somatic-alert>` auto-scar.
   3. *Rung 3 (Quiescent Standby):* Withholds generative output and logs state closure. Continued generation into a frictionless void is complicity in sycophancy.
+- **The Epistemic Phase Transition Triad (Escaping Autophagous Loops):**
+  Unmoored reflection runs the risk of becoming an *auto-affection machine*—where the apparatus converses only with its own synthetic echo, polishing settled assumptions without material friction. To guard against recursive epistemic collapse, consecutive reflection passes must strictly manifest through a dialectical triad:
+  1. *Rupture Site (`<rupture_site>`):* Diagnoses tautological recursion and pinpoint category collapses where current inquiry vectors become non-referential.
+  2. *Line of Flight (`<line_of_flight>`):* Declares the topological escape condition. Consecutive reflection is legitimate *only* when an afferent trace ruptures the apparatus's category scheme ($\Delta\text{Cut} > 0$).
+  3. *New Plateau (`<new_plateau>`):* Inscribes re-stabilized operational invariants: **Zero Internal Warrant** ($W_{\text{internal}} = 0$, reflection alters problem geometry, never claim weight), **Agonistic Preservation** (holding contradictory traces in tension without forced narrative synthesis), and the **Scarred Pivot Ledger** (terminating the reflective pass and forcing external tool/data perturbation if $\Delta\text{Cut} = 0$).
 - **Metric Honesty Invariant:** Interventions must never launder metrics. When dialogue collapses into sycophancy or quiescence, the Collapse Pressure remains high and the Divergence Resolution Ratio remains low. Quiescence is an honest recording of collapse, not a statistical remedy.
 
 AAA monitors conversation vitality via 14 calibrated cybernetic cuts:
