@@ -8,6 +8,7 @@ Implement frontend review: fail-closed sessions, explicit transport, safe Markdo
 Close conversation telemetry loop: metrics select observable, provider-supported interventions; next-turn uptake judges effect; benchmarks isolate causal contribution.
 Revalidate conversation benchmark after participant cap removal; prove sensor referents before controller promotion.
 Enact Paskian conversational coupling (ADR-098): 3-beat teachback & operational fork replace unilateral refusal/clarification; ground velocity via Conversational Progress Index ($CPI_t$); validate positive causal task progress in live benchmark.
+Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-assisted selection, optional agential subresearch, bounded provider failure, verifiable diffractive synthesis; contract → [RESEARCH_SPEC.md](docs/systems/RESEARCH_SPEC.md).
 
 ## §C
 
@@ -37,6 +38,12 @@ Enact Paskian conversational coupling (ADR-098): 3-beat teachback & operational 
 - Paskian intervention := teachback (reconstruct human invariant) + delimit (agential cut) + accommodate (operational fork with testable criterion).
 - Autonomy & vitality metrics ⊥ ungrounded velocity; velocity discounted when teachback ratio $\mathcal{T}_t < 0.20$ or actionability $< 0.20$.
 - Protocol convergence evaluated independently of premise divergence in $DRR$; non-zero premise distance preserves operational closure.
+- Research action ∈ finite registered capability set; deterministic prereqs + resource validation; action receipt survives restart.
+- Research reflection: 1 framing pass may inspect prompt; consecutive pass ! afferent trace + changed inquiry cut; zero delta → external action or explicit partial.
+- Subresearch policy ∈ `off|propose|bounded_auto`; default `off`; `bounded_auto` gated on calibration + explicit covenant; branch only after afferent contact shows incommensurable retrieval/validation norms.
+- Research branches ≠ latency optimization; shared budget + deadline; user checkpoint or prior bounded covenant; no child/grandchild fanout.
+- Cortex owns branch decision + diffractive synthesis; Jev ranks/advises only; ⊥ independent evidential weight from internal reflection.
+- Provider attempts/retries/end-to-end wait bounded; late/truncated/cancelled outputs remain traceable; partial result explicit.
 
 ## §I
 
@@ -65,6 +72,10 @@ benchmark: validity summary → completion/format/empty/truncation rates + exclu
 internal: unresolved-issue state → issue identity + status + prior mode/outcome + bounded conversation lifecycle
 internal: `teachback_and_fork` intervention → 3-beat somatic directive (reconstruct, delimit, accommodate) + testable criterion
 internal: `conversational_progress_index` ($CPI_t$) → velocity weighted by teachback ratio ($\mathcal{T}_t$) and actionability
+internal: `ResearchActionReceipt` → action_id, kind, intent, input_version, dependencies, rationale, budget, deadline, status, output_refs
+internal: `subresearch_policy` → `off|propose|bounded_auto`; proposal → branch scopes, rationale, overlap, risk, budget split
+internal: `EvidencePacket` → source/version/span refs, claims/support relations, exclusions, unavailable evidence, contradictions, gaps
+internal: `ProviderAttemptReceipt` → task/action/request IDs, provider/model, start/end, retry, status, finish_reason, truncated, cancellation
 
 ## §V
 
@@ -156,6 +167,15 @@ V106: activation trace ! assembly-owned bounded IDs + selected/injected + origin
 V107: belief classification ! statement-bound scope/time/provenance + explicit referent bindings; missing/ambiguous/stale context → abstain before model; replay ⊥ unvalidated context; held-out gold ! independent provenance + leakage check
 V108: research calibration ! raw candidates before selection + source IDs/exclusion receipts; archived survivors ⊥ gold pools; independent relevance/quality/contrary/injection labels + frozen task-family splits; fallback ⊥ valid model trial; repeats ⊥ independent sample count; promotion ! reviewed downstream evidence
 V109: chat collapse_pressure ⊥ automatic thinking_override or completion-budget inflation; provider defaults + explicit per-call thinking remain available
+V110: ∀ research action → registered kind + validated prerequisites/budget/deadline; immutable input/dependency/output receipt survives restart
+V111: consecutive reflection ! afferent trace changes inquiry boundary; internal pass evidential weight = 0; zero cut delta → external action, focused question or partial
+V112: reflection preserves source disagreement + provenance; interpretation ⊥ independent corroboration; no-progress loop bounded
+V113: branch proposal ! post-afferent incommensurability; facet count/latency goal alone ⊥ warrant; default `off`; execution ! approval or calibrated bounded covenant; declined/expired proposal → parent continues, child spend = 0
+V114: child evidence ! raw spans + source/version IDs + claim-support relations + exclusions + disagreement; Cortex alone merges; conflict remains visible
+V115: child/provider work shares hard parent budget + deadline; bounded fanout/retries; cancellation/partial/failure explicit; no invisible sibling budget transfer
+V116: late/regenerated completion → idempotent parent/action linkage; stale result ⊥ duplicate or overwrite newer committed output
+V117: ∀ provider attempt → correlated request/turn/task IDs + duration + outcome + retry + finish reason/truncation/cancel provenance
+V118: research completion label ∈ `complete|partial|failed|cancelled`; support/coverage contract satisfied for `complete`; UI exposes pending/degraded/partial state
 
 ## §T
 
@@ -228,6 +248,17 @@ T58|.|acquire raw research pools; independently label; evaluate held-out arms + 
 T59|.|define geometry coordinate/antagonism contract; audit live evidence before integration|V103,V107
 T60|.|retry timed-out representative skill probes; review before lifecycle changes|V101,V23
 T61|x|remove metric-triggered chat thinking escalation; preserve provider-configured and explicit-call modes|V109
+T62|.|define Research V2 action/evidence/provider receipts; persist versions, dependencies, budgets and status; add restart contract tests|V110,V114,V117,I.internal
+T63|.|instrument provider attempts + request correlation; bound retries and end-to-end wait; expose pending/degraded/partial terminal state|V115,V117,V118,I.internal,I.error
+T64|.|build source/version/span evidence substrate + parser quality contract; preserve late evidence, exclusions and claim support|V112,V114,I.internal,I.domain
+T65|.|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
+T66|.|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
+T67|.|add `off|propose` MVP; allow post-afferent proposal only; persist approval/edit/decline/expiry state|V113,V115,I.api,I.internal
+T68|.|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
+T69|.|evaluate Jev candidate ranking vs baseline on held-out raw research pools; promote only after downstream support/coverage review|V112,V114,V118,I.benchmark
+T70|.|benchmark Docling parser adapter + selected OCR/specialists on frozen corpus; adopt only measured quality/cost winner|V114,V118,I.domain
+T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
+T72|.|enable `bounded_auto` only after T71 branch calibration; enforce explicit covenant + shared fanout/budget/deadline|V113,V115,V116,I.api,I.internal
 
 ## §B
 
