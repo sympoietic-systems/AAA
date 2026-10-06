@@ -56,6 +56,167 @@ def install_step(monkeypatch, execute):
 
 
 @pytest.mark.asyncio
+async def test_acquisition_receipts_persist_cache_access_without_new_observation(setup, monkeypatch):
+    import backend.services.research.orchestrator as orchestration
+    from backend.services.research.acquisition import AcquisitionRuntime
+    from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+
+    orch, repo, app = setup
+    monkeypatch.setattr(orchestration, "validate_safe_url", lambda url: url)
+    monkeypatch.setattr(
+        orchestration,
+        "AcquisitionRuntime",
+        lambda policy, **kwargs: AcquisitionRuntime(policy, validator=lambda url: url, **kwargs),
+    )
+    calls = 0
+
+    async def execute(_, envelope):
+        async def load():
+            nonlocal calls
+            calls += 1
+            return "Evidence"
+
+        first = await orch.acquire("task", "https://example.test/source", load)
+        second = await orch.acquire("task", "https://example.test/source", load)
+        assert not first.cache_hit and second.cache_hit and first.observed_at == second.observed_at
+        return StepOutput(payload=PlanPayload())
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    acquisitions = ResearchAcquisitionRepository(repo._db_path).list_action("task", result["action_id"])
+    assert calls == 1 and [item.outcome for item in acquisitions] == ["fetched", "cache_hit"]
+    assert acquisitions[1].origin_acquisition_id == acquisitions[0].acquisition_id
+    saved = orch._action_journal.repo.get("task", result["action_id"])
+    assert saved.observation.acquisition_ids == tuple(item.acquisition_id for item in acquisitions)
+    from backend.storage.research_evidence import EvidenceBundle
+
+    bundle = EvidenceBundle.model_validate(orch._evidence_store.repo.export_bundle("task"))
+    assert bundle.acquisitions == acquisitions
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_failed_acquisition_has_sanitized_durable_observation(setup, monkeypatch):
+    import backend.services.research.orchestrator as orchestration
+    from backend.services.research.acquisition import AcquisitionRuntime
+    from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+
+    orch, repo, _ = setup
+    monkeypatch.setattr(orchestration, "validate_safe_url", lambda url: url)
+    monkeypatch.setattr(
+        orchestration,
+        "AcquisitionRuntime",
+        lambda policy, **kwargs: AcquisitionRuntime(policy, validator=lambda url: url, **kwargs),
+    )
+
+    async def execute(_, envelope):
+        async def fail():
+            raise RuntimeError("private key secret")
+
+        await orch.acquire("task", "https://example.test/source", fail)
+        return StepOutput(payload=PlanPayload())
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    records = ResearchAcquisitionRepository(repo._db_path).list_action("task", result["action_id"])
+    assert records[0].outcome == "failed" and records[0].error_category == "RuntimeError"
+    assert "private key secret" not in records[0].model_dump_json()
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_v119_parallel_cache_access_waits_for_durable_origin(setup, monkeypatch):
+    import backend.services.research.orchestrator as orchestration
+    from backend.services.research.acquisition import AcquisitionRuntime
+    from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+
+    orch, repo, _ = setup
+    monkeypatch.setattr(orchestration, "validate_safe_url", lambda url: url)
+    monkeypatch.setattr(
+        orchestration,
+        "AcquisitionRuntime",
+        lambda policy, **kwargs: AcquisitionRuntime(policy, validator=lambda url: url, **kwargs),
+    )
+    original_finish = ResearchAcquisitionRepository.finish
+
+    def finish(self, receipt):
+        if receipt.outcome == "fetched":
+            import time
+
+            time.sleep(0.03)
+        return original_finish(self, receipt)
+
+    monkeypatch.setattr(ResearchAcquisitionRepository, "finish", finish)
+    calls = 0
+
+    async def execute(_, envelope):
+        async def load():
+            nonlocal calls
+            calls += 1
+            return "Evidence"
+
+        results = await asyncio.gather(*(orch.acquire("task", "https://example.test/source", load) for _ in range(2)))
+        assert {result.cache_hit for result in results} == {False, True}
+        return StepOutput(payload=PlanPayload())
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    assert calls == 1
+    rows = ResearchAcquisitionRepository(repo._db_path).list_action("task", result["action_id"])
+    assert {item.outcome for item in rows} == {"fetched", "cache_hit"}
+    assert all(item.source_id and item.source_version for item in rows)
+    assert orch._action_journal.repo.get("task", result["action_id"]).status == "complete"
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_pending_acquisition_marks_partial_and_closes_on_action_end(setup, monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+    from backend.storage.research_acquisition import AcquisitionReceipt
+
+    orch, repo, _ = setup
+    acquisition_repo = ResearchAcquisitionRepository(repo._db_path)
+    initial = None
+
+    async def execute(_, envelope):
+        nonlocal initial
+        initial = AcquisitionReceipt(
+            acquisition_id="pending-acquisition",
+            task_id="task",
+            action_id=orch._get_state("task")["active_action_id"],
+            canonical_url="https://example.test/source",
+            config_hash="fixture",
+            started_at=datetime.now(UTC),
+        )
+        await asyncio.to_thread(acquisition_repo.reserve, initial)
+        return StepOutput(payload=PlanPayload())
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    action = orch._action_journal.repo.get("task", result["action_id"])
+    assert action.status == "partial"
+    records = acquisition_repo.list_action("task", result["action_id"])
+    assert records[0].outcome == "cancelled" and records[0].error_category == "action_ended"
+    assert action.observation.acquisition_ids == ("pending-acquisition",)
+    now = datetime.now(UTC)
+    with pytest.raises(ReceiptConflictError, match="immutable"):
+        acquisition_repo.finish(
+            initial.model_copy(
+                update=dict(
+                    outcome="fetched",
+                    completed_at=now,
+                    observed_at=now,
+                    valid_until=now + timedelta(seconds=30),
+                    origin_acquisition_id=initial.acquisition_id,
+                )
+            )
+        )
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
 async def test_truncated_synthesis_finishes_partial_and_manager_cannot_complete(setup, monkeypatch):
     from backend.services.research.task_manager import ResearchTaskManager
 

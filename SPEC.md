@@ -179,6 +179,8 @@ V116: late/regenerated completion → idempotent parent/action linkage; stale re
 V117: ∀ provider attempt → correlated request/turn/task IDs + duration + outcome + retry + finish reason/truncation/cancel provenance
 V118: research completion label ∈ `complete|partial|failed|cancelled`; support/coverage contract satisfied for `complete`; UI exposes pending/degraded/partial state
 
+V119: acquisition cache publication ! durable origin receipt; cache access preserves observation/config/source lineage; expired/unsafe/cancelled output ⊥ current acquisition; shared provider/CPU capacity held until actual work exits
+
 ## §T
 
 id|status|task|cites
@@ -253,7 +255,7 @@ T61|x|remove metric-triggered chat thinking escalation; preserve provider-config
 T62|x|define Research V2 action/evidence/provider receipts; persist versions, dependencies, budgets and status; add restart contract tests|V110,V114,V117,I.internal
 T63|x|instrument provider attempts + request correlation; bound retries and end-to-end wait; expose pending/degraded/partial terminal state|V115,V117,V118,I.internal,I.error
 T64|x|build source/version/span evidence substrate + parser quality contract; preserve late evidence, exclusions and claim support|V112,V114,I.internal,I.domain
-T65|.|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
+T65|x|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
 T66|.|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
 T67|.|add `off|propose` MVP; allow post-afferent proposal only; persist approval/edit/decline/expiry state|V113,V115,I.api,I.internal
 T68|.|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
@@ -365,3 +367,7 @@ B90|2026-10-05|standalone provider probe omitted migration switch; test conftest
 B91|2026-10-05|T63 retry hook moved; old mock patched removed asyncio import; fallback test passed unsupported fallback keyword|patch retry_delay behavioral seam; use fallback_value; strict helper typing; V117,V118 tests retained
 B92|2026-10-05|pending-closure fixture omitted immutable policy; new API test omitted pytest import and expected incomplete response shape|preserve checkpoint policy; use configured automatic asyncio mode; assert retried_from; V117,V118; no new invariant
 B93|2026-10-06|T64 fixtures omitted required policy/budget; resolution error expected as null; mixed model typing and Markdown string expansion corrected|contract-shaped fixtures; exact span/restart/export/import/late-decision tests pass; V112,V114; no new runtime invariant
+
+B94|2026-10-06|cache publication raced durable origin; cancellation could release physical CPU capacity; expanded typing command included legacy files outside strict allowlist|durable observe-before-publish + parallel origin test; retained thread capacity test; configured/focused typing reported separately; V119
+
+B95|2026-10-06|Matplotlib SVG emitted trailing spaces; shell continued to commit after diff check failure|normalize SVG whitespace; run gate and commit in checked subprocess sequence; amend own T65 commit; V30

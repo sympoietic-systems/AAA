@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from urllib.parse import urljoin
+from typing import Any
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 
@@ -56,6 +58,10 @@ async def safe_fetch(
     max_redirects: int = DEFAULT_MAX_REDIRECTS,
     transport: httpx.AsyncBaseTransport | None = None,
     validator: Callable[[str], str] = validate_safe_url,
+    client: httpx.AsyncClient | None = None,
+    method: str = "GET",
+    data: Mapping[str, str] | None = None,
+    json: dict[str, Any] | None = None,
 ) -> SafeFetchResponse:
     """GET a public URL with per-hop validation and bounded streaming.
 
@@ -69,25 +75,33 @@ async def safe_fetch(
 
     current_url = url
     request_headers = dict(headers or {})
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(timeout),
-        follow_redirects=False,
-        transport=transport,
-    ) as client:
+    if method not in {"GET", "POST"}:
+        raise ValueError("Safe fetch supports GET and POST only")
+    async with _client_scope(client, transport, timeout) as active_client:
         for hop in range(max_redirects + 1):
             try:
                 safe_url = await asyncio.to_thread(validator, current_url)
             except ValueError as exc:
                 raise UnsafeDestinationError(str(exc)) from exc
 
-            async with client.stream("GET", safe_url, headers=request_headers) as response:
+            async with active_client.stream(
+                method, safe_url, headers=request_headers, data=data, json=json, timeout=timeout, follow_redirects=False
+            ) as response:
                 if response.is_redirect:
+                    if method == "POST":
+                        raise RedirectLimitError("POST redirects are disabled")
                     location = response.headers.get("location")
                     if not location:
                         raise SafeFetchError("Redirect response missing Location header")
                     if hop >= max_redirects:
                         raise RedirectLimitError(f"Redirect limit exceeded ({max_redirects})")
                     current_url = urljoin(safe_url, location)
+                    if urlsplit(current_url).netloc != urlsplit(safe_url).netloc:
+                        request_headers = {
+                            key: value
+                            for key, value in request_headers.items()
+                            if key.lower() not in {"authorization", "cookie", "proxy-authorization"}
+                        }
                     continue
 
                 declared_size = response.headers.get("content-length")
@@ -112,3 +126,18 @@ async def safe_fetch(
                 )
 
     raise RedirectLimitError(f"Redirect limit exceeded ({max_redirects})")
+
+
+@asynccontextmanager
+async def _client_scope(
+    client: httpx.AsyncClient | None, transport: httpx.AsyncBaseTransport | None, timeout: float
+) -> AsyncIterator[httpx.AsyncClient]:
+    if client is not None:
+        if transport is not None:
+            raise ValueError("A supplied client owns its transport")
+        yield client
+    else:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(timeout), follow_redirects=False, transport=transport
+        ) as owned:
+            yield owned

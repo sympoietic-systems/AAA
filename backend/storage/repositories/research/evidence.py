@@ -263,6 +263,7 @@ class ResearchEvidenceRepository(BaseRepository):
     def export_bundle(self, task_id: str) -> dict[str, Any]:
         """Bounded pages; complete immutable records with self-contained locators."""
         queries = {
+            "acquisitions": "SELECT rowid,receipt_json FROM research_acquisitions WHERE task_id=? AND rowid>? ORDER BY rowid LIMIT 50",
             "contracts": "SELECT rowid,contract_json FROM research_contracts WHERE task_id=? AND rowid>? ORDER BY rowid LIMIT 50",
             "sources": "SELECT rowid,artifact_json,representation_text FROM research_source_versions WHERE task_id=? AND rowid>? ORDER BY rowid LIMIT 50",
             "segments": "SELECT rowid,segment_json FROM research_evidence_segments WHERE task_id=? AND rowid>? ORDER BY rowid LIMIT 50",

@@ -37,6 +37,11 @@ class EvidencePacket(ReceiptModel):
     raw_span_locator: str | None = None
     representation: str | None = None
     representation_span_locators: tuple[str, ...] = Field(default=(), max_length=1000)
+    acquisition_id: str | None = None
+    observed_at: AwareDatetime | None = None
+    accessed_at: AwareDatetime | None = None
+    valid_until: AwareDatetime | None = None
+    cache_hit: bool | None = None
     claim_ids: tuple[str, ...] = ()
     covered_rubric_ids: tuple[str, ...] = ()
     supporting_segment_ids: tuple[str, ...] = ()
@@ -58,6 +63,7 @@ class ActionObservation(ReceiptModel):
     output_refs: tuple[str, ...] = ()
     provider_attempts: tuple[ProviderAttemptReceipt, ...] = ()
     evidence_packets: tuple[EvidencePacket, ...] = ()
+    acquisition_ids: tuple[str, ...] = Field(default=(), max_length=256)
     phase_elapsed_seconds: float | None = Field(default=None, ge=0)
 
 

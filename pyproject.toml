@@ -51,6 +51,11 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/research/acquisition.py",
+    "backend/storage/research_acquisition.py",
+    "backend/storage/repositories/research/acquisition.py",
+    "backend/storage/migrations/m056_research_acquisition.py",
+    "backend/modules/retrieval/safe_http.py",
     "backend/storage/research_evidence.py",
     "backend/storage/repositories/research/evidence.py",
     "backend/storage/migrations/m055_research_evidence.py",

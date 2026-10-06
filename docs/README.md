@@ -130,3 +130,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 032: Main release and remaining gates](reports/032-main-release-and-remaining-gates.md)
 - [Report 034: Research provider reliability](reports/034-research-provider-reliability/README.md)
 - [Report 035: Research evidence substrate](reports/035-research-evidence-substrate/README.md)
+- [Report 036: Bounded research acquisition](reports/036-research-acquisition/README.md)

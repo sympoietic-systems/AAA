@@ -45,6 +45,7 @@ class ResearchEvidenceStore:
         reused: bool = False,
         quality: ParserQuality | None = None,
         unavailable_reason: str = "empty_extraction",
+        observed_at: datetime | None = None,
     ) -> tuple[SourceArtifact, tuple[EvidenceSegment, ...]]:
         parts = urlsplit(url)
         if parts.scheme not in {"http", "https"} or not parts.hostname or parts.username or parts.password:
@@ -62,7 +63,7 @@ class ResearchEvidenceStore:
             None,
             "legacy_step_result_text_v1" if reused else "sensory_text_v1",
             quality,
-            None if reused else datetime.now(UTC),
+            None if reused else (observed_at or datetime.now(UTC)),
             unavailable_reason,
         )
 

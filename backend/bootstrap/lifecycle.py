@@ -189,6 +189,8 @@ async def lifespan(app: FastAPI):
         from backend.modules.provider_attempts import shutdown_attempts
 
         await shutdown_attempts()
+        if services.research_task_manager is not None and services.research_task_manager._orchestrator is not None:
+            await services.research_task_manager._orchestrator.aclose()
         if services.startup_scheduler is not None:
             await services.startup_scheduler.aclose()
         if services.dream_daemon is not None:

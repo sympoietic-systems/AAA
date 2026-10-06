@@ -4,6 +4,7 @@ import json
 
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
+from backend.storage.research_acquisition import AcquisitionReceipt
 from backend.storage.research_evidence import ResearchContract
 from backend.storage.research_receipts import ActionStatus, ProviderAttemptReceipt, ResearchActionReceipt
 
@@ -72,6 +73,7 @@ class ResearchActionReceiptRepository(BaseRepository):
                 if active_id != receipt.action_id and not (active_id is None and last_id == receipt.action_id):
                     raise ReceiptConflictError("Late action cannot overwrite a newer task checkpoint")
                 receipt = self._close_pending_attempts(receipt)
+                self._close_pending_acquisitions(receipt)
                 self.transition(receipt, expected_status="running")
             cursor = self._conn().execute(
                 "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ?",
@@ -126,6 +128,27 @@ class ResearchActionReceiptRepository(BaseRepository):
             update={"provider_attempts": receipt.observation.provider_attempts + tuple(closed)}
         )
         return receipt.model_copy(update={"observation": observation})
+
+    def _close_pending_acquisitions(self, receipt: ResearchActionReceipt) -> None:
+        rows = (
+            self._conn()
+            .execute(
+                "SELECT receipt_json FROM research_acquisitions WHERE task_id=? AND action_id=? AND outcome='pending'",
+                (receipt.task_id, receipt.action_id),
+            )
+            .fetchall()
+        )
+        if rows and receipt.status == "complete":
+            raise ReceiptConflictError("Pending acquisition cannot satisfy a complete action")
+        for row in rows:
+            initial = AcquisitionReceipt.model_validate_json(row[0])
+            terminal = initial.model_copy(
+                update=dict(outcome="cancelled", completed_at=receipt.completed_at, error_category="action_ended")
+            )
+            self._conn().execute(
+                "UPDATE research_acquisitions SET receipt_json=?,outcome='cancelled' WHERE acquisition_id=? AND outcome='pending'",
+                (terminal.model_dump_json(), terminal.acquisition_id),
+            )
 
     @with_connection
     def create(self, receipt: ResearchActionReceipt) -> ResearchActionReceipt:

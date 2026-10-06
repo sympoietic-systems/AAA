@@ -82,7 +82,14 @@ class ResearchActionJournal:
                 phase_elapsed_seconds=elapsed,
                 provider_attempts=provider_attempts,
                 evidence_packets=evidence_packets,
+                acquisition_ids=self.acquisition_ids(receipt),
             ),
         )
         self.repo.checkpoint(terminal, serialize_research_state(checkpoint))
         state.update(checkpoint)
+
+    def acquisition_ids(self, receipt: ResearchActionReceipt) -> tuple[str, ...]:
+        from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+
+        acquisitions = ResearchAcquisitionRepository(self.repo._db_path).list_action(receipt.task_id, receipt.action_id)
+        return tuple(item.acquisition_id for item in acquisitions)

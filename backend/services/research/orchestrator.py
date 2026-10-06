@@ -12,9 +12,18 @@ import contextlib
 import json
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any, cast
+from urllib.parse import urlsplit, urlunsplit
 
 from backend.modules.structural_engine import CompositeStructuralScorer
+from backend.services.research.acquisition import (
+    AcquisitionPolicy,
+    AcquisitionResources,
+    AcquisitionResult,
+    AcquisitionRuntime,
+)
 from backend.services.research.action_journal import ResearchActionJournal, input_hash
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
@@ -30,11 +39,15 @@ from backend.services.research.task_state import (
     TaskStateManager,
     serialize_research_state,
 )
-from backend.storage.repositories.research.action_receipt import ResearchActionReceiptRepository
+from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+from backend.storage.repositories.research.action_receipt import ReceiptConflictError, ResearchActionReceiptRepository
 from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
 from backend.storage.repositories.research.research_task import ResearchTaskRepository
+from backend.storage.research_acquisition import AcquisitionReceipt
+from backend.storage.research_evidence import ParserQuality
 from backend.utils.concurrency import ensure_semaphore
 from backend.utils.research_logger import log_research_meta, now_utc_str
+from backend.utils.security import validate_safe_url
 
 logger = logging.getLogger("aaa.research_orchestrator")
 
@@ -168,6 +181,8 @@ class SomaticResearchOrchestrator:
             phase_block=PHASE_BLOCK,
             phase_sub_sequence=PHASE_SUB_SEQUENCE,
         )
+        self._acquisition_runtimes: dict[str, AcquisitionRuntime] = {}
+        self._acquisition_resources = AcquisitionResources()
 
     # ── Properties ──────────────────────────────────────────────────
 
@@ -441,10 +456,13 @@ class SomaticResearchOrchestrator:
         state = self._state_mgr.init_task(task_id)
         if state.get("action_journal_policy") is None:
             enabled = self.config.get("action_receipts_enabled", False) is True
-            contract = ResearchEvidenceStore.initial_contract(task_id, state, 3) if enabled else None
+            contract = ResearchEvidenceStore.initial_contract(task_id, state, 4) if enabled else None
             state["contract_revision"] = 1
             state["action_journal_policy"] = {
-                "version": 3,
+                "version": 4,
+                "acquisition_policy": AcquisitionPolicy.model_validate(
+                    self.config.get("acquisition_limits", {})
+                ).model_dump(),
                 "evidence_substrate_version": 1,
                 "enabled": enabled,
                 "coverage": "durable_leaf_provider_attempts_and_phases",
@@ -478,6 +496,104 @@ class SomaticResearchOrchestrator:
     def evidence_store_for(self, task_id: str) -> ResearchEvidenceStore | None:
         policy = self._get_state(task_id).get("action_journal_policy") or {}
         return self._evidence_store if policy.get("enabled") and policy.get("evidence_substrate_version") == 1 else None
+
+    def acquisition_enabled(self, task_id: str) -> bool:
+        policy = self._get_state(task_id).get("action_journal_policy") or {}
+        return policy.get("enabled") is True and "acquisition_policy" in policy
+
+    async def acquire(
+        self, task_id: str, url: str, loader: Callable[[], Awaitable[str]], request_config: dict[str, Any] | None = None
+    ) -> AcquisitionResult:
+        state = self._get_state(task_id)
+        policy = state["action_journal_policy"]
+        limits = AcquisitionPolicy.model_validate(policy["acquisition_policy"])
+        key = input_hash(limits.model_dump())
+        runtime = self._acquisition_runtimes.get(key)
+        if runtime is None:
+            if len(self._acquisition_runtimes) >= 8:
+                raise RuntimeError("Acquisition policy runtime limit exceeded")
+            runtime = AcquisitionRuntime(limits, resources=self._acquisition_resources)
+            self._acquisition_runtimes[key] = runtime
+        parsed = urlsplit(await asyncio.to_thread(validate_safe_url, url))
+        canonical = urlunsplit((parsed.scheme.lower(), parsed.netloc.lower(), parsed.path or "/", parsed.query, ""))
+        config = request_config if request_config is not None else self._state.config
+        initial = AcquisitionReceipt(
+            acquisition_id=str(uuid.uuid4()),
+            task_id=task_id,
+            action_id=state["active_action_id"],
+            canonical_url=canonical,
+            config_hash=input_hash(config),
+            started_at=datetime.now(UTC),
+        )
+        if self._action_journal is None:
+            raise RuntimeError("Acquisition requires durable action storage")
+        repo = ResearchAcquisitionRepository(self._action_journal.repo._db_path)
+        await asyncio.to_thread(repo.reserve, initial)
+        committed = False
+
+        async def observe(result: AcquisitionResult) -> None:
+            nonlocal committed
+            source = None
+            if request_config is None and self._evidence_store is not None:
+                source, _ = await asyncio.to_thread(
+                    self._evidence_store.record_text,
+                    task_id,
+                    canonical,
+                    result.content,
+                    quality=ParserQuality(
+                        method=(result.providers or (None,))[-1],
+                        config_hash=result.config_hash,
+                        warnings=("original_bytes_unavailable",),
+                    ),
+                    observed_at=result.observed_at,
+                )
+            terminal = initial.model_copy(
+                update=dict(
+                    completed_at=result.accessed_at,
+                    outcome="cache_hit" if result.cache_hit else ("fetched" if result.content else "unavailable"),
+                    origin_acquisition_id=result.origin_acquisition_id,
+                    observed_at=result.observed_at,
+                    valid_until=result.valid_until,
+                    providers=() if result.cache_hit else result.providers,
+                    origin_providers=result.providers,
+                    source_id=source.source_id if source else None,
+                    source_version=source.source_version if source else None,
+                )
+            )
+            await asyncio.to_thread(repo.finish, terminal)
+            committed = True
+
+        try:
+            result = await runtime.fetch(
+                canonical,
+                config,
+                datetime.fromisoformat(policy["provider_policy"]["deadline"]),
+                loader,
+                initial.acquisition_id,
+                observe,
+            )
+            return result
+        except BaseException as exc:
+            if committed:
+                raise
+            terminal = initial.model_copy(
+                update=dict(
+                    completed_at=datetime.now(UTC),
+                    outcome="cancelled" if isinstance(exc, asyncio.CancelledError) else "failed",
+                    error_category=type(exc).__name__,
+                )
+            )
+            try:
+                await asyncio.to_thread(repo.finish, terminal)
+            except ReceiptConflictError as race:
+                raise exc from race
+            raise
+
+    async def aclose(self) -> None:
+        for runtime in self._acquisition_runtimes.values():
+            await runtime.aclose()
+        if self._acquisition_resources.cpu_pending:
+            await asyncio.wait(set(self._acquisition_resources.cpu_pending), timeout=1)
 
     def resume_task(self, task_id: str) -> dict[str, Any] | None:
         return cast(dict[str, Any] | None, self._state_mgr.resume_task(task_id))

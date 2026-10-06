@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-06T01:32:39.786868+00:00",
+  "scope": "offline mechanical HTTP fixture",
+  "independent_quality_calibration": false,
+  "dataset": "benchmarks\\data\\research\\acquisition_fixture.json",
+  "dataset_sha256": "2cfdb7f98555e0469b93936aaf463e204ead746a9910df20558064cd3198a489",
+  "samples": [
+    {
+      "baseline": {
+        "elapsed_seconds": 4.811845800002629,
+        "outbound_calls": 4,
+        "client_creations": 4,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      },
+      "bounded_cold": {
+        "elapsed_seconds": 4.538380700003472,
+        "outbound_calls": 4,
+        "client_creations": 1,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      },
+      "bounded_warm": {
+        "elapsed_seconds": 0.00244869999733055,
+        "outbound_calls": 0,
+        "client_creations": 0,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      }
+    },
+    {
+      "baseline": {
+        "elapsed_seconds": 4.632221100000606,
+        "outbound_calls": 4,
+        "client_creations": 4,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      },
+      "bounded_cold": {
+        "elapsed_seconds": 4.538996800001769,
+        "outbound_calls": 4,
+        "client_creations": 1,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      },
+      "bounded_warm": {
+        "elapsed_seconds": 0.0027789999949163757,
+        "outbound_calls": 0,
+        "client_creations": 0,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      }
+    },
+    {
+      "baseline": {
+        "elapsed_seconds": 4.634254600001441,
+        "outbound_calls": 4,
+        "client_creations": 4,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      },
+      "bounded_cold": {
+        "elapsed_seconds": 4.535560800002713,
+        "outbound_calls": 4,
+        "client_creations": 1,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      },
+      "bounded_warm": {
+        "elapsed_seconds": 0.00222349999967264,
+        "outbound_calls": 0,
+        "client_creations": 0,
+        "coverage_count": 8,
+        "coverage_unique_sources": 2,
+        "coverage_hash": "948586dc4a3a808eb0b3d76a0e9889fb65da58b994033d30e61ee3b94262d2b8"
+      }
+    }
+  ]
+}

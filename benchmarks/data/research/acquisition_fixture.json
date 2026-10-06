@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "provenance": "Synthetic mechanical fixture authored for T65; not independent relevance or support annotations",
+  "quality_calibration_eligible": false,
+  "response_delay_seconds": 0.03,
+  "queries": ["fixture alpha", "fixture beta", "fixture gamma", "fixture delta"],
+  "sources": [
+    {"url": "https://fixture.test/source-a", "title": "Fixture A"},
+    {"url": "https://fixture.test/source-b", "title": "Fixture B"}
+  ]
+}

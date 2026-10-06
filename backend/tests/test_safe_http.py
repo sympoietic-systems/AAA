@@ -60,3 +60,40 @@ async def test_safe_fetch_enforces_redirect_limit():
 def test_validate_safe_url_rejects_credentials():
     with pytest.raises(ValueError, match="credentials"):
         validate_safe_url("https://user:password@example.com/path")
+
+
+@pytest.mark.asyncio
+async def test_borrowed_client_is_not_closed_and_redirect_drops_credentials():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return (
+            httpx.Response(302, headers={"location": "https://other.test/final"})
+            if len(seen) == 1
+            else httpx.Response(200, text="ok")
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await safe_fetch(
+            "https://example.test/start",
+            client=client,
+            validator=lambda url: url,
+            headers={"Authorization": "secret", "Cookie": "private"},
+        )
+        assert result.text == "ok" and not client.is_closed
+    assert "authorization" not in seen[1].headers and "cookie" not in seen[1].headers
+
+
+@pytest.mark.asyncio
+async def test_post_redirect_does_not_replay_body():
+    with pytest.raises(RedirectLimitError, match="POST"):
+        await safe_fetch(
+            "https://example.test/post",
+            method="POST",
+            data={"q": "query"},
+            validator=lambda url: url,
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(307, headers={"location": "https://other.test/post"})
+            ),
+        )

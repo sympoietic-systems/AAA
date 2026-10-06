@@ -28,6 +28,14 @@ def evidence_appendix(evidence: dict | None) -> str:
     bundle = EvidenceBundle.model_validate(evidence)
     parts = ["## EVIDENCE PROVENANCE", "", "Citation resolution and semantic support are separate observations.", ""]
     parts.extend([f"Origin task: `{bundle.task_id}`. Imported snapshots confer no local action authority.", ""])
+    for acquisition in bundle.acquisitions:
+        parts.append(
+            f"- Acquisition `{acquisition.acquisition_id}`: {acquisition.outcome}; observed {acquisition.observed_at or 'unknown'}; accessed {acquisition.completed_at or 'pending'}; reuse expiry {acquisition.valid_until or 'unknown'}; origin `{acquisition.origin_acquisition_id or 'unknown'}`."
+        )
+        if acquisition.origin_providers:
+            parts.append("  Original provider route: " + ", ".join(acquisition.origin_providers))
+        if acquisition.error_category:
+            parts.append("  Failure category: " + acquisition.error_category)
     for source in bundle.sources:
         artifact = source.artifact
         parts.extend(
@@ -283,7 +291,9 @@ class ResearchExportBuilder:
     ) -> dict:
         """Build a structured JSON export for re-import."""
         result = {
-            "export_format_version": "2.1" if evidence is not None else "2.0",
+            "export_format_version": "2.2"
+            if evidence is not None and "acquisitions" in evidence
+            else ("2.1" if evidence is not None else "2.0"),
             "exported_at": datetime.now(UTC).isoformat(),
             "task": task,
             "branches": branches,

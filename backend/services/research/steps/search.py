@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
 import re
 import uuid
+from urllib.parse import quote
 
 from backend.modules.sensory.evidence_triage import EvidenceTriage
 from backend.services.research.provider_observation import generate_unified
@@ -112,6 +114,12 @@ class SearchStep(BaseResearchStep):
                 search_queries.append(q)
 
         direct_urls = direct_urls[:5]
+        if (
+            hasattr(orch, "acquisition_enabled")
+            and orch.acquisition_enabled(envelope.task_id) is True
+            and len(search_queries) > 10
+        ):
+            raise ValueError("Acquisition phase exceeds ten search queries")
         pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
 
         return {
@@ -162,7 +170,13 @@ class SearchStep(BaseResearchStep):
         pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
 
         # Cache search inputs for re-use on rerun
-        cache = orch._load_cache(task_id)
+        if (
+            hasattr(orch, "acquisition_enabled")
+            and orch.acquisition_enabled(task_id) is True
+            and len(search_queries) > 10
+        ):
+            raise ValueError("Acquisition phase exceeds ten search queries")
+        cache = await asyncio.to_thread(orch._load_cache, task_id)
         cache["searching"] = {
             "phase": "searching",
             "pending_queries": pending_queries,
@@ -170,21 +184,23 @@ class SearchStep(BaseResearchStep):
             "top_n": orch.default_top_n,
             "cached_at": now_utc_str(),
         }
-        orch._save_cache(task_id, cache)
+        await asyncio.to_thread(orch._save_cache, task_id, cache)
 
         s = orch._get_state(task_id)
         group_steps = {}
 
         for i, q in enumerate(search_queries):
             q_group = i + 1
-            step_id = orch._create_or_update_step(s, task_id, "search", query_group=q_group, query_text=q[:300])
+            step_id = await asyncio.to_thread(
+                orch._create_or_update_step, s, task_id, "search", query_group=q_group, query_text=q[:300]
+            )
             group_steps[q_group] = step_id
 
         direct_group = len(search_queries) + 1 if direct_urls else None
         if direct_group:
             direct_label = f"Direct: {direct_urls[0][:60]}{'…' if len(direct_urls) > 1 else ''}"
-            step_id = orch._create_or_update_step(
-                s, task_id, "search", query_group=direct_group, query_text=direct_label
+            step_id = await asyncio.to_thread(
+                orch._create_or_update_step, s, task_id, "search", query_group=direct_group, query_text=direct_label
             )
             group_steps[direct_group] = step_id
 
@@ -195,11 +211,45 @@ class SearchStep(BaseResearchStep):
         candidate_count = config_orchestrator.get("search_candidates", 10)
         llm = getattr(orch._state, "llm_provider", None)
 
+        acquisition_enabled = hasattr(orch, "acquisition_enabled") and orch.acquisition_enabled(task_id) is True
+
+        async def acquire_query(query: str) -> list[dict]:
+            async def load() -> str:
+                return json.dumps(await web_search(query, candidate_count, orch._state.config))
+
+            result = await orch.acquire(
+                task_id,
+                "https://lite.duckduckgo.com/lite/?q=" + quote(query),
+                load,
+                request_config={
+                    "config": orch._state.config,
+                    "query": query,
+                    "limit": candidate_count,
+                    "operation": "search",
+                },
+            )
+            return json.loads(result.content)
+
+        acquired_results = []
+        if acquisition_enabled:
+            jobs = [asyncio.create_task(acquire_query(query)) for query in search_queries]
+            try:
+                acquired_results = await asyncio.gather(*jobs)
+            except BaseException:
+                for job in jobs:
+                    if not job.done() and not job.cancelling():
+                        job.cancel()
+                if jobs:
+                    await asyncio.wait(jobs, timeout=1)
+                raise
+
         for i, q in enumerate(search_queries):
-            if i > 0:
+            if i > 0 and not acquisition_enabled:
                 logger.info("Staggering search: sleeping 1.5s between requests...")
                 await asyncio.sleep(1.5)
-            raw_res = await web_search(q, candidate_count, orch._state.config)
+            raw_res = (
+                acquired_results[i] if acquisition_enabled else await web_search(q, candidate_count, orch._state.config)
+            )
             if triage is not None:
                 selected_res, receipt = await triage.screen(envelope.objective, q, raw_res, orch.default_top_n)
                 triage_receipts.append(receipt)
@@ -225,15 +275,20 @@ class SearchStep(BaseResearchStep):
 
             if orch.step_repo:
                 if not results:
-                    orch.step_repo.update(step_id, status="completed", result_summary="no results")
+                    await asyncio.to_thread(
+                        orch.step_repo.update, step_id, status="completed", result_summary="no results"
+                    )
                 else:
-                    orch.step_repo.update(step_id, status="completed", result_summary=f"{len(results)} results")
+                    await asyncio.to_thread(
+                        orch.step_repo.update, step_id, status="completed", result_summary=f"{len(results)} results"
+                    )
 
             for r in results:
                 url = r.get("url")
                 if url and orch.step_result_repo:
                     try:
-                        orch.step_result_repo.create(
+                        await asyncio.to_thread(
+                            orch.step_result_repo.create,
                             {
                                 "id": str(uuid.uuid4()),
                                 "step_id": step_id,
@@ -242,7 +297,7 @@ class SearchStep(BaseResearchStep):
                                 "source_title": r.get("title", url[:100]),
                                 "relevance_score": r.get("relevance", 0.0),
                                 "novelty_score": r.get("novelty", 0.0),
-                            }
+                            },
                         )
                     except Exception as e:
                         logger.warning("Failed to save search step result to DB: %s", e)
@@ -263,13 +318,17 @@ class SearchStep(BaseResearchStep):
                 step_id=step_id,
             )
             if orch.step_repo:
-                orch.step_repo.update(
-                    step_id, status="completed", result_summary=f"{len(direct_urls)} direct URL(s) queued"
+                await asyncio.to_thread(
+                    orch.step_repo.update,
+                    step_id,
+                    status="completed",
+                    result_summary=f"{len(direct_urls)} direct URL(s) queued",
                 )
             for url in direct_urls:
                 if orch.step_result_repo:
                     try:
-                        orch.step_result_repo.create(
+                        await asyncio.to_thread(
+                            orch.step_result_repo.create,
                             {
                                 "id": str(uuid.uuid4()),
                                 "step_id": step_id,
@@ -278,7 +337,7 @@ class SearchStep(BaseResearchStep):
                                 "source_title": url[:100],
                                 "relevance_score": 1.0,
                                 "novelty_score": 1.0,
-                            }
+                            },
                         )
                     except Exception as e:
                         logger.warning("Failed to save direct URL result: %s", e)

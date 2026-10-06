@@ -11,12 +11,30 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 9.
 
 import asyncio
 import contextlib
+import json
 import logging
 from typing import Any
 
 import httpx
 
+from backend.services.research.acquisition import acquisition_http, current_acquisition
+
 logger = logging.getLogger("aaa.sensory_affordances")
+
+
+def _extract_pdf_bytes(content: bytes) -> str:
+    from pathlib import Path
+    from tempfile import NamedTemporaryFile
+
+    from backend.modules.digester import SimpleChunkDigester
+
+    with NamedTemporaryFile(delete=False, suffix=".pdf") as temporary:
+        temporary.write(content)
+        path = Path(temporary.name)
+    try:
+        return SimpleChunkDigester().extract(path, "pdf")
+    finally:
+        path.unlink(missing_ok=True)
 
 
 # ── Custom Exceptions ───────────────────────────────────────────────
@@ -79,7 +97,7 @@ async def fetch_via_jina(
     from backend.utils.security import validate_safe_url
 
     try:
-        url = validate_safe_url(url)
+        url = await asyncio.to_thread(validate_safe_url, url)
     except ValueError as err:
         logger.warning("SSRF blocked Jina target %s: %s", url, err)
         return ""
@@ -92,6 +110,16 @@ async def fetch_via_jina(
     headers: dict[str, str] = {}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
+
+    if current_acquisition() is not None:
+        response = await acquisition_http("jina", target_url, headers=headers, timeout=timeout)
+        if response.status_code == 200:
+            return response.text
+        if response.status_code == 429:
+            raise RateLimitError("Jina rate limited")
+        if response.status_code in (401, 403):
+            raise ShutterClosedError("Jina access denied")
+        return ""
 
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -130,6 +158,13 @@ async def fetch_via_crawl4ai(
     url: str,
     config: dict | None = None,
 ) -> str:
+    context = current_acquisition()
+    if context is not None:
+        return await context.runtime.provider_call("crawl4ai", lambda: _fetch_via_crawl4ai(url, config))
+    return await _fetch_via_crawl4ai(url, config)
+
+
+async def _fetch_via_crawl4ai(url: str, config: dict | None = None) -> str:
     """Crawl4AI — self-hosted, Playwright-based web scraper.
 
     Uses robust browser config: random user agents, network-idle wait,
@@ -213,6 +248,17 @@ async def search_via_firecrawl(
         "Content-Type": "application/json",
     }
 
+    if current_acquisition() is not None:
+        response = await acquisition_http(
+            "firecrawl",
+            f"{api_base}/search",
+            method="POST",
+            json={"query": query, "limit": limit},
+            headers=headers,
+            timeout=timeout,
+        )
+        return json.loads(response.content) if response.status_code == 200 else {"success": False, "data": []}
+
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             response = await client.post(
@@ -244,6 +290,17 @@ async def crawl_via_firecrawl(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+
+    if current_acquisition() is not None:
+        response = await acquisition_http(
+            "firecrawl",
+            f"{api_base}/crawl",
+            method="POST",
+            json={"url": url, "limit": limit},
+            headers=headers,
+            timeout=timeout,
+        )
+        return json.loads(response.content) if response.status_code == 200 else {"success": False}
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
@@ -290,7 +347,7 @@ async def select_and_fetch(
         from backend.utils.security import validate_safe_url
 
         try:
-            url_or_query = validate_safe_url(url_or_query)
+            url_or_query = await asyncio.to_thread(validate_safe_url, url_or_query)
         except ValueError as err:
             logger.warning("SSRF blocked fetch_url target %s: %s", url_or_query, err)
             return ""
@@ -306,10 +363,21 @@ async def select_and_fetch(
             from backend.modules.digester import SimpleChunkDigester
             from backend.modules.retrieval.safe_http import safe_fetch
 
-            response = await safe_fetch(url_or_query, timeout=30.0, max_bytes=25 * 1024 * 1024)
+            response = (
+                await acquisition_http("pdf", url_or_query, timeout=30.0, max_bytes=25 * 1024 * 1024)
+                if current_acquisition()
+                else await safe_fetch(url_or_query, timeout=30.0, max_bytes=25 * 1024 * 1024)
+            )
             if response.status_code >= 400:
                 raise SensoryAffordanceError(f"PDF fetch returned HTTP {response.status_code}")
             pdf_bytes = response.content
+
+            context = current_acquisition()
+            if context is not None:
+                extracted_text = await context.runtime.cpu_call(lambda: _extract_pdf_bytes(pdf_bytes))
+                if extracted_text.strip():
+                    return extracted_text
+                raise SensoryAffordanceError("PDF extraction returned no text")
 
             with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                 tmp_file.write(pdf_bytes)
@@ -333,6 +401,8 @@ async def select_and_fetch(
     keys = api_keys or {}
 
     backends = routing.get(task_type, ["jina_reader", "crawl4ai"])
+    if current_acquisition() is not None:
+        backends = list(dict.fromkeys(backends))[:3]
 
     errors = []
 

@@ -176,8 +176,21 @@ class ResearchStepExecutor:
                 )
 
                 # Merge findings
+                acquisition_degraded = False
+                if receipt is not None and journal is not None:
+                    from backend.storage.repositories.research.acquisition import ResearchAcquisitionRepository
+
+                    acquisition_records = await asyncio.to_thread(
+                        ResearchAcquisitionRepository(journal.repo._db_path).list_action, task_id, receipt.action_id
+                    )
+                    acquisition_degraded = any(
+                        item.outcome in {"pending", "failed", "cancelled", "unavailable"}
+                        for item in acquisition_records
+                    )
                 if action_status == "complete" and (
-                    getattr(provider_attempts, "delivery_failed", False)
+                    acquisition_degraded
+                    or output.signal_flags.get("acquisition_degraded", False)
+                    or getattr(provider_attempts, "delivery_failed", False)
                     or any(a.truncated or a.outcome in {"failed", "cancelled", "partial"} for a in provider_attempts)
                 ):
                     action_status = "partial"

@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 from pydantic import AwareDatetime, Field, model_validator
 
+from backend.storage.research_acquisition import AcquisitionReceipt
 from backend.storage.research_receipts import ReceiptModel
 
 
@@ -189,6 +190,7 @@ class EvidenceBundle(ReceiptModel):
     segments: tuple[EvidenceSegment, ...] = Field(default=(), max_length=5000)
     claims: tuple[ClaimEvidence, ...] = Field(default=(), max_length=5000)
     decisions: tuple[DecisionReceipt, ...] = Field(default=(), max_length=5000)
+    acquisitions: tuple[AcquisitionReceipt, ...] = Field(default=(), max_length=256)
 
     @model_validator(mode="after")
     def validate_graph(self) -> "EvidenceBundle":
@@ -203,12 +205,16 @@ class EvidenceBundle(ReceiptModel):
             raise ValueError("Evidence bundle contains duplicate identities")
         if sum(len(item.representation_text) for item in self.sources) > 20_000_000:
             raise ValueError("Evidence bundle exceeds text limit")
-        records: tuple[ResearchContract | SourceArtifact | EvidenceSegment | ClaimEvidence | DecisionReceipt, ...] = (
+        records: tuple[
+            ResearchContract | SourceArtifact | EvidenceSegment | ClaimEvidence | DecisionReceipt | AcquisitionReceipt,
+            ...,
+        ] = (
             *self.contracts,
             *(s.artifact for s in self.sources),
             *self.segments,
             *self.claims,
             *self.decisions,
+            *self.acquisitions,
         )
         if any(record.task_id != self.task_id for record in records):
             raise ValueError("Evidence bundle crosses task boundaries")
@@ -246,6 +252,9 @@ class EvidenceBundle(ReceiptModel):
                 for ref in references
             ):
                 raise ValueError("Evidence bundle claim refers to unknown evidence")
+        for acquisition in self.acquisitions:
+            if acquisition.source_id is not None and (acquisition.source_id, acquisition.source_version) not in sources:
+                raise ValueError("Acquisition refers to unknown source version")
         return self
 
     def resolve(self, segment_id: str) -> tuple[SourceArtifact, EvidenceSegment]:

@@ -6,6 +6,7 @@ plus URL extraction from raw markdown / HTML content.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
 import re
@@ -131,6 +132,15 @@ def extract_urls_from_content(content: str, n: int = 3, query: str = "") -> list
 
 
 async def search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
+    from backend.services.research.acquisition import current_acquisition
+
+    context = current_acquisition()
+    if context is not None:
+        return await context.runtime.provider_call("crawl4ai", lambda: _search_via_crawl4ai(search_url, n))
+    return await _search_via_crawl4ai(search_url, n)
+
+
+async def _search_via_crawl4ai(search_url: str, n: int = 3) -> list[dict]:
     """Use Crawl4AI's structured link extraction with layered fallback strategies.
 
     Four strategies in order:
@@ -255,10 +265,15 @@ async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
     DuckDuckGo Lite returns clean HTML with direct result links in <a> tags.
     No redirect URLs — plain, parseable HTML.
     """
-    import html.parser
 
     search_url = "https://lite.duckduckgo.com/lite/"
     try:
+        from backend.services.research.acquisition import acquisition_http, current_acquisition
+
+        if current_acquisition() is not None:
+            response = await acquisition_http("ddg", search_url, method="POST", data={"q": query}, timeout=15)
+            html_text = response.text if response.status_code == 200 else ""
+            return await asyncio.to_thread(_parse_ddg_lite_html, html_text, n)
         import httpx
 
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
@@ -275,7 +290,17 @@ async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
             html_text = resp.text
     except Exception as e:
         logger.warning("DDG Lite fetch failed: %s", e)
+        from backend.services.research.acquisition import current_acquisition
+
+        if current_acquisition() is not None:
+            raise
         return []
+
+    return await asyncio.to_thread(_parse_ddg_lite_html, html_text, n)
+
+
+def _parse_ddg_lite_html(html_text: str, n: int) -> list[dict]:
+    import html.parser
 
     if not html_text:
         logger.debug("_search_ddg_lite: empty response")
@@ -363,9 +388,13 @@ async def web_search(query: str, n: int = 3, config: dict | None = None) -> list
         # Jina fallback — get raw content and extract URLs
         raw = await fetch_via_jina(html_search_url, config or {})
         if raw:
-            return extract_urls_from_content(raw, n, query)
+            return await asyncio.to_thread(extract_urls_from_content, raw, n, query)
 
         return []
     except Exception as e:
         logger.warning("Web search failed for '%s': %s", query[:60], e)
+        from backend.services.research.acquisition import current_acquisition
+
+        if current_acquisition() is not None:
+            raise
         return []
