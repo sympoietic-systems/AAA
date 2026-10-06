@@ -27,3 +27,9 @@ Search now preserves the original Jev receipt and records separate standard-fall
 ## Verification
 
 Focused verification covers exploratory trial accounting, held-out filtering, checkpointing, provisional-label completeness, exclusion of failed/fallback trials, triage confidence guards and search fallback receipt separation. The focused suite passed 46 tests covering evidence/belief triage, exploratory comparison, calibration and labeling. Ruff lint and format checks passed for all four changed Python files. The checked YAML enables the route; toggling it off constructs no triage instance. `git diff --check` passed. An initial test run passed 24 tests but hit a Windows temporary-directory permission error for one fixture; rerunning with a fresh workspace basetemp passed. Repository-wide checks were not repeated for this scoped change; existing global limitations remain recorded in Report 040. Generated verification artifacts remain outside the commit after an earlier cleanup action was blocked by policy.
+
+## Subsequent disposition — 2026-10-06
+
+After reviewing the abstentions, the user instructed: “mark it and so not use Jev for this task.” The experimental activation described above was withdrawn. `research_triage.enabled` is false; orchestrator research selection uses the standard selector without a Jev call. T69 remains complete with a non-adoption decision for the evaluated setup. This does not establish that Jev is unsuitable for every decision task; the observed limitation concerns this prompt, candidate representation and confidence guard. Historical comparison receipts and the earlier rollout record remain unchanged.
+
+Withdrawal verification: repository YAML parses with triage disabled, configuration constructs no Jev triage instance, 11 focused evidence-triage tests pass, and git diff whitespace checks pass.

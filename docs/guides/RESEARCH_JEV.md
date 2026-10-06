@@ -1,6 +1,8 @@
-# Experimental Jev research selection
+# Jev research selection — not adopted
 
-The research branch enables `research_triage.enabled: true` in `backend/config.yaml` under the user's 2026-10-06 authorization to promote using provisional LLM labels. Set it to `false` and restart the service to return to standard selection. This repository change does not deploy the VPS.
+The research branch sets `research_triage.enabled: false` in `backend/config.yaml`. On 2026-10-06 the user withdrew the earlier experimental promotion and chose not to use Jev for this task. Research search uses the standard selector and skips Jev. The same switch disables research triage in the web probe; other TypeSafe/Jev integrations are unchanged. Restart the service after applying the configuration on the VPS; this repository change does not deploy it.
+
+The remaining description documents the retained, disabled integration for future evaluation. Re-enabling it requires a new rollout decision.
 
 Configure the existing `typesafe` provider credentials/model/base URL for the intended Jev endpoint. Keep credentials in the environment; do not commit them. An unconfigured provider produces an unavailable receipt and uses standard selection.
 

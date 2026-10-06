@@ -443,7 +443,7 @@ backup:
 server:
   host: "127.0.0.1"
   port: 8499
-# Experimental rollout authorized on provisional LLM labels (2026-10-06).
-# Independent quality/release review remains pending; confidence guards stay active.
+# T69: Jev not adopted for research selection after provisional comparison.
+# User disabled experimental rollout on 2026-10-06; standard selection remains active.
 research_triage:
-  enabled: true
+  enabled: false

@@ -48,3 +48,5 @@ See [Research V2 progress](RESEARCH_V2_PROGRESS.md) for the remaining evaluation
 ## Authorized experimental rollout
 
 On 2026-10-06 the user explicitly authorized experimental Jev promotion on provisional LLM labels. [Report 042](../reports/042-jev-experimental-promotion/README.md) records that exception and the observed abstentions. Annotation provenance and default independent-gold calibration gates remain unchanged; independent quality and downstream release review remain T71.
+
+The user subsequently withdrew that rollout on the same date and chose not to use Jev for research selection. `research_triage.enabled` is now false; source annotations remain provisional and unchanged.

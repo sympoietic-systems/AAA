@@ -13,7 +13,7 @@ Snapshot: 2026-10-06, branch `codex/research-v2`. Root [SPEC.md](../../SPEC.md) 
 | T66 | Finite action scheduling, prerequisites, persisted routing decisions, witnessed reflection guards | [Report 037](../reports/037-research-finite-actions/README.md) |
 | T67 | Durable human branch proposals, source review, edited approval, decline and expiry | [Report 038](../reports/038-research-branch-proposals/README.md) |
 | T68 | Approved isolated child gathering, shared family budgets, raw-evidence archives, parent-owned merge | [Report 039](../reports/039-approved-research-children/README.md) |
-| T69 | User-authorized experimental Jev selection with standard-selector fallback on uncertainty | [Report 042](../reports/042-jev-experimental-promotion/README.md) |
+| T69 | Jev comparison completed; candidate not adopted for research selection; standard selector restored | [Report 042](../reports/042-jev-experimental-promotion/README.md) |
 | T73 | Optional standard-first Docling PDF fallback with bounded CPU worker and preserved parser observations | [Report 040](../reports/040-docling-fallback/README.md) |
 | T74 | Automated provisional source labeling, checkpointed resume, explicit annotator provenance | [Report 041](../reports/041-research-provisional-labeling/README.md) |
 
@@ -31,7 +31,7 @@ Use [JSON export/import](RESEARCH_EXPORT_IMPORT.md) to preserve durable provenan
 
 ## Remaining evaluation gates
 
-The [automated labeling command](RESEARCH_LABELING.md) prepares provisional source annotations and preserves per-query failures for resume. Its default calibration gates remain strict. The user authorized T69 experimental activation on these provisional labels; independent quality and downstream release review remain T71. See [Jev operating instructions](RESEARCH_JEV.md).
+The [automated labeling command](RESEARCH_LABELING.md) prepares provisional source annotations and preserves per-query failures for resume. Its default calibration gates remain strict. The user withdrew T69 experimental activation after reviewing the abstentions; research selection uses the standard selector. Independent release review remains T71. See [Jev operating instructions](RESEARCH_JEV.md).
 
 | Task | Work still required |
 | --- | --- |
