@@ -15,8 +15,8 @@ class ResearchTaskRepository(BaseRepository):
                 id, title, objective, trigger_source, status, priority,
                 conversation_id, max_depth, max_breadth, is_agonistic,
                 budget_limit_usd, proposal_rationale, proposal_message_id,
-                proposed_at, orchestrator_state
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                proposed_at, orchestrator_state, subresearch_policy
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 task["id"],
                 task["title"],
@@ -33,6 +33,7 @@ class ResearchTaskRepository(BaseRepository):
                 task.get("proposal_message_id"),
                 datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S"),
                 task.get("orchestrator_state"),
+                task.get("subresearch_policy", "off"),
             ),
         )
         conn.commit()

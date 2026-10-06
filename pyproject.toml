@@ -51,6 +51,11 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/api/routes/research/branch_proposals.py",
+    "backend/storage/research_branch_proposal.py",
+    "backend/storage/repositories/research/branch_proposal.py",
+    "backend/storage/migrations/m057_research_branch_proposals.py",
+    "backend/services/research/branch_review.py",
     "backend/services/research/action_scheduler.py",
     "backend/services/research/acquisition.py",
     "backend/storage/research_acquisition.py",

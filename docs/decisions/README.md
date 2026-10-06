@@ -148,6 +148,8 @@ What becomes easier/harder?
 
 | [109](ADR-109-research-finite-action-scheduler.md) | Finite Research Action Scheduler | accepted for opt-in implementation | 2026-10-06 |
 
+| [110](ADR-110-research-branch-proposal-review.md) | Human Branch Proposal Review | accepted for opt-in implementation | 2026-10-06 |
+
 ## Creating a New ADR
 
 1. Copy an existing ADR as a template

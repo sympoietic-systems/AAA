@@ -132,3 +132,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 035: Research evidence substrate](reports/035-research-evidence-substrate/README.md)
 - [Report 036: Bounded research acquisition](reports/036-research-acquisition/README.md)
 - [Report 037: Finite research actions](reports/037-research-finite-actions/README.md)
+- [Report 038: Human branch proposals](reports/038-research-branch-proposals/README.md)

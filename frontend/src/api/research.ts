@@ -49,6 +49,7 @@ export interface InjectedDocSpec {
 }
 
 export interface DispatchPayload {
+  subresearch_policy?: "off" | "propose"
   objective: string
   title?: string
   conversation_id?: string
@@ -519,3 +520,47 @@ export async function getResearchSemanticKnots(taskId: string): Promise<Research
 }
 
 import type { NoteInfo } from "./types"
+
+
+export interface BranchScope {
+  scope_id: string
+  question: string
+  retrieval_vocabulary: string[]
+  validation_norm: string
+  attempt_allocation: number
+  budget_allocation_usd: number
+}
+
+export interface BranchProposal {
+  proposal_id: string
+  task_id: string
+  parent_objective: string
+  expires_at: string
+  status: "pending" | "approved" | "declined" | "expired"
+  approved_scopes: BranchScope[] | null
+  draft: {
+    question: string
+    rationale: string
+    cut_kind: "retrieval_vocabulary" | "validation_norm"
+    scopes: BranchScope[]
+    overlap: string
+    risk: string
+    parent_attempt_reserve: number
+    parent_budget_reserve_usd: number
+  }
+  witnesses: { segment_id: string; text: string; source_url: string | null; source_version: string; representation: string; warnings: string[] }[]
+}
+
+export function getBranchProposal(taskId: string, signal?: AbortSignal): Promise<BranchProposal | null> {
+  return apiJson<BranchProposal | null>(`${BASE}/research/tasks/${taskId}/branch-proposal`, { signal })
+}
+
+export function approveBranchProposal(taskId: string, proposalId: string, scopes: BranchScope[], signal?: AbortSignal) {
+  return apiJson<Omit<BranchProposal, "witnesses">>(`${BASE}/research/tasks/${taskId}/branch-proposals/${proposalId}/approve`, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ scopes, boundary_acknowledged: true }), signal,
+  })
+}
+
+export function declineBranchProposal(taskId: string, proposalId: string, signal?: AbortSignal) {
+  return apiJson<Omit<BranchProposal, "witnesses">>(`${BASE}/research/tasks/${taskId}/branch-proposals/${proposalId}/decline`, { method: "POST", signal })
+}

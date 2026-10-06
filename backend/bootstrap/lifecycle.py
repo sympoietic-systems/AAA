@@ -171,6 +171,7 @@ async def lifespan(app: FastAPI):
     from backend.services.research.task_manager import ResearchTaskManager
 
     services.research_task_manager = ResearchTaskManager(services)
+    await services.research_task_manager.start_branch_watch()
     bind_legacy_state_aliases(app.state, services)
 
     # Wire app_state into the rhizome web probe module (created before app_state existed)
@@ -189,6 +190,8 @@ async def lifespan(app: FastAPI):
         from backend.modules.provider_attempts import shutdown_attempts
 
         await shutdown_attempts()
+        if services.research_task_manager is not None:
+            await services.research_task_manager.close_branch_watch()
         if services.research_task_manager is not None and services.research_task_manager._orchestrator is not None:
             await services.research_task_manager._orchestrator.aclose()
         if services.startup_scheduler is not None:

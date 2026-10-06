@@ -28,6 +28,7 @@ interface SelectedDocItem {
 }
 
 export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClose, conversationId }: Props) {
+  const [subresearchPolicy, setSubresearchPolicy] = useState<"off" | "propose">("off")
   const [objective, setObjective] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
@@ -200,6 +201,7 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
         max_breadth: breadth,
         is_agonistic: agonistic,
         budget_limit_usd: budget,
+        subresearch_policy: subresearchPolicy,
         inject_file_id: firstDoc?.file_id,
         inject_conversation_id: firstDoc?.conversation_id,
         document_mode: firstDoc?.document_mode,
@@ -223,6 +225,12 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
     <form onSubmit={handleSubmit} className="mb-4">
       <TerminalHeader className="mb-2">[ new research ]</TerminalHeader>
 
+      <label className="block text-xs text-white">Branching
+        <select className="ml-2 border border-white/40 bg-black p-1 text-white focus-visible:outline" value={subresearchPolicy} onChange={event => setSubresearchPolicy(event.target.value as "off" | "propose")}>
+          <option value="off">Keep one research line</option>
+          <option value="propose">Ask before branching</option>
+        </select>
+      </label>
       {/* Objective */}
       <TerminalInput
         value={objective}

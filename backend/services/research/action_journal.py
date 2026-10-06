@@ -78,6 +78,8 @@ class ResearchActionJournal:
     ) -> None:
         now = datetime.now(UTC)
         checkpoint = {**state, "active_action_id": None, "last_action_id": receipt.action_id}
+        if status in {"failed", "cancelled"} and checkpoint.get("phase") == "waiting_for_branch_approval":
+            checkpoint.update(phase="complete", pending_branch_proposal_id=None)
         if useful and checkpoint.get("first_useful_result_seconds") is None:
             started = datetime.fromisoformat(checkpoint["research_started_at"])
             checkpoint["first_useful_result_seconds"] = max(0, (now - started).total_seconds())
@@ -91,6 +93,7 @@ class ResearchActionJournal:
                 evidence_packets=evidence_packets,
                 acquisition_ids=self.acquisition_ids(receipt),
                 scheduler_decision=((state.get("scheduler_state") or {}).get("decisions") or [None])[-1],
+                branch_proposal_id=state.get("pending_branch_proposal_id"),
             ),
         )
         self.repo.checkpoint(terminal, serialize_research_state(checkpoint))

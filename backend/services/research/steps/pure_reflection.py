@@ -64,6 +64,7 @@ class PureReflectionStep(ReflectionStep):
             routing_patches=routing_patches,
             step_ids=output.step_ids,
             transition_rationale=output.transition_rationale,
+            branch_proposal=output.branch_proposal,
         )
 
 

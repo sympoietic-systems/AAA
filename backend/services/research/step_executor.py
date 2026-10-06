@@ -48,6 +48,14 @@ class ResearchStepExecutor:
         async with orchestrator._state_mgr.locks[task_id]:
             s = await asyncio.to_thread(orchestrator._get_state, task_id)
             phase = s["phase"]
+            if phase == "waiting_for_branch_approval":
+                return {
+                    "task_id": task_id,
+                    "phase": phase,
+                    "next_phase": phase,
+                    "status": phase,
+                    "proposal_id": s.get("pending_branch_proposal_id"),
+                }
             logger.info(
                 "execute_step: phase=%s, depth=%s, phase_group=%s", phase, s.get("current_depth"), s.get("phase_group")
             )
@@ -302,6 +310,35 @@ class ResearchStepExecutor:
                     next_phase = action_scheduler.route(phase, next_phase, s, afferent)
                     result["scheduler_decision"] = s["scheduler_state"]["decisions"][-1]
                 s["phase"] = next_phase
+                if (
+                    output.branch_proposal
+                    and (s.get("action_journal_policy") or {}).get("subresearch_policy", "off") == "propose"
+                ):
+                    assert receipt is not None and journal is not None
+                    import uuid
+                    from datetime import timedelta
+
+                    from backend.storage.repositories.research.branch_proposal import ResearchBranchProposalRepository
+                    from backend.storage.research_branch_proposal import BranchProposal
+
+                    proposal = BranchProposal(
+                        proposal_id=str(uuid.uuid4()),
+                        task_id=task_id,
+                        action_id=receipt.action_id,
+                        parent_objective=s["objective"],
+                        draft=output.branch_proposal,
+                        created_at=datetime.now(UTC),
+                        expires_at=min(
+                            datetime.now(UTC) + timedelta(seconds=120),
+                            datetime.fromisoformat(s["action_journal_policy"]["provider_policy"]["deadline"]),
+                        ),
+                        resume_phase=next_phase,
+                    )
+                    await asyncio.to_thread(ResearchBranchProposalRepository(journal.repo._db_path).create, proposal)
+                    s["pending_branch_proposal_id"] = proposal.proposal_id
+                    s["phase"] = "waiting_for_branch_approval"
+                    result["status"] = "waiting_for_branch_approval"
+                    result["proposal_id"] = proposal.proposal_id
 
                 if next_phase == "planning":
                     if phase == "evaluating":
@@ -336,7 +373,7 @@ class ResearchStepExecutor:
                                             else db_step["step_data"]
                                         )
                                 step_data["transition_rationale"] = rationale
-                                step_data["next_phase"] = next_phase
+                                step_data["next_phase"] = s["phase"]
                                 orchestrator.step_repo.update(
                                     sid, step_data=json.dumps(step_data, default=str, ensure_ascii=False)
                                 )
@@ -411,6 +448,10 @@ class ResearchStepExecutor:
                 )
             else:
                 orchestrator._persist_state(task_id)
+            if s["phase"] == "waiting_for_branch_approval":
+                manager = getattr(orchestrator._state, "research_task_manager", None)
+                if manager is not None:
+                    await manager.start_branch_watch(force=True)
 
             return result
 

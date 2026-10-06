@@ -454,12 +454,18 @@ class SomaticResearchOrchestrator:
 
     def init_task(self, task_id: str) -> dict[str, Any]:
         state = self._state_mgr.init_task(task_id)
+        task = self.task_repo.get(task_id) or {}
+        task_policy = task.get("subresearch_policy", "off")
+        initial = json.loads(task.get("orchestrator_state") or "{}") if task_policy == "propose" else {}
+        if task_policy == "propose" and "action_journal_policy" not in initial:
+            state["action_journal_policy"] = None
         if state.get("action_journal_policy") is None:
-            enabled = self.config.get("action_receipts_enabled", False) is True
-            contract = ResearchEvidenceStore.initial_contract(task_id, state, 5) if enabled else None
+            enabled = self.config.get("action_receipts_enabled", False) is True or task_policy == "propose"
+            contract = ResearchEvidenceStore.initial_contract(task_id, state, 6) if enabled else None
             state["contract_revision"] = 1
             state["action_journal_policy"] = {
-                "version": 5,
+                "version": 6,
+                "subresearch_policy": task_policy if enabled else "off",
                 "scheduler_version": 1,
                 "acquisition_policy": AcquisitionPolicy.model_validate(
                     self.config.get("acquisition_limits", {})
@@ -468,7 +474,7 @@ class SomaticResearchOrchestrator:
                 "enabled": enabled,
                 "coverage": "durable_leaf_provider_attempts_and_phases",
                 "provider_policy": ProviderPolicy.model_validate(self.config.get("provider_limits", {})).freeze(),
-                "policy_hash": input_hash(self.config),
+                "policy_hash": input_hash({"config": self.config, "subresearch_policy": task_policy}),
                 "contract_hash": contract.content_hash()
                 if contract
                 else input_hash({key: state.get(key) for key in ("objective", "max_depth", "budget")}),
@@ -853,6 +859,12 @@ class SomaticResearchOrchestrator:
         max_iterations = max(s.get("max_depth", 3) * 15, 200)
         iteration_count = 0
         while s["phase"] != "complete":
+            if s["phase"] == "waiting_for_branch_approval":
+                return {
+                    "task_id": task_id,
+                    "status": "waiting_for_branch_approval",
+                    "proposal_id": s.get("pending_branch_proposal_id"),
+                }
             iteration_count += 1
             if iteration_count > max_iterations:
                 reason = f"iteration limit exceeded ({iteration_count}/{max_iterations}) — phase stuck at: {s['phase']}"

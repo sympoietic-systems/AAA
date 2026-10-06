@@ -19,7 +19,7 @@ export function useTaskPolling(taskId: string, _taskStatus: string, initialTask:
           getResearchTask(taskId, controller.signal), getTaskPhase(taskId, controller.signal),
         ])
         if (controller.signal.aborted) return
-        active = task.status === "active" || task.status === "queued"
+        active = task.status === "active" || task.status === "queued" || task.status === "waiting_for_branch_approval"
         setState({ task, phase: phase.phase === "not_started" ? "" : phase.phase, error: "" })
       } catch (error) {
         if (!controller.signal.aborted) setState(previous => ({ ...previous, error: error instanceof Error ? error.message : "Task polling failed" }))

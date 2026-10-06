@@ -5,6 +5,7 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
 
+from backend.storage.research_branch_proposal import BranchProposalDraft
 from backend.storage.research_receipts import EvidencePacket
 from backend.utils.research_logger import log_research_meta
 
@@ -173,9 +174,12 @@ class StepOutput(BaseModel):
     transition_rationale: str | None = None
     step_ids: list[str] = Field(default_factory=list)
     evidence_packets: tuple[EvidencePacket, ...] = ()
+    branch_proposal: BranchProposalDraft | None = None
 
 
 _ORCH_STATE_KEYS = {
+    "pending_branch_proposal_id",
+    "approved_branch_proposal_id",
     "scheduler_state",
     "active_routing_patches",
     "patch_reroute_count",
@@ -250,7 +254,7 @@ def make_initial_state(task: dict) -> dict:
             extra = _json.loads(orch_state_raw) if isinstance(orch_state_raw, str) else orch_state_raw
 
     state = {
-        "phase": "planning",
+        "phase": extra.get("phase", "planning"),
         "objective": task["objective"],
         "max_depth": task["max_depth"],
         "budget": task["budget_limit_usd"],
@@ -301,6 +305,8 @@ def make_initial_state(task: dict) -> dict:
         "last_action_id": extra.get("last_action_id"),
         "research_started_at": extra.get("research_started_at"),
         "contract_revision": extra.get("contract_revision", 1),
+        "pending_branch_proposal_id": extra.get("pending_branch_proposal_id"),
+        "approved_branch_proposal_id": extra.get("approved_branch_proposal_id"),
         "scheduler_state": extra.get("scheduler_state", {}),
         "active_routing_patches": extra.get("active_routing_patches", []),
         "patch_reroute_count": extra.get("patch_reroute_count", 0),

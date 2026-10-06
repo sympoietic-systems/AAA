@@ -19,7 +19,7 @@ class ResearchActionReceiptRepository(BaseRepository):
         """Freeze policy before the first action; a competing initializer wins once."""
         with self.atomic():
             cursor = self._conn().execute(
-                "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ? AND (orchestrator_state IS NULL OR orchestrator_state = '')",
+                "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ? AND (orchestrator_state IS NULL OR orchestrator_state = '' OR CASE WHEN subresearch_policy='propose' AND json_valid(orchestrator_state) THEN json_type(orchestrator_state,'$.action_journal_policy') IS NULL ELSE 0 END)",
                 (state_json, task_id),
             )
             if cursor.rowcount == 1 and contract is not None:
@@ -74,6 +74,29 @@ class ResearchActionReceiptRepository(BaseRepository):
                     raise ReceiptConflictError("Late action cannot overwrite a newer task checkpoint")
                 receipt = self._close_pending_attempts(receipt)
                 self._close_pending_acquisitions(receipt)
+                if receipt.status in {"failed", "cancelled"}:
+                    from backend.storage.research_branch_proposal import BranchProposal
+
+                    proposals = (
+                        self._conn()
+                        .execute(
+                            "SELECT proposal_json FROM research_branch_proposals WHERE action_id=? AND status='pending'",
+                            (receipt.action_id,),
+                        )
+                        .fetchall()
+                    )
+                    for row in proposals:
+                        proposal = BranchProposal.model_validate_json(row[0]).model_copy(
+                            update={
+                                "status": "declined",
+                                "resolved_at": receipt.completed_at,
+                                "resolution_reason": "action_" + receipt.status,
+                            }
+                        )
+                        self._conn().execute(
+                            "UPDATE research_branch_proposals SET proposal_json=?,status='declined' WHERE proposal_id=? AND status='pending'",
+                            (proposal.model_dump_json(), proposal.proposal_id),
+                        )
                 self.transition(receipt, expected_status="running")
             cursor = self._conn().execute(
                 "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ?",
@@ -82,6 +105,20 @@ class ResearchActionReceiptRepository(BaseRepository):
             if cursor.rowcount != 1:
                 raise ReceiptConflictError("Task disappeared during checkpoint")
             state = json.loads(state_json)
+            if not starting and state.get("phase") == "waiting_for_branch_approval":
+                proposal = (
+                    self._conn()
+                    .execute(
+                        "SELECT 1 FROM research_branch_proposals WHERE task_id=? AND action_id=? AND proposal_id=? AND status='pending'",
+                        (receipt.task_id, receipt.action_id, state.get("pending_branch_proposal_id")),
+                    )
+                    .fetchone()
+                )
+                if not proposal or receipt.status not in {"complete", "partial"}:
+                    raise ReceiptConflictError("Waiting state requires a successfully checkpointed proposal action")
+                self._conn().execute(
+                    "UPDATE research_tasks SET status='waiting_for_branch_approval' WHERE id=?", (receipt.task_id,)
+                )
             if (
                 not starting
                 and state.get("phase") == "complete"

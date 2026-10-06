@@ -7,6 +7,7 @@ import type { ResearchTask, ResearchStep } from "../../../api/research"
 import { getResearchTask, getTaskUnifiedNotes, getTaskSteps, getResearchMemoryNodes, getResearchSemanticKnots, dispatchResearch, type UnifiedNoteInfo, type ResearchMemoryNode, type ResearchKnot } from "../../../api/research"
 import { STATUS_COLORS, STEP_LABELS } from "./constants/taskConstants"
 import { useTaskPolling } from "./shared/useTaskPolling"
+import { BranchProposalReview } from "./BranchProposalReview"
 import { InfoTab } from "./tabs/InfoTab"
 import { StepsTab } from "./tabs/StepsTab"
 import { NewResearchForm } from "./NewResearchForm"
@@ -299,6 +300,7 @@ const TaskPageInner = memo(function TaskPageInner({ task }: { task: ResearchTask
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4 pt-1">
+        <BranchProposalReview key={current.id} taskId={current.id} status={current.status} onResolved={refreshAll} />
         {tab === "info"     && <div className="flex-1 overflow-y-auto pr-1"><InfoTab task={current} orchPhase={orchPhase} onRefreshTask={refreshAll} /></div>}
         {tab === "steps"    && <StepsTab taskId={current.id} orchPhase={orchPhase} taskStatus={current.status} onRefreshTask={refreshAll} externalStepId={navigateStepId} />}
 

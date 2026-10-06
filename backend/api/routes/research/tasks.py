@@ -66,6 +66,7 @@ async def dispatch_research(payload: DispatchPayload, request: Request):
     task_id = await run_research_sync(
         manager.create_task,
         objective=payload.objective,
+        subresearch_policy=payload.subresearch_policy,
         trigger_source="user_console" if not payload.conversation_id else "user_inline",
         title=payload.title or payload.objective[:80],
         conversation_id=payload.conversation_id,

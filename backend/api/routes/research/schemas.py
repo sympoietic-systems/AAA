@@ -1,5 +1,7 @@
 """Pydantic schemas and payload membranes for the Autonomous Research Engine."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -11,6 +13,7 @@ class InjectedDocSpec(BaseModel):
 
 
 class DispatchPayload(BaseModel):
+    subresearch_policy: Literal["off", "propose"] = "off"
     objective: str = Field(..., min_length=1, max_length=5000)
     title: str | None = Field(default=None, max_length=300)
     conversation_id: str | None = Field(default=None, max_length=100)

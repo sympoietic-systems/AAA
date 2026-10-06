@@ -26,6 +26,7 @@ VALID_STATUSES = {
     "approved",
     "queued",
     "active",
+    "waiting_for_branch_approval",
     "completed",
     "partial",
     "failed",
@@ -38,7 +39,8 @@ VALID_TRANSITIONS = {
     "proposed": {"approved", "rejected", "expired", "cancelled"},
     "approved": {"queued", "active", "cancelled"},
     "queued": {"active", "cancelled"},
-    "active": {"completed", "partial", "failed", "cancelled"},
+    "active": {"completed", "partial", "failed", "cancelled", "waiting_for_branch_approval"},
+    "waiting_for_branch_approval": {"queued", "active", "partial", "cancelled"},
 }
 
 TERMINAL_STATUSES = {"completed", "partial", "failed", "cancelled", "rejected", "expired"}
@@ -67,6 +69,41 @@ class ResearchTaskManager:
         self._semaphore: asyncio.Semaphore | None = None
         self._active_tasks: dict[str, asyncio.Task] = {}
         self._orchestrator = None  # lazy init
+        self._branch_watch: asyncio.Task[None] | None = None
+
+    async def start_branch_watch(self, *, force: bool = False) -> None:
+        should_start = force or self._app_state.config.get("research_orchestrator", {}).get(
+            "action_receipts_enabled", False
+        )
+        if not should_start:
+            should_start = bool(
+                await asyncio.to_thread(self.task_repo.list_all, status="waiting_for_branch_approval", limit=1)
+            )
+        if self._branch_watch is None and should_start:
+            self._branch_watch = asyncio.create_task(self._watch_branch_proposals())
+
+    async def close_branch_watch(self) -> None:
+        if self._branch_watch is not None:
+            self._branch_watch.cancel()
+            results = await asyncio.gather(self._branch_watch, return_exceptions=True)
+            for outcome in results:
+                if isinstance(outcome, Exception):
+                    logger.error("Branch expiry worker failed: category=%s", type(outcome).__name__)
+            self._branch_watch = None
+
+    async def _watch_branch_proposals(self) -> None:
+        from backend.services.research.branch_review import resolve_proposal
+        from backend.storage.repositories.research.action_receipt import ReceiptConflictError
+        from backend.storage.repositories.research.branch_proposal import ResearchBranchProposalRepository
+
+        repo = ResearchBranchProposalRepository(self.task_repo._db_path)
+        while True:
+            for task_id, proposal_id in await asyncio.to_thread(repo.expired_waiting):
+                try:
+                    await resolve_proposal(self, task_id, proposal_id, "expired")
+                except ReceiptConflictError:
+                    logger.info("Branch expiry raced another parent transition: task=%s", task_id)
+            await asyncio.sleep(5)
 
     @property
     def orchestrator(self):
@@ -124,10 +161,13 @@ class ResearchTaskManager:
         document_chunk_limit: int | None = None,
         injected_documents: list[dict] | None = None,
         task_id: str | None = None,
+        subresearch_policy: str = "off",
     ) -> str:
         """Create a new research task and persist it. Returns task_id."""
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status: {status}")
+        if subresearch_policy not in {"off", "propose"}:
+            raise ValueError("Only off/propose subresearch policies are available")
 
         task_id = task_id or str(uuid.uuid4())
         task_data = {
@@ -144,6 +184,7 @@ class ResearchTaskManager:
             "budget_limit_usd": budget_limit_usd,
             "proposal_rationale": proposal_rationale,
             "proposal_message_id": proposal_message_id,
+            "subresearch_policy": subresearch_policy,
         }
         extra_state: dict[str, Any] = {}
         if previous_context:
@@ -191,6 +232,12 @@ class ResearchTaskManager:
             raise ValueError(f"Invalid transition: {current} -> {new_status}. Allowed: {allowed}")
 
         self.task_repo.transition_status(task_id, new_status)
+        if new_status == "cancelled":
+            from backend.storage.repositories.research.branch_proposal import ResearchBranchProposalRepository
+
+            ResearchBranchProposalRepository(self.task_repo._db_path).abandon_cancelled_parent(task_id)
+            if self._orchestrator is not None:
+                self._orchestrator._state_mgr.states.pop(task_id, None)
         logger.info("Research task %s: %s -> %s", task_id, current, new_status)
 
         # Dispatch notification
@@ -337,6 +384,8 @@ class ResearchTaskManager:
 
                 logger.info("EXECUTING task %s via orchestrator", task_id[:8])
                 result = await self.orchestrator.execute(task_id)
+                if result.get("status") == "waiting_for_branch_approval":
+                    return
 
                 summary = result.get("result_summary", "")
                 if not summary:
