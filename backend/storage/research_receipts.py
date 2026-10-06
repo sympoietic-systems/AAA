@@ -1,7 +1,7 @@
 """Versioned research records. Provenance does not establish semantic support."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -65,6 +65,7 @@ class ActionObservation(ReceiptModel):
     evidence_packets: tuple[EvidencePacket, ...] = ()
     acquisition_ids: tuple[str, ...] = Field(default=(), max_length=256)
     phase_elapsed_seconds: float | None = Field(default=None, ge=0)
+    scheduler_decision: dict[str, Any] | None = None
 
 
 class ResearchActionReceipt(ReceiptModel):

@@ -79,7 +79,7 @@ class ResearchEnvelopeMapper:
             payload = DigestPayload(parsed_sources_cache=parsed_sources)
         elif phase == "consolidating":
             payload = ConsolidatePayload(last_reflection=task_state.get("last_reflection") or {})
-        elif phase == "reflection":
+        elif phase in {"reflection", "pure_reflection"}:
             payload = ReflectionPayload(
                 reflection_notes=task_state.get("reflection_notes", ""),
                 detected_biases=task_state.get("detected_biases", []),
@@ -91,6 +91,9 @@ class ResearchEnvelopeMapper:
                 refined_queries=task_state.get("refined_queries", []),
                 revised_confidence=task_state.get("revised_confidence", 0.5),
                 monologue_trace=task_state.get("monologue_trace", []),
+                critique_log=task_state.get("critique_log", []),
+                diffractive_audit=task_state.get("diffractive_audit", "CEREMONIAL"),
+                diffractive_audit_description=task_state.get("diffractive_audit_description", ""),
             )
         elif phase == "evaluating":
             payload = EvaluatePayload(
@@ -155,7 +158,7 @@ class ResearchEnvelopeMapper:
                 "next_queries": payload.next_queries,
                 "next_direct_urls": payload.next_direct_urls,
             }
-        elif phase == "reflection" and isinstance(payload, ReflectionPayload):
+        elif phase in {"reflection", "pure_reflection"} and isinstance(payload, ReflectionPayload):
             task_state["reflection_notes"] = payload.reflection_notes
             task_state["detected_biases"] = payload.detected_biases
             task_state["knowledge_gaps"] = payload.knowledge_gaps

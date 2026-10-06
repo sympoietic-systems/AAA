@@ -92,6 +92,34 @@ async def test_acquisition_receipts_persist_cache_access_without_new_observation
 
     bundle = EvidenceBundle.model_validate(orch._evidence_store.repo.export_bundle("task"))
     assert bundle.acquisitions == acquisitions
+    snapshot = orch._evidence_store.repo.afferent_snapshot("task")
+    assert len(snapshot) == 1
+    assert snapshot[0]["acquisition_id"] == acquisitions[0].acquisition_id
+    assert snapshot[0]["segment_ids"]
+    from backend.storage.research_evidence import ClaimEvidence, SourceReference
+
+    segment = bundle.segments[0]
+    orch._evidence_store.repo.put_claim(
+        ClaimEvidence(
+            task_id="task",
+            claim_id="contrary-claim",
+            contract_revision=1,
+            text="Contested claim",
+            contrary_segment_ids=(segment.segment_id,),
+            source_lineage=(SourceReference(source_id=segment.source_id, source_version=segment.source_version),),
+            citation_status="resolvable",
+        )
+    )
+    snapshot = orch._evidence_store.repo.afferent_snapshot("task")
+    assert snapshot[0]["cut_witnesses"] == ["contradiction:" + segment.text_hash]
+    from datetime import UTC, datetime, timedelta
+
+    import backend.storage.repositories.research.evidence as evidence_module
+
+    monkeypatch.setattr(
+        evidence_module, "datetime", SimpleNamespace(now=lambda _: datetime.now(UTC) + timedelta(hours=1))
+    )
+    assert orch._evidence_store.repo.afferent_snapshot("task") == []
     await orch.aclose()
 
 
@@ -349,6 +377,7 @@ async def test_interrupted_action_blocks_reexecution(setup, monkeypatch):
 async def test_provider_latency_calls_and_first_evidence_are_observed(setup, monkeypatch):
     orch, repo, _ = setup
     orch._get_state("task")["phase"] = "parsing"
+    orch._get_state("task")["search_results_cache"] = [{"url": "https://example.test/evidence"}]
     provider = SimpleNamespace(
         provider_name="fixture",
         generate=AsyncMock(
@@ -475,3 +504,62 @@ def test_policy_is_frozen_before_first_action(setup):
     restarted = SomaticResearchOrchestrator(app)
     assert restarted.resume_task("task")["action_journal_policy"] == policy
     assert restarted.init_task("task")["action_journal_policy"] == policy
+
+
+@pytest.mark.asyncio
+async def test_v110_invalid_prerequisite_spends_no_provider_call(setup, monkeypatch):
+    from backend.services.research.action_scheduler import ActionPrerequisiteError
+
+    orch, repo, app = setup
+    orch._get_state("task")["phase"] = "parsing"
+    execute = AsyncMock()
+    install_step(monkeypatch, execute)
+    with pytest.raises(ActionPrerequisiteError, match="missing_candidates"):
+        await orch.execute_step("task")
+    execute.assert_not_awaited()
+    assert orch._get_state("task")["active_action_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_v111_dynamic_reflection_gate_has_immutable_decision_and_restart_state(setup, monkeypatch):
+    from backend.services.research.task_state import ReflectionPayload, RoutingPatch
+
+    orch, repo, app = setup
+    orch._get_state("task")["phase"] = "reflection"
+
+    async def execute(_, envelope):
+        return StepOutput(
+            payload=ReflectionPayload(refined_queries=["rewording"]),
+            routing_patches=[RoutingPatch(source_phase="reflection", target_phase="pure_reflection")],
+        )
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    assert result["next_phase"] == "searching"
+    assert result["scheduler_decision"]["rejection"] == "zero_afferent_cut_change"
+    receipt = orch._action_journal.repo.get("task", result["action_id"])
+    assert receipt.observation.scheduler_decision == result["scheduler_decision"]
+    restarted = SomaticResearchOrchestrator(app)
+    saved = restarted._get_state("task")
+    assert saved["scheduler_state"]["consecutive_reflections"] == 1
+    assert saved["patch_reroute_count"] == 1
+    assert saved["delivery_degraded"]
+
+
+@pytest.mark.asyncio
+async def test_v110_unsupported_patch_cannot_execute_arbitrary_action(setup, monkeypatch):
+    from backend.services.research.task_state import RoutingPatch
+
+    orch, repo, app = setup
+
+    async def execute(_, envelope):
+        return StepOutput(
+            payload=PlanPayload(),
+            routing_patches=[RoutingPatch(action="insert", source_phase="planning", target_phase="arbitrary")],
+        )
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    assert result["status"] == "error"
+    assert result["next_phase"] == "complete"
+    assert orch._action_journal.repo.get("task", result["action_id"]).status == "failed"

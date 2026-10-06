@@ -52,3 +52,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 034: Research provider reliability](034-research-provider-reliability/README.md)
 - [Report 035: Research evidence substrate](035-research-evidence-substrate/README.md)
 - [Report 036: Bounded research acquisition](036-research-acquisition/README.md)
+- [Report 037: Finite research actions](037-research-finite-actions/README.md)

@@ -146,6 +146,8 @@ What becomes easier/harder?
 
 | [108](ADR-108-research-bounded-acquisition.md) | Bounded Research Acquisition | accepted for opt-in implementation | 2026-10-06 |
 
+| [109](ADR-109-research-finite-action-scheduler.md) | Finite Research Action Scheduler | accepted for opt-in implementation | 2026-10-06 |
+
 ## Creating a New ADR
 
 1. Copy an existing ADR as a template

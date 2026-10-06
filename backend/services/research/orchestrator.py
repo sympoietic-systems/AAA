@@ -456,10 +456,11 @@ class SomaticResearchOrchestrator:
         state = self._state_mgr.init_task(task_id)
         if state.get("action_journal_policy") is None:
             enabled = self.config.get("action_receipts_enabled", False) is True
-            contract = ResearchEvidenceStore.initial_contract(task_id, state, 4) if enabled else None
+            contract = ResearchEvidenceStore.initial_contract(task_id, state, 5) if enabled else None
             state["contract_revision"] = 1
             state["action_journal_policy"] = {
-                "version": 4,
+                "version": 5,
+                "scheduler_version": 1,
                 "acquisition_policy": AcquisitionPolicy.model_validate(
                     self.config.get("acquisition_limits", {})
                 ).model_dump(),

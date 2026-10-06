@@ -36,14 +36,21 @@ class ResearchActionJournal:
             )
         now = datetime.now(UTC)
         policy = state["action_journal_policy"]
+        if policy.get("scheduler_version") == 1 and state.get("last_action_id"):
+            dependency = self.repo.get(task_id, state["last_action_id"])
+            if dependency is None or dependency.status not in {"complete", "partial"}:
+                raise InterruptedResearchActionError("Action dependency is absent or unsuccessful")
         receipt = ResearchActionReceipt(
             action_id=str(uuid.uuid4()),
             task_id=task_id,
             kind=phase,
             intent="legacy_phase",
-            input_version=input_hash(inputs),
+            input_version=input_hash({"envelope": inputs, "scheduler": state.get("scheduler_state")})
+            if policy.get("scheduler_version") == 1
+            else input_hash(inputs),
             dependency_ids=(state["last_action_id"],) if state.get("last_action_id") else (),
-            rationale="Execute registered legacy phase under recorded journal policy",
+            rationale=((state.get("scheduler_state") or {}).get("decisions") or [{}])[-1].get("rejection")
+            or "Execute registered phase with validated prerequisites and persisted predecessor",
             budget_reserved=0,
             deadline=policy.get("provider_policy", {}).get("deadline"),
             contract_hash=policy["contract_hash"],
@@ -83,6 +90,7 @@ class ResearchActionJournal:
                 provider_attempts=provider_attempts,
                 evidence_packets=evidence_packets,
                 acquisition_ids=self.acquisition_ids(receipt),
+                scheduler_decision=((state.get("scheduler_state") or {}).get("decisions") or [None])[-1],
             ),
         )
         self.repo.checkpoint(terminal, serialize_research_state(checkpoint))

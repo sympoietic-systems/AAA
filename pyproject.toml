@@ -51,6 +51,7 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/research/action_scheduler.py",
     "backend/services/research/acquisition.py",
     "backend/storage/research_acquisition.py",
     "backend/storage/repositories/research/acquisition.py",

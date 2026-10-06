@@ -256,7 +256,7 @@ T62|x|define Research V2 action/evidence/provider receipts; persist versions, de
 T63|x|instrument provider attempts + request correlation; bound retries and end-to-end wait; expose pending/degraded/partial terminal state|V115,V117,V118,I.internal,I.error
 T64|x|build source/version/span evidence substrate + parser quality contract; preserve late evidence, exclusions and claim support|V112,V114,I.internal,I.domain
 T65|x|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
-T66|.|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
+T66|x|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
 T67|.|add `off|propose` MVP; allow post-afferent proposal only; persist approval/edit/decline/expiry state|V113,V115,I.api,I.internal
 T68|.|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
 T69|.|evaluate Jev candidate ranking vs baseline on held-out raw research pools; promote only after downstream support/coverage review|V112,V114,V118,I.benchmark
@@ -371,3 +371,5 @@ B93|2026-10-06|T64 fixtures omitted required policy/budget; resolution error exp
 B94|2026-10-06|cache publication raced durable origin; cancellation could release physical CPU capacity; expanded typing command included legacy files outside strict allowlist|durable observe-before-publish + parallel origin test; retained thread capacity test; configured/focused typing reported separately; V119
 
 B95|2026-10-06|Matplotlib SVG emitted trailing spaces; shell continued to commit after diff check failure|normalize SVG whitespace; run gate and commit in checked subprocess sequence; amend own T65 commit; V30
+
+B96|2026-10-06|T66 fixture entered parsing without candidates; initial cut projection included model query prose; test formatting violated lint|valid candidate fixture; typed anchors + persisted contrary witness gate; 157 regression tests pass; V110,V111,V112,V30

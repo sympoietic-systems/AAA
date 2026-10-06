@@ -20,6 +20,89 @@ from backend.storage.research_evidence import (
 
 class ResearchEvidenceRepository(BaseRepository):
     @with_connection
+    def afferent_snapshot(self, task_id: str) -> list[dict[str, Any]]:
+        """Persisted content identity, never access time or model novelty claims."""
+        rows = (
+            self._conn()
+            .execute(
+                "SELECT artifact_json FROM research_source_versions WHERE task_id=? ORDER BY rowid LIMIT 5001",
+                (task_id,),
+            )
+            .fetchall()
+        )
+        if len(rows) > 5000:
+            raise ReceiptConflictError("Afferent snapshot exceeds source ceiling")
+        acquisitions = (
+            self._conn()
+            .execute(
+                "SELECT receipt_json FROM research_acquisitions WHERE task_id=? AND outcome='fetched' LIMIT 257",
+                (task_id,),
+            )
+            .fetchall()
+        )
+        from backend.storage.research_acquisition import AcquisitionReceipt
+
+        witnesses = {}
+        for row in acquisitions:
+            acquisition = AcquisitionReceipt.model_validate_json(row[0])
+            if acquisition.source_id and acquisition.valid_until and acquisition.valid_until > datetime.now(UTC):
+                witnesses[(acquisition.source_id, acquisition.source_version)] = acquisition.acquisition_id
+        result: list[dict[str, Any]] = []
+        anchor_count = 0
+        claim_rows = (
+            self._conn()
+            .execute("SELECT claim_json FROM research_claim_evidence WHERE task_id=? LIMIT 5001", (task_id,))
+            .fetchall()
+        )
+        if len(claim_rows) > 5000:
+            raise ReceiptConflictError("Afferent claim ceiling exceeded")
+        contrary_ids = {
+            segment_id
+            for row in claim_rows
+            for segment_id in ClaimEvidence.model_validate_json(row[0]).contrary_segment_ids
+        }
+        for row in rows:
+            artifact = SourceArtifact.model_validate_json(row[0])
+            key = (artifact.source_id, artifact.source_version)
+            if artifact.fetch_status != "available" or not artifact.representation_hash:
+                continue
+            if key not in witnesses and not artifact.authorized_file_id:
+                continue
+            segment_rows = (
+                self._conn()
+                .execute(
+                    "SELECT segment_json FROM research_evidence_segments WHERE task_id=? AND source_id=? AND source_version=? LIMIT 1001",
+                    (task_id, *key),
+                )
+                .fetchall()
+            )
+            segment_models = [EvidenceSegment.model_validate_json(row[0]) for row in segment_rows]
+            segments = [segment.segment_id for segment in segment_models]
+            anchor_count += len(segments)
+            if not segments:
+                continue
+            if len(segments) > 1000 or len(result) >= 256 or anchor_count > 5000:
+                raise ReceiptConflictError("Afferent witness ceiling exceeded")
+            result.append(
+                {
+                    "source_id": artifact.source_id,
+                    "source_version": artifact.source_version,
+                    "content_hash": artifact.representation_hash,
+                    "segment_ids": sorted(segments),
+                    "acquisition_id": witnesses.get(key),
+                    "authorized_file_id": artifact.authorized_file_id,
+                    "cut_witnesses": sorted(
+                        {
+                            "contradiction:" + segment.text_hash
+                            for segment in segment_models
+                            if segment.segment_id in contrary_ids
+                        }
+                    ),
+                }
+            )
+        return result
+
+    @with_connection
     def preserve_import(self, task_id: str, bundle: EvidenceBundle) -> None:
         """Archive foreign provenance without creating local execution authority."""
         payload = bundle.model_dump_json()

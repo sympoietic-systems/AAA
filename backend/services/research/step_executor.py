@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 from backend.modules.provider_attempts import bounded_call
+from backend.services.research import action_scheduler
 from backend.services.research.action_journal import ResearchActionJournal
 from backend.services.research.provider_observation import ProviderObservations, observe_provider_calls
 from backend.services.research.steps.base import ResearchStepRegistry
@@ -137,6 +138,13 @@ class ResearchStepExecutor:
                     raise RuntimeError("Receipt-enabled task requires a durable action journal")
                 # Validate capability before recording or executing any action.
                 ResearchStepRegistry.get_step(phase)
+                if action_scheduler.enabled(s):
+                    from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
+
+                    afferent = await asyncio.to_thread(
+                        ResearchEvidenceRepository(journal.repo._db_path).afferent_snapshot, task_id
+                    )
+                    action_scheduler.admit(phase, s, afferent)
                 receipt = await asyncio.to_thread(journal.begin, task_id, s, phase, envelope.model_dump(mode="json"))
                 result["action_id"] = receipt.action_id
             phase_started = time.perf_counter()
@@ -219,6 +227,13 @@ class ResearchStepExecutor:
                     s["active_routing_patches"] = s.get("active_routing_patches", [])
                     for patch in output.routing_patches:
                         patch_dict = patch.model_dump()
+                        if action_scheduler.enabled(s) and (
+                            patch.action != "override"
+                            or patch.target_phase not in action_scheduler.KINDS
+                            or patch.source_phase not in action_scheduler.KINDS
+                            or not 1 <= patch.ttl <= 3
+                        ):
+                            raise action_scheduler.ActionPrerequisiteError("Invalid finite routing patch")
                         s["active_routing_patches"].append(patch_dict)
                         logger.info(
                             "Ingested RoutingPatch: %s -> %s (action=%s, ttl=%s)",
@@ -277,6 +292,15 @@ class ResearchStepExecutor:
                         if transition.condition(output, envelope):
                             next_phase = transition.target_phase
                             break
+                if action_scheduler.enabled(s):
+                    assert journal is not None
+                    from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
+
+                    afferent = await asyncio.to_thread(
+                        ResearchEvidenceRepository(journal.repo._db_path).afferent_snapshot, task_id
+                    )
+                    next_phase = action_scheduler.route(phase, next_phase, s, afferent)
+                    result["scheduler_decision"] = s["scheduler_state"]["decisions"][-1]
                 s["phase"] = next_phase
 
                 if next_phase == "planning":
