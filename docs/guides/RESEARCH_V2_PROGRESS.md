@@ -14,6 +14,7 @@ Snapshot: 2026-10-06, branch `codex/research-v2`. Root [SPEC.md](../../SPEC.md) 
 | T67 | Durable human branch proposals, source review, edited approval, decline and expiry | [Report 038](../reports/038-research-branch-proposals/README.md) |
 | T68 | Approved isolated child gathering, shared family budgets, raw-evidence archives, parent-owned merge | [Report 039](../reports/039-approved-research-children/README.md) |
 | T73 | Optional standard-first Docling PDF fallback with bounded CPU worker and preserved parser observations | [Report 040](../reports/040-docling-fallback/README.md) |
+| T74 | Automated provisional source labeling, checkpointed resume, explicit annotator provenance | [Report 041](../reports/041-research-provisional-labeling/README.md) |
 
 Reports describe verification at each task's completion. Their test counts overlap and must not be added together. Later implementation can extend behavior described by an earlier report; for example, T67 stopped at proposal approval and T68 added child execution.
 
@@ -28,6 +29,8 @@ PDF extraction uses pdfplumber first. `AAA_DOCLING_ENABLED=false` is the default
 Use [JSON export/import](RESEARCH_EXPORT_IMPORT.md) to preserve durable provenance. Imported evidence and child archives do not confer execution authority or recreate approval. Existing tasks retain their frozen policy rather than adopting new defaults silently.
 
 ## Remaining evaluation gates
+
+The [automated labeling command](RESEARCH_LABELING.md) prepares provisional source annotations and preserves per-query failures for resume. It reduces annotation preparation work while retaining T69's independent-label and downstream-review gates.
 
 | Task | Work still required |
 | --- | --- |

@@ -266,6 +266,7 @@ T70|.|benchmark Docling parser adapter + selected OCR/specialists on frozen corp
 T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
 T72|.|enable `bounded_auto` only after T71 branch calibration; enforce explicit covenant + shared fanout/budget/deadline|V113,V115,V116,I.api,I.internal
 T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent T70 accuracy gate remains open|V69,V105,V114,V119,V120,I.env,I.domain
+T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; T69 independent review still open|V108,V114,V117,I.benchmark
 
 ## §B
 
@@ -381,3 +382,4 @@ B97|2026-10-06|proposal restart reset phase; UI tests retained DOM and effect re
 
 B98|2026-10-06|combined test collection missed cross-module fixture; implicit mock state entered child prompt; family pricing lacked conservative reservations and parent reserve guard|module-owned fixture; typed context gate; atomic family caps + nullable observed cost; restart/cancel/raw-evidence/idempotent-merge regressions; V23,V114,V115,V116,V119; no new invariant
 B99|2026-10-06|35% heading threshold missed 29.8% degraded extraction; shared threshold rejected legitimate Docling Markdown headings; Windows OS guard exposed Unix typing; parser rename misattributed legacy catch debt|standard-only quarter-heading regression + Docling-output assertion + versioned quality fingerprint; platform-aware imports; narrowed new exception boundaries + preserve existing helper debt; worker timeout/cancellation/byte-hash/span tests; V30,V105,V119,V120
+B100|2026-10-06|initial annotation pass lacked incremental checkpoint and HTTP status; live NVIDIA 503/malformed JSON/timeout; catalog entry returned inference 404|atomic per-query checkpoint + same-model/input resume + safe status receipts + pacing; failures never create gold; 30 NVIDIA + 40 explicit Codex provisional labels; V108,V114,V117

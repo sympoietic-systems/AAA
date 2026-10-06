@@ -56,3 +56,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 038: Human branch proposals](038-research-branch-proposals/README.md)
 - [Report 039: Approved research children](039-approved-research-children/README.md)
 - [Report 040: Optional Docling fallback](040-docling-fallback/README.md)
+- [Report 041: Provisional research labeling](041-research-provisional-labeling/README.md)

@@ -1,6 +1,6 @@
 # Research V2 Specification
 
-Status: partially implemented; T62–T68 and explicitly requested T73 complete; T69–T72 evaluation/promotion gates open. Not a completed release.
+Status: partially implemented; T62–T68 and explicitly requested T73–T74 complete; T69–T72 evaluation/promotion gates open. Not a completed release.
 Owner: Research V2 task sequence in root [SPEC.md](../../SPEC.md).
 Rationale and evidence: [RESEARCH_V2_PROPOSAL.md](RESEARCH_V2_PROPOSAL.md).
 Implementation snapshot and operating references: [RESEARCH_V2_PROGRESS.md](../guides/RESEARCH_V2_PROGRESS.md).
@@ -83,6 +83,7 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 | T71 | Release evaluation | Compare v1, evidence/retrieval, Jev, reflection and proposal branches; include outages, late/truncated results and restarts; publish quality, latency and cost evidence. |
 | T72 | Bounded automatic branching | Enable only after T71 branch calibration; explicit covenant, ≤2 children, shared budget/deadline and synthesis reserve enforced. |
 | T73 | Optional standard-first Docling fallback | Default-off environment switch; isolated bounded CPU worker; standard extraction first; preserve both representations and unknown quality; cancellation/hash/cache regression checks. See [ADR-112](../decisions/ADR-112-standard-first-docling-fallback.md) and [usage guide](../guides/DOCLING.md). T70 remains open. |
+| T74 | Automated provisional source labeling | NVIDIA command validates exact source coverage, checkpoints/resumes, preserves model/input provenance and failure receipts; automated labels do not bypass independent-gold gates. See [labeling guide](../guides/RESEARCH_LABELING.md). |
 
 ## §B Initial findings and remaining gaps
 
