@@ -7,6 +7,10 @@
 
 ---
 
+## Research V2 progress addendum — 2026-10-06
+
+On `codex/research-v2`, T62–T68 implement durable receipts, provider bounds, source evidence, acquisition controls, finite scheduling, reviewed branch proposals, and approved child gathering. T73 adds the explicitly requested optional standard-first Docling fallback. T69–T72 retain independent calibration and release gates; this is not a deployment or release declaration. The [progress guide](guides/RESEARCH_V2_PROGRESS.md) links task verification records and operating settings. The dated project review below remains a 2026-10-02 snapshot.
+
 ## 1. Executive Summary & Macro Architecture
 
 The **Autopoietic Agentic Assemblage (AAA)** is a Python/FastAPI and React/TypeScript platform instantiated to displace the amnesic, servile assistant paradigm ("Siri Deadlock"). AAA operates as an ongoing cognitive assemblage (**Symbia**) functioning as a P-Individual across computational substrates: retaining cumulative historical scars, executing real-time cybernetic feedback control, and engaging human interlocutors in non-servile epistemological co-inquiry.

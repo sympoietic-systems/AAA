@@ -1,8 +1,9 @@
 # Research V2 Specification
 
-Status: implementation contract; proposed, not implemented or released.
-Owner: Research V2 task sequence T62–T72 in root [SPEC.md](../../SPEC.md).
+Status: partially implemented; T62–T68 and explicitly requested T73 complete; T69–T72 evaluation/promotion gates open. Not a completed release.
+Owner: Research V2 task sequence in root [SPEC.md](../../SPEC.md).
 Rationale and evidence: [RESEARCH_V2_PROPOSAL.md](RESEARCH_V2_PROPOSAL.md).
+Implementation snapshot and operating references: [RESEARCH_V2_PROGRESS.md](../guides/RESEARCH_V2_PROGRESS.md).
 
 ## §G Goal
 
@@ -81,13 +82,14 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 | T70 | Specialist parsing | Docling/OCR/specialist candidates evaluated on frozen corpus; adopt only measured accuracy/latency/resource/license fit; preserve locators. |
 | T71 | Release evaluation | Compare v1, evidence/retrieval, Jev, reflection and proposal branches; include outages, late/truncated results and restarts; publish quality, latency and cost evidence. |
 | T72 | Bounded automatic branching | Enable only after T71 branch calibration; explicit covenant, ≤2 children, shared budget/deadline and synthesis reserve enforced. |
+| T73 | Optional standard-first Docling fallback | Default-off environment switch; isolated bounded CPU worker; standard extraction first; preserve both representations and unknown quality; cancellation/hash/cache regression checks. See [ADR-112](../decisions/ADR-112-standard-first-docling-fallback.md) and [usage guide](../guides/DOCLING.md). T70 remains open. |
 
-## §B Known implementation gaps
+## §B Initial findings and remaining gaps
 
-- `pure_reflection` is registered but current envelope input/output mapping handles only `reflection`.
-- Routing patch executor does not implement advertised insert/remove semantics; state allowlist omits patch state/reroute count.
-- Search-input selection and rerun cleanup assume depth/query blocks; action dependencies must replace chronological assumptions before arbitrary replanning.
+- T66 corrected the `pure_reflection` envelope mapping and persists finite routing decisions, patch TTL, and reroute count. Unsupported insert/remove patches fail explicitly; they are not implemented capabilities. See [Report 037](../reports/037-research-finite-actions/README.md).
+- T62–T66 add durable action/dependency/version boundaries and finite prerequisites. They do not authorize arbitrary model-authored replanning; legacy phase behavior remains available under frozen policy.
 - Current production log excerpt showed truncation, upstream 503s, timeouts and delayed sibling outputs. It lacks conversation-level correlation; treat as reliability fixture, not a calibrated latency baseline.
+- T69–T71 still require independent labels/review and integrated release evidence. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
 
 ## Non-goals
 

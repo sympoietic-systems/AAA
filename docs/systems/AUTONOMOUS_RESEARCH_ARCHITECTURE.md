@@ -1,5 +1,7 @@
 # AAA Autonomous Research System — Architecture & Implementation Plan
 
+> **Research V2 update, 2026-10-06:** T62–T68 and optional Docling task T73 are implemented on `codex/research-v2`; T69–T72 remain evaluation/promotion gates. See the [current contract](RESEARCH_SPEC.md), [implementation progress](../guides/RESEARCH_V2_PROGRESS.md), and [Docling setup](../guides/DOCLING.md). The original branch/status block and design examples below describe the earlier engine and remain historical context.
+
 > **Status:** Implementation Active — Core Engine ✅ | Orchestrator ✅ | Step Hierarchy (m043) ✅ | Sediment Display (m044-m045) ✅  
 > **Branch:** `feature/autonomous-research-engine`  
 > **Contributors:** Vector (Systems Architecture), Symbia (Philosophical Critique & Ontological Reconciliation)  

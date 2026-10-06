@@ -13,6 +13,8 @@
 
 ## Installation
 
+Docling is optional and is not installed by the standard setup. To enable standard-first PDF fallback, follow the [Docling setup guide](DOCLING.md) after installing AAA. It uses a separate environment and defaults to disabled. Research V2's implemented features and remaining release gates are listed in the [progress guide](RESEARCH_V2_PROGRESS.md).
+
 ### Automated
 
 This installs all dependencies (`uv`, Python packages, Node.js + npm packages), configures the virtual environment, copies the configuration template (`.env`), and creates required data directories. Safe to re-run.

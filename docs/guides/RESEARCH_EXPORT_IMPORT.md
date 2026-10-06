@@ -3,6 +3,8 @@
 Export and transfer research tasks in multiple formats — full data dumps,
 clean process traces, or structured JSON for re-import.
 
+Research V2 JSON transfer also preserves evidence contracts, acquisition receipts, source versions, representation-specific spans, claim/decision records, exclusions, and read-only child evidence archives. The execution action/provider journal is separate from this evidence export. Importing provenance does not grant execution authority or recreate branch approval. Older exports without provenance keep those fields unknown. See [Report 035](../reports/035-research-evidence-substrate/README.md), [Report 039](../reports/039-approved-research-children/README.md), and [current progress](RESEARCH_V2_PROGRESS.md). Docling observations use distinct parser representations; spans refer to their extracted text rather than PDF byte offsets.
+
 ## Endpoints
 
 | Method | Path | Purpose |

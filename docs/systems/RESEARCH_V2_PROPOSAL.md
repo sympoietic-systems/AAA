@@ -2,7 +2,9 @@
 
 Date: 2026-10-05. Status: proposal, not an accepted ADR or implemented release.
 Review baseline: local checkout `592b18a`, with pre-existing unrelated telemetry changes preserved.
-Implementation contract: [RESEARCH_SPEC.md](RESEARCH_SPEC.md); ordered tasks T62–T72 remain in root [SPEC.md](../../SPEC.md).
+Implementation contract: [RESEARCH_SPEC.md](RESEARCH_SPEC.md); task status remains in root [SPEC.md](../../SPEC.md).
+
+Later implementation note, 2026-10-06: T62–T68 and optional parser task T73 are implemented and tested on `codex/research-v2`; T69–T72 remain gated. See [current progress](../guides/RESEARCH_V2_PROGRESS.md). The observations and unverified claims below describe the original proposal review, not the current implementation or deployment status.
 
 The recommended upgrade keeps the current phase engine and adds a durable evidence model, section-aware reading, measured decision routing, and enforceable resource budgets. Jev should reduce expensive selection and evaluation work where calibration supports it. It must retain abstention and must not turn relevance scores into truth or belief authority.
 
