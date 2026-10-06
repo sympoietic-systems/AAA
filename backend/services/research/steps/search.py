@@ -90,6 +90,16 @@ async def _select_high_fidelity_results(
     return results[:target_count]
 
 
+async def _select_with_triage(llm, triage, objective, query, results, target_count):
+    """Keep uncertain Jev decisions separate from the standard selector's output."""
+    selected, receipt = await triage.screen(objective, query, results, target_count)
+    if receipt.get("fallback"):
+        selected = await _select_high_fidelity_results(llm, objective, query, results, target_count)
+        receipt["fallback_selector"] = "standard"
+        receipt["fallback_selected_ids"] = [str(i) for i, candidate in enumerate(results) if candidate in selected]
+    return selected, receipt
+
+
 class SearchStep(BaseResearchStep):
     @property
     def step_type(self) -> str:
@@ -251,7 +261,9 @@ class SearchStep(BaseResearchStep):
                 acquired_results[i] if acquisition_enabled else await web_search(q, candidate_count, orch._state.config)
             )
             if triage is not None:
-                selected_res, receipt = await triage.screen(envelope.objective, q, raw_res, orch.default_top_n)
+                selected_res, receipt = await _select_with_triage(
+                    llm, triage, envelope.objective, q, raw_res, orch.default_top_n
+                )
                 triage_receipts.append(receipt)
             else:
                 selected_res = await _select_high_fidelity_results(

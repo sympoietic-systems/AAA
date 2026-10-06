@@ -6,6 +6,7 @@ import pytest
 from backend.modules.retrieval.web_retrieval import RhizomeWebProbe
 from backend.modules.sensory.evidence_triage import EvidenceTriage, probability
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
+from backend.services.research.steps.search import _select_with_triage
 from backend.services.research.task_state import SearchPayload, StepOutput, TaskStateManager, make_initial_state
 
 
@@ -13,6 +14,33 @@ def client(answers):
     return SimpleNamespace(
         model="fixture", is_configured=True, evaluate=AsyncMock(return_value={"success": True, "answers": answers})
     )
+
+
+@pytest.mark.asyncio
+async def test_search_abstention_uses_standard_selector_and_keeps_jev_receipt(monkeypatch):
+    sources = [{"url": "https://first.test"}, {"url": "https://second.test"}]
+    fallback = AsyncMock(return_value=[sources[1]])
+    monkeypatch.setattr("backend.services.research.steps.search._select_high_fidelity_results", fallback)
+    triage = EvidenceTriage(client({"0": {"score": 0.9, "confidence": 0.1}}))
+    selected, receipt = await _select_with_triage(None, triage, "a", "b", sources, 1)
+    assert selected == [sources[1]]
+    fallback.assert_awaited_once_with(None, "a", "b", sources, 1)
+    assert receipt["status"] == "abstain" and receipt["fallback"]
+    assert receipt["selected_ids"] == ["0"]
+    assert receipt["fallback_selected_ids"] == ["1"]
+    assert receipt["fallback_selector"] == "standard"
+
+
+@pytest.mark.asyncio
+async def test_search_accepted_jev_selection_skips_standard_selector(monkeypatch):
+    fallback = AsyncMock()
+    monkeypatch.setattr("backend.services.research.steps.search._select_high_fidelity_results", fallback)
+    sources = [{"url": "https://first.test"}, {"url": "https://second.test"}]
+    triage = EvidenceTriage(client({"0": {"score": 0.1, "confidence": 0.9}, "1": {"score": 0.9, "confidence": 0.9}}))
+    selected, receipt = await _select_with_triage(None, triage, "a", "b", sources, 1)
+    assert selected == [sources[1]] and receipt["status"] == "selected"
+    fallback.assert_not_awaited()
+    assert "fallback_selected_ids" not in receipt
 
 
 @pytest.mark.asyncio

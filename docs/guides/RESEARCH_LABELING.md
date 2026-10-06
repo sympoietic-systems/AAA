@@ -44,3 +44,7 @@ Annotations from the same model and unchanged objective/query/source input are v
 Annotations use `method=model_provisional` and `independent=false`. The dataset remains unfrozen and promotion remains blocked. Automated labels alone do not satisfy T69's independent-gold or downstream-support gates. The existing contract accepts actual human review or qualifying independently sourced model judgments; simply repeating this command or changing a model does not establish that independence. Independent review must assess the evidence and provenance rather than merely approve a file mechanically.
 
 See [Research V2 progress](RESEARCH_V2_PROGRESS.md) for the remaining evaluation gates. Keep private source packets and full annotations in ignored benchmark runs; publish verified summaries through the report registry.
+
+## Authorized experimental rollout
+
+On 2026-10-06 the user explicitly authorized experimental Jev promotion on provisional LLM labels. [Report 042](../reports/042-jev-experimental-promotion/README.md) records that exception and the observed abstentions. Annotation provenance and default independent-gold calibration gates remain unchanged; independent quality and downstream release review remain T71.

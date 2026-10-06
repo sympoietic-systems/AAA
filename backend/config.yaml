@@ -443,6 +443,7 @@ backup:
 server:
   host: "127.0.0.1"
   port: 8499
-# Candidate rollout: enable only after representative local quality calibration.
+# Experimental rollout authorized on provisional LLM labels (2026-10-06).
+# Independent quality/release review remains pending; confidence guards stay active.
 research_triage:
-  enabled: false
+  enabled: true

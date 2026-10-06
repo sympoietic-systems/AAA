@@ -1,6 +1,6 @@
 # Research V2 Specification
 
-Status: partially implemented; T62–T68 and explicitly requested T73–T74 complete; T69–T72 evaluation/promotion gates open. Not a completed release.
+Status: partially implemented; T62–T69 and explicitly requested T73–T74 complete; T69 experimental promotion authorized on provisional LLM labels; T70–T72 release gates open. Not a completed release.
 Owner: Research V2 task sequence in root [SPEC.md](../../SPEC.md).
 Rationale and evidence: [RESEARCH_V2_PROPOSAL.md](RESEARCH_V2_PROPOSAL.md).
 Implementation snapshot and operating references: [RESEARCH_V2_PROGRESS.md](../guides/RESEARCH_V2_PROGRESS.md).
@@ -78,7 +78,7 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 | T66 | Adaptive routing | Legal action paths pass prerequisites; repeated reflection obeys V3–V5; `pure_reflection` input/output mapping and restart/rerun dependencies work. |
 | T67 | Proposal UX | `off` unchanged; `propose` waits durably; approve/edit/decline/expiry tested; no child spend before approval. |
 | T68 | Child execution and merge | ≤2 isolated children; source spans and conflicts preserved; parent Cortex owns synthesis; restart/cancel/failure paths tested. |
-| T69 | Jev selection | Held-out raw pools, independent labels and downstream support/coverage review; Jev abstains on uncertainty; promotion gated on evidence. |
+| T69 | Jev selection | User-authorized experimental promotion on provisional LLM labels, 2026-10-06; held-out comparison complete; uncertainty uses standard-selector fallback. Independent quality and downstream release review remain T71. See [Report 042](../reports/042-jev-experimental-promotion/README.md). |
 | T70 | Specialist parsing | Docling/OCR/specialist candidates evaluated on frozen corpus; adopt only measured accuracy/latency/resource/license fit; preserve locators. |
 | T71 | Release evaluation | Compare v1, evidence/retrieval, Jev, reflection and proposal branches; include outages, late/truncated results and restarts; publish quality, latency and cost evidence. |
 | T72 | Bounded automatic branching | Enable only after T71 branch calibration; explicit covenant, ≤2 children, shared budget/deadline and synthesis reserve enforced. |
@@ -90,7 +90,7 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 - T66 corrected the `pure_reflection` envelope mapping and persists finite routing decisions, patch TTL, and reroute count. Unsupported insert/remove patches fail explicitly; they are not implemented capabilities. See [Report 037](../reports/037-research-finite-actions/README.md).
 - T62–T66 add durable action/dependency/version boundaries and finite prerequisites. They do not authorize arbitrary model-authored replanning; legacy phase behavior remains available under frozen policy.
 - Current production log excerpt showed truncation, upstream 503s, timeouts and delayed sibling outputs. It lacks conversation-level correlation; treat as reliability fixture, not a calibrated latency baseline.
-- T69–T71 still require independent labels/review and integrated release evidence. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
+- T69 experimental activation uses the explicit user exception above; T70–T71 still require independent labels/review and integrated release evidence. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
 
 ## Non-goals
 

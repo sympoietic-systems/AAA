@@ -12,6 +12,8 @@ Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-ass
 
 ## §C
 
+- 2026-10-06 user authorizes T69 experimental Jev promotion on provisional LLM labels; retain confidence/standard-selector fallback, provisional provenance; independent quality certification + downstream release review remain T71.
+
 - Python 3.11+, FastAPI, Pydantic 2, httpx, SQLite WAL.
 - Preserve route paths & successful response shapes unless security contract requires change.
 - Dependency flow: `api` → `services` → `modules` → `storage`; ⊥ FastAPI concepts below `api`.
@@ -168,7 +170,7 @@ V105: bridge storage faults → propagate; PDF parser/I/O failures → bounded f
 V106: activation trace ! assembly-owned bounded IDs + selected/injected + origin; legacy NULL → unknown; chat/dream parity; provenance ≠ response influence; ⊥ automatic pruning
 
 V107: belief classification ! statement-bound scope/time/provenance + explicit referent bindings; missing/ambiguous/stale context → abstain before model; replay ⊥ unvalidated context; held-out gold ! independent provenance + leakage check
-V108: research calibration ! raw candidates before selection + source IDs/exclusion receipts; archived survivors ⊥ gold pools; independent relevance/quality/contrary/injection labels + frozen task-family splits; fallback ⊥ valid model trial; repeats ⊥ independent sample count; promotion ! reviewed downstream evidence
+V108: research calibration ! raw candidates before selection + source IDs/exclusion receipts; archived survivors ⊥ gold pools; independent relevance/quality/contrary/injection labels + frozen task-family splits; fallback ⊥ valid model trial; repeats ⊥ independent sample count; quality-certified promotion ! reviewed downstream evidence; explicit experimental exception in §C
 V109: chat collapse_pressure ⊥ automatic thinking_override or completion-budget inflation; provider defaults + explicit per-call thinking remain available
 V110: ∀ research action → registered kind + validated prerequisites/budget/deadline; immutable input/dependency/output receipt survives restart
 V111: consecutive reflection ! afferent trace changes inquiry boundary; internal pass evidential weight = 0; zero cut delta → external action, focused question or partial
@@ -261,7 +263,7 @@ T65|x|implement provider-aware bounded acquisition scheduling, reusable clients/
 T66|x|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
 T67|x|add `off|propose` MVP; allow post-afferent proposal only; persist approval/edit/decline/expiry state|V113,V115,I.api,I.internal
 T68|x|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
-T69|.|evaluate Jev candidate ranking vs baseline on held-out raw research pools; promote only after downstream support/coverage review|V112,V114,V118,I.benchmark
+T69|x|54 held-out comparison trials; user-authorized experimental Jev promotion on LLM labels; standard-selector fallback tested; independent quality/release review remains T71|V112,V114,V118,I.benchmark
 T70|.|benchmark Docling parser adapter + selected OCR/specialists on frozen corpus; adopt only measured quality/cost winner|V114,V118,I.domain
 T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
 T72|.|enable `bounded_auto` only after T71 branch calibration; enforce explicit covenant + shared fanout/budget/deadline|V113,V115,V116,I.api,I.internal
@@ -383,3 +385,5 @@ B97|2026-10-06|proposal restart reset phase; UI tests retained DOM and effect re
 B98|2026-10-06|combined test collection missed cross-module fixture; implicit mock state entered child prompt; family pricing lacked conservative reservations and parent reserve guard|module-owned fixture; typed context gate; atomic family caps + nullable observed cost; restart/cancel/raw-evidence/idempotent-merge regressions; V23,V114,V115,V116,V119; no new invariant
 B99|2026-10-06|35% heading threshold missed 29.8% degraded extraction; shared threshold rejected legitimate Docling Markdown headings; Windows OS guard exposed Unix typing; parser rename misattributed legacy catch debt|standard-only quarter-heading regression + Docling-output assertion + versioned quality fingerprint; platform-aware imports; narrowed new exception boundaries + preserve existing helper debt; worker timeout/cancellation/byte-hash/span tests; V30,V105,V119,V120
 B100|2026-10-06|initial annotation pass lacked incremental checkpoint and HTTP status; live NVIDIA 503/malformed JSON/timeout; catalog entry returned inference 404|atomic per-query checkpoint + same-model/input resume + safe status receipts + pacing; failures never create gold; 30 NVIDIA + 40 explicit Codex provisional labels; V108,V114,V117
+
+B101|2026-10-06|Jev abstention bypassed standard selector, returning raw top results; initial exploratory lint found nested contexts|standard-selector fallback on abstention/unavailability; separate fallback IDs preserve Jev receipt; regression assertions; lint fixed under V30,V108; Windows temp permission failure → isolated workspace basetemp, 46 tests pass
