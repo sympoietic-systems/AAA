@@ -94,6 +94,12 @@ class SimpleChunkDigester(FileDigester):
 
     @staticmethod
     def _extract_pdf(file_path: Path) -> str:
+        from backend.modules.pdf_extraction import extract_pdf
+
+        return extract_pdf(file_path, SimpleChunkDigester._extract_pdf_standard)
+
+    @staticmethod
+    def _extract_pdf_standard(file_path: Path) -> str:
         try:
             import pdfplumber
         except ImportError:

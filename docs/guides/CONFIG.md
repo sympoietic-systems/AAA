@@ -502,6 +502,7 @@ To disable LLM scoring for a single request, send `"include_structural_scoring":
 
 ## See Also
 
+*   [Optional Docling PDF Fallback](DOCLING.md) — `AAA_DOCLING_ENABLED=false` by default; standard parser first, bounded CPU fallback on degraded extraction.
 *   [Easy Quickstart Guide](QUICKSTART_NON_TECHNICAL.md) — Walkthrough for local setup.
 *   [Setup & Deployment Guide](SETUP.md) — Advanced setup and database seeding.
 *   [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) — Configuring identity, beliefs, skills, and prompts.

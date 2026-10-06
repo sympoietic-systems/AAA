@@ -56,3 +56,4 @@ benchmarks/runs/
 **/*.log
 .tmp_pytest_nvidia/
 .local/
+.venv-docling/

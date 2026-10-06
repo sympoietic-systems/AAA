@@ -46,6 +46,7 @@ Step-by-step operational guides for setting up, configuring, and extending the s
 - [SETUP.md](guides/SETUP.md) — Prerequisites, installation, and first-run instructions.
 - [QUICKSTART_NON_TECHNICAL.md](guides/QUICKSTART_NON_TECHNICAL.md) — Easy local setup guide for non-technical users.
 - [CONFIG.md](guides/CONFIG.md) — `config.yaml` and environment variable reference.
+- [DOCLING.md](guides/DOCLING.md) — Optional standard-first PDF fallback, installation, limits, and VPS settings.
 - [CUSTOMIZE_PERSONALITY.md](guides/CUSTOMIZE_PERSONALITY.md) — Core identity, beliefs, skills, and prompt customization guide.
 - [PLUGINS.md](guides/PLUGINS.md) — Plugin system architecture and module development.
 - [MCP_SERVER.md](guides/MCP_SERVER.md) — Model Context Protocol integration guide.

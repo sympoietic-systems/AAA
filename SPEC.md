@@ -63,6 +63,7 @@ error: Glitch → `{status,kind,message,entity?,details?}`; ⊥ internal path/tr
 env: `AAA_PASSWORD` → optional local auth secret
 env: upload limits & worker concurrency → positive bounded integers
 env: outbound fetch limits & timeouts → positive bounded numbers
+env: `AAA_DOCLING_ENABLED=false`; optional isolated Python/models path; CPU threads 1–2; timeout 1–300s; OCR opt-in default true behind disabled router
 internal: `app.state.services` → typed `AppServices`; legacy state aliases temporary
 internal: route → typed service use case → repository/module ports
 internal: conversation serialization → app-scoped bounded lock registry
@@ -180,6 +181,7 @@ V117: ∀ provider attempt → correlated request/turn/task IDs + duration + out
 V118: research completion label ∈ `complete|partial|failed|cancelled`; support/coverage contract satisfied for `complete`; UI exposes pending/degraded/partial state
 
 V119: acquisition cache publication ! durable origin receipt; cache access preserves observation/config/source lineage; expired/unsafe/cancelled output ⊥ current acquisition; shared provider/CPU capacity held until actual work exits
+V120: optional Docling default off; standard first → mechanical degradation/expected failure triggers bounded CPU fallback; immutable PDF hash + parser-specific representations/spans retain both observations/exclusions; quality unknown; rejected fallback keeps standard; capacity/input lifetime ! physical worker exit
 
 ## §T
 
@@ -263,6 +265,7 @@ T69|.|evaluate Jev candidate ranking vs baseline on held-out raw research pools;
 T70|.|benchmark Docling parser adapter + selected OCR/specialists on frozen corpus; adopt only measured quality/cost winner|V114,V118,I.domain
 T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
 T72|.|enable `bounded_auto` only after T71 branch calibration; enforce explicit covenant + shared fanout/budget/deadline|V113,V115,V116,I.api,I.internal
+T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent T70 accuracy gate remains open|V69,V105,V114,V119,V120,I.env,I.domain
 
 ## §B
 
@@ -377,3 +380,4 @@ B96|2026-10-06|T66 fixture entered parsing without candidates; initial cut proje
 B97|2026-10-06|proposal restart reset phase; UI tests retained DOM and effect resets failed lint; eager vocabulary splitting erased typed separators; global defaults blocked explicit contextual opt-in|restore phase + durable expiry monitor; scoped UI ownership/cleanup; raw edit buffer; trusted per-task initialization with atomic policy/contract; V23,V39,V110,V113,V115
 
 B98|2026-10-06|combined test collection missed cross-module fixture; implicit mock state entered child prompt; family pricing lacked conservative reservations and parent reserve guard|module-owned fixture; typed context gate; atomic family caps + nullable observed cost; restart/cancel/raw-evidence/idempotent-merge regressions; V23,V114,V115,V116,V119; no new invariant
+B99|2026-10-06|35% heading threshold missed 29.8% degraded extraction; shared threshold rejected legitimate Docling Markdown headings; Windows OS guard exposed Unix typing; parser rename misattributed legacy catch debt|standard-only quarter-heading regression + Docling-output assertion + versioned quality fingerprint; platform-aware imports; narrowed new exception boundaries + preserve existing helper debt; worker timeout/cancellation/byte-hash/span tests; V30,V105,V119,V120

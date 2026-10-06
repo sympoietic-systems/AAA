@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from backend.core.logging_config import mask_secrets
+from backend.modules.pdf_extraction import PDFText
 from backend.services.research.action_journal import input_hash
 from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
 from backend.storage.research_evidence import (
@@ -52,6 +53,38 @@ class ResearchEvidenceStore:
             raise ValueError("Evidence URL must be an HTTP source without embedded credentials")
         canonical = urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path, parts.query, ""))
         source_id = "source:" + text_hash(canonical)
+        if isinstance(content, PDFText):
+            extraction = content.extraction
+            observation_time = observed_at or datetime.now(UTC)
+            recorded = []
+            for observation in extraction.observations:
+                warnings = ("parser_output_unverified", "original_bytes_unavailable") + observation.issues
+                if observation.method == "docling":
+                    warnings += ("fallback_triggered",) + tuple(
+                        "standard:" + issue for issue in extraction.observations[0].issues
+                    )
+                parser_quality = ParserQuality(
+                    method=observation.method,
+                    parser_version=observation.parser_version,
+                    config_hash=extraction.config_hash,
+                    ocr_used=observation.ocr_used,
+                    warnings=warnings,
+                )
+                recorded.append(
+                    self._record_representation(
+                        task_id,
+                        source_id,
+                        observation.text,
+                        canonical,
+                        None,
+                        observation.method + "_pdf_text_v1",
+                        parser_quality,
+                        observation_time,
+                        "empty_extraction",
+                        original_byte_hash=extraction.byte_hash,
+                    )
+                )
+            return recorded[extraction.selected_index]
         quality = quality or ParserQuality(warnings=("parser_route_unobserved", "original_bytes_unavailable"))
         if reused:
             quality = quality.model_copy(update={"warnings": quality.warnings + ("legacy_cache_may_be_truncated",)})
@@ -99,12 +132,14 @@ class ResearchEvidenceStore:
         quality: ParserQuality,
         acquired_at: datetime | None,
         unavailable_reason: str,
+        original_byte_hash: str | None = None,
     ) -> tuple[SourceArtifact, tuple[EvidenceSegment, ...]]:
         if len(content) > 2_000_000:
             raise ValueError("Evidence representation exceeds text limit")
         version = input_hash(
             {
                 "representation": representation,
+                **({"original_byte_hash": original_byte_hash} if original_byte_hash else {}),
                 "observed_at": acquired_at.isoformat() if acquired_at and content else None,
                 "text_hash": text_hash(content),
                 "quality": quality.model_dump(mode="json"),
@@ -115,6 +150,7 @@ class ResearchEvidenceStore:
             task_id=task_id,
             source_id=source_id,
             source_version=version,
+            original_byte_hash=original_byte_hash,
             canonical_url=canonical_url,
             authorized_file_id=authorized_file_ref,
             acquired_at=acquired_at if content else None,
@@ -214,6 +250,9 @@ class ResearchEvidenceStore:
             claim_ids=claim_ids,
             extraction_method=source.quality.method,
             extraction_quality=source.quality.score,
+            excluded_evidence={"standard_parser": ",".join(source.quality.warnings)}
+            if any(w.startswith("standard:") for w in source.quality.warnings)
+            else {},
             unavailable_evidence={source.source_id: source.unavailable_reason or "unknown"}
             if source.fetch_status != "available"
             else {},

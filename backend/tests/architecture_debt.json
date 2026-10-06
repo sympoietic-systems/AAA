@@ -131,7 +131,7 @@
       "ConversationMetricsModule.process": 1
     },
     "backend/modules/digester.py": {
-      "SimpleChunkDigester._extract_pdf": 1
+      "SimpleChunkDigester._extract_pdf_standard": 1
     },
     "backend/modules/embedder.py": {
       "EmbedderModule.validate": 1,

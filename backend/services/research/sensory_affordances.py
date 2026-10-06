@@ -10,7 +10,6 @@ See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 9.
 """
 
 import asyncio
-import contextlib
 import json
 import logging
 from typing import Any
@@ -356,11 +355,6 @@ async def select_and_fetch(
     if url_or_query.lower().split("?")[0].endswith(".pdf") or task_type == "pdf":
         logger.info("PDF URL detected, downloading and extracting text: %s", url_or_query)
         try:
-            import os
-            from pathlib import Path
-            from tempfile import NamedTemporaryFile
-
-            from backend.modules.digester import SimpleChunkDigester
             from backend.modules.retrieval.safe_http import safe_fetch
 
             response = (
@@ -379,20 +373,10 @@ async def select_and_fetch(
                     return extracted_text
                 raise SensoryAffordanceError("PDF extraction returned no text")
 
-            with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(pdf_bytes)
-                tmp_path = Path(tmp_file.name)
-
-            try:
-                digester = SimpleChunkDigester()
-                extracted_text = await asyncio.to_thread(digester.extract, tmp_path, "pdf")
-                if extracted_text and extracted_text.strip():
-                    return extracted_text
-                else:
-                    logger.warning("Extracted PDF text is empty: %s", url_or_query)
-            finally:
-                with contextlib.suppress(Exception):
-                    os.unlink(tmp_path)
+            extracted_text = await asyncio.to_thread(_extract_pdf_bytes, pdf_bytes)
+            if extracted_text and extracted_text.strip():
+                return extracted_text
+            logger.warning("Extracted PDF text is empty: %s", url_or_query)
         except Exception as e:
             logger.error("Failed to download and extract PDF from URL %s: %s", url_or_query, e)
 

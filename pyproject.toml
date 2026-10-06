@@ -51,6 +51,8 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/modules/pdf_extraction.py",
+    "backend/modules/docling_worker.py",
     "backend/storage/repositories/research/child_run.py",
     "backend/storage/research_children.py",
     "backend/storage/migrations/m058_research_children.py",

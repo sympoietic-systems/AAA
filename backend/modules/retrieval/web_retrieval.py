@@ -241,7 +241,7 @@ class RhizomeWebProbe:
         with tempfile.TemporaryDirectory(prefix="aaa-crawl-") as directory:
             path = Path(directory) / "source.pdf"
             path.write_bytes(content)
-            return SimpleChunkDigester().extract(path, "pdf").strip()
+            return SimpleChunkDigester().extract(path, "pdf")
 
     async def execute_probe(self, query: str, conversation_id: str) -> dict:
         results = await self.search(query)

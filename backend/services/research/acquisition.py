@@ -15,6 +15,7 @@ from typing import Any, TypeVar
 import httpx
 from pydantic import Field
 
+from backend.modules.pdf_extraction import PDFSettings, retained_characters
 from backend.modules.retrieval.safe_http import SafeFetchResponse
 from backend.services.research.action_journal import input_hash
 from backend.storage.research_receipts import ReceiptModel
@@ -153,7 +154,13 @@ class AcquisitionRuntime:
         namespace: str = "",
     ) -> AcquisitionResult:
         fingerprint = input_hash(
-            {"url": url, "config": config, "parser_contract": "sensory-v2", "namespace": namespace}
+            {
+                "url": url,
+                "config": config,
+                "parser_contract": "sensory-v2",
+                "namespace": namespace,
+                "pdf_settings": PDFSettings.from_env().fingerprint(),
+            }
         )
         access_id = acquisition_id or str(uuid.uuid4())
         stripe = self._stripes[int(fingerprint[:8], 16) % len(self._stripes)]
@@ -199,12 +206,13 @@ class AcquisitionRuntime:
                     raise asyncio.CancelledError
                 if self._closed or datetime.now(UTC) >= deadline:
                     raise TimeoutError("Acquisition observation passed its delivery boundary")
-                if content and len(content) <= self.policy.cache_characters:
+                if content and retained_characters(content) <= self.policy.cache_characters:
                     self._cache[fingerprint] = result
                     self._cache.move_to_end(fingerprint)
                     while (
                         len(self._cache) > self.policy.cache_entries
-                        or sum(len(v.content) for v in self._cache.values()) > self.policy.cache_characters
+                        or sum(retained_characters(v.content) for v in self._cache.values())
+                        > self.policy.cache_characters
                     ):
                         self._cache.popitem(last=False)
                 return result
