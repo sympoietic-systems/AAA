@@ -133,3 +133,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 036: Bounded research acquisition](reports/036-research-acquisition/README.md)
 - [Report 037: Finite research actions](reports/037-research-finite-actions/README.md)
 - [Report 038: Human branch proposals](reports/038-research-branch-proposals/README.md)
+- [Report 039: Approved research children](reports/039-approved-research-children/README.md)

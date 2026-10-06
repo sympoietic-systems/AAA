@@ -8,6 +8,7 @@ from urllib.parse import quote
 from pydantic import AwareDatetime, Field, model_validator
 
 from backend.storage.research_acquisition import AcquisitionReceipt
+from backend.storage.research_branch_proposal import BranchScope
 from backend.storage.research_receipts import ReceiptModel
 
 
@@ -182,6 +183,18 @@ class SourceSnapshot(ReceiptModel):
     representation_text: str = Field(max_length=2_000_000)
 
 
+class ChildArchive(ReceiptModel):
+    child_task_id: str
+    parent_task_id: str
+    proposal_id: str
+    scope: BranchScope
+    status: Literal["complete", "partial", "failed", "cancelled"]
+    evidence: "EvidenceBundle"
+    interpretations: tuple[str, ...] = Field(default=(), max_length=100)
+    unresolved_objections: tuple[str, ...] = Field(default=(), max_length=100)
+    evidence_role: Literal["child_archive_unreviewed"] = "child_archive_unreviewed"
+
+
 class EvidenceBundle(ReceiptModel):
     schema_version: Literal[1] = 1
     task_id: str
@@ -191,9 +204,19 @@ class EvidenceBundle(ReceiptModel):
     claims: tuple[ClaimEvidence, ...] = Field(default=(), max_length=5000)
     decisions: tuple[DecisionReceipt, ...] = Field(default=(), max_length=5000)
     acquisitions: tuple[AcquisitionReceipt, ...] = Field(default=(), max_length=256)
+    child_archives: tuple[ChildArchive, ...] = Field(default=(), max_length=2)
 
     @model_validator(mode="after")
     def validate_graph(self) -> "EvidenceBundle":
+        if any(
+            child.parent_task_id != self.task_id
+            or child.child_task_id != child.evidence.task_id
+            or child.evidence.child_archives
+            for child in self.child_archives
+        ):
+            raise ValueError("Child archive crosses ownership or permits grandchildren")
+        if len({child.child_task_id for child in self.child_archives}) != len(self.child_archives):
+            raise ValueError("Duplicate child archive")
         sources = {(item.artifact.source_id, item.artifact.source_version): item for item in self.sources}
         segments = {item.segment_id: item for item in self.segments}
         contracts = {item.revision: item for item in self.contracts}
@@ -274,3 +297,7 @@ class EvidenceBundle(ReceiptModel):
             if segment.locator() == locator:
                 return self.resolve(segment.segment_id)
         raise ValueError("Unknown evidence locator")
+
+
+ChildArchive.model_rebuild()
+EvidenceBundle.model_rebuild()

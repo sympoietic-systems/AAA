@@ -54,3 +54,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 036: Bounded research acquisition](036-research-acquisition/README.md)
 - [Report 037: Finite research actions](037-research-finite-actions/README.md)
 - [Report 038: Human branch proposals](038-research-branch-proposals/README.md)
+- [Report 039: Approved research children](039-approved-research-children/README.md)

@@ -219,7 +219,8 @@ class ResearchStepExecutor:
                 orchestrator.apply_step_output(s, phase, output)
 
                 # Metabolize research findings into belief system
-                await orchestrator._metabolize_step(task_id, phase, output.new_findings or [])
+                if not s.get("research_child"):
+                    await orchestrator._metabolize_step(task_id, phase, output.new_findings or [])
 
                 result.update(
                     {
@@ -300,6 +301,12 @@ class ResearchStepExecutor:
                         if transition.condition(output, envelope):
                             next_phase = transition.target_phase
                             break
+                if s.get("research_child"):
+                    next_phase = {
+                        "searching": "parsing" if output.signal_flags.get("has_results") else "complete",
+                        "parsing": "digesting" if output.signal_flags.get("has_parsed_content") else "complete",
+                        "digesting": "complete",
+                    }.get(phase, "complete")
                 if action_scheduler.enabled(s):
                     assert journal is not None
                     from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
@@ -312,6 +319,7 @@ class ResearchStepExecutor:
                 s["phase"] = next_phase
                 if (
                     output.branch_proposal
+                    and not s.get("branch_review_complete")
                     and (s.get("action_journal_policy") or {}).get("subresearch_policy", "off") == "propose"
                 ):
                     assert receipt is not None and journal is not None

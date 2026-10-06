@@ -236,6 +236,9 @@ class ResearchTaskManager:
             from backend.storage.repositories.research.branch_proposal import ResearchBranchProposalRepository
 
             ResearchBranchProposalRepository(self.task_repo._db_path).abandon_cancelled_parent(task_id)
+            from backend.storage.repositories.research.child_run import ResearchChildRunRepository
+
+            ResearchChildRunRepository(self.task_repo._db_path).cancel_parent(task_id)
             if self._orchestrator is not None:
                 self._orchestrator._state_mgr.states.pop(task_id, None)
         logger.info("Research task %s: %s -> %s", task_id, current, new_status)
@@ -267,7 +270,7 @@ class ResearchTaskManager:
         task = self.task_repo.get(task_id)
         if task is None:
             return
-        if task["status"] not in ("queued", "active", "proposed", "approved"):
+        if task["status"] not in ("queued", "active", "proposed", "approved", "waiting_for_branch_approval"):
             raise ValueError(f"Cannot cancel task in status: {task['status']}")
 
         self.transition(task_id, "cancelled")

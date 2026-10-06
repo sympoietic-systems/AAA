@@ -1,4 +1,5 @@
 from backend.services.research.steps.base import BaseResearchStep, ResearchStepRegistry  # noqa: F401
+from backend.services.research.steps.branch_gather import BranchGatherStep  # noqa: F401
 from backend.services.research.steps.consolidate import ConsolidateStep  # noqa: F401
 from backend.services.research.steps.digest import DigestStep  # noqa: F401
 from backend.services.research.steps.document_digestion import DocumentDigestionStep  # noqa: F401
@@ -21,3 +22,5 @@ ResearchStepRegistry.register("reflection", ReflectionStep)
 ResearchStepRegistry.register("pure_reflection", PureReflectionStep)
 ResearchStepRegistry.register("evaluating", EvaluateStep)
 ResearchStepRegistry.register("synthesizing", SynthesizeStep)
+
+ResearchStepRegistry.register("branch_gathering", BranchGatherStep)

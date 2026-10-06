@@ -150,6 +150,8 @@ What becomes easier/harder?
 
 | [110](ADR-110-research-branch-proposal-review.md) | Human Branch Proposal Review | accepted for opt-in implementation | 2026-10-06 |
 
+| [111](ADR-111-approved-research-child-gathering.md) | Approved Research Child Gathering | accepted for opt-in implementation | 2026-10-06 |
+
 ## Creating a New ADR
 
 1. Copy an existing ADR as a template

@@ -150,8 +150,11 @@ class AcquisitionRuntime:
         loader: Callable[[], Awaitable[str]],
         acquisition_id: str | None = None,
         observe: Callable[[AcquisitionResult], Awaitable[None]] | None = None,
+        namespace: str = "",
     ) -> AcquisitionResult:
-        fingerprint = input_hash({"url": url, "config": config, "parser_contract": "sensory-v2"})
+        fingerprint = input_hash(
+            {"url": url, "config": config, "parser_contract": "sensory-v2", "namespace": namespace}
+        )
         access_id = acquisition_id or str(uuid.uuid4())
         stripe = self._stripes[int(fingerprint[:8], 16) % len(self._stripes)]
 

@@ -77,7 +77,7 @@ class ResearchEnvelopeMapper:
         elif phase == "digesting":
             parsed_sources = task_state.get("parsed_sources_cache") or []
             payload = DigestPayload(parsed_sources_cache=parsed_sources)
-        elif phase == "consolidating":
+        elif phase in {"consolidating", "branch_gathering"}:
             payload = ConsolidatePayload(last_reflection=task_state.get("last_reflection") or {})
         elif phase in {"reflection", "pure_reflection"}:
             payload = ReflectionPayload(

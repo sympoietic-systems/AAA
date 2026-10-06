@@ -258,7 +258,7 @@ T64|x|build source/version/span evidence substrate + parser quality contract; pr
 T65|x|implement provider-aware bounded acquisition scheduling, reusable clients/cache and deadline/cancellation behavior|V115,V117,I.domain
 T66|x|implement adaptive finite-action routing + persisted dependencies; gate consecutive reflection on afferent cut change; repair reflection envelope mapping|V110,V111,V112,I.internal
 T67|x|add `off|propose` MVP; allow post-afferent proposal only; persist approval/edit/decline/expiry state|V113,V115,I.api,I.internal
-T68|.|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
+T68|x|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
 T69|.|evaluate Jev candidate ranking vs baseline on held-out raw research pools; promote only after downstream support/coverage review|V112,V114,V118,I.benchmark
 T70|.|benchmark Docling parser adapter + selected OCR/specialists on frozen corpus; adopt only measured quality/cost winner|V114,V118,I.domain
 T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
@@ -375,3 +375,5 @@ B95|2026-10-06|Matplotlib SVG emitted trailing spaces; shell continued to commit
 B96|2026-10-06|T66 fixture entered parsing without candidates; initial cut projection included model query prose; test formatting violated lint|valid candidate fixture; typed anchors + persisted contrary witness gate; 157 regression tests pass; V110,V111,V112,V30
 
 B97|2026-10-06|proposal restart reset phase; UI tests retained DOM and effect resets failed lint; eager vocabulary splitting erased typed separators; global defaults blocked explicit contextual opt-in|restore phase + durable expiry monitor; scoped UI ownership/cleanup; raw edit buffer; trusted per-task initialization with atomic policy/contract; V23,V39,V110,V113,V115
+
+B98|2026-10-06|combined test collection missed cross-module fixture; implicit mock state entered child prompt; family pricing lacked conservative reservations and parent reserve guard|module-owned fixture; typed context gate; atomic family caps + nullable observed cost; restart/cancel/raw-evidence/idempotent-merge regressions; V23,V114,V115,V116,V119; no new invariant

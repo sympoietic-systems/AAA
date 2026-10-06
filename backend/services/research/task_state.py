@@ -178,6 +178,10 @@ class StepOutput(BaseModel):
 
 
 _ORCH_STATE_KEYS = {
+    "merged_child_ids",
+    "branch_review_complete",
+    "research_child",
+    "child_evidence_context",
     "pending_branch_proposal_id",
     "approved_branch_proposal_id",
     "scheduler_state",
@@ -255,6 +259,10 @@ def make_initial_state(task: dict) -> dict:
 
     state = {
         "phase": extra.get("phase", "planning"),
+        "branch_review_complete": extra.get("branch_review_complete", False),
+        "merged_child_ids": extra.get("merged_child_ids", []),
+        "research_child": extra.get("research_child"),
+        "child_evidence_context": extra.get("child_evidence_context"),
         "objective": task["objective"],
         "max_depth": task["max_depth"],
         "budget": task["budget_limit_usd"],

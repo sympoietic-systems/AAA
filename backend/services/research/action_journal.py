@@ -83,6 +83,11 @@ class ResearchActionJournal:
         if useful and checkpoint.get("first_useful_result_seconds") is None:
             started = datetime.fromisoformat(checkpoint["research_started_at"])
             checkpoint["first_useful_result_seconds"] = max(0, (now - started).total_seconds())
+        children = []
+        if receipt.kind == "branch_gathering":
+            from backend.storage.repositories.research.child_run import ResearchChildRunRepository
+
+            children = ResearchChildRunRepository(self.repo._db_path).list_parent(receipt.task_id)
         terminal = receipt.transition(
             status,
             now,
@@ -94,6 +99,12 @@ class ResearchActionJournal:
                 acquisition_ids=self.acquisition_ids(receipt),
                 scheduler_decision=((state.get("scheduler_state") or {}).get("decisions") or [None])[-1],
                 branch_proposal_id=state.get("pending_branch_proposal_id"),
+                child_task_ids=tuple(child["child_task_id"] for child in children),
+                child_packet_hashes={
+                    child["child_task_id"]: input_hash(json.loads(child["packet_json"]))
+                    for child in children
+                    if child["packet_json"]
+                },
             ),
         )
         self.repo.checkpoint(terminal, serialize_research_state(checkpoint))

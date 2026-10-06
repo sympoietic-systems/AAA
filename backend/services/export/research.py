@@ -67,6 +67,17 @@ def evidence_appendix(evidence: dict | None) -> str:
     for decision in bundle.decisions:
         for exclusion in decision.exclusions:
             parts.append(f"Excluded `{exclusion.candidate_id}`: {exclusion.reason}; {exclusion.explanation}.")
+    for child in bundle.child_archives:
+        parts.extend(
+            [
+                "",
+                f"### Child `{child.child_task_id}`: {child.status}",
+                f"Scope: {child.scope.question}; validation norm: {child.scope.validation_norm}.",
+                "Unreviewed child evidence; disagreement remains visible; shared sources are not independent corroboration.",
+                "; ".join(child.unresolved_objections),
+                evidence_appendix(child.evidence.model_dump(mode="json")),
+            ]
+        )
     return "\n".join(parts)
 
 

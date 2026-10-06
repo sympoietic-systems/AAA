@@ -370,4 +370,42 @@ class ResearchEvidenceRepository(BaseRepository):
                     records.append({"artifact": record, "representation_text": row[2]} if name == "sources" else record)
                 after = rows[-1][0]
             bundle[name] = records
+        rows = (
+            self._conn()
+            .execute(
+                "SELECT packet_json FROM research_child_runs WHERE parent_task_id=? AND packet_json IS NOT NULL ORDER BY scope_id LIMIT 2",
+                (task_id,),
+            )
+            .fetchall()
+        )
+        bundle["child_archives"] = [json.loads(row[0]) for row in rows]
+        unfinished = (
+            self._conn()
+            .execute(
+                "SELECT child_task_id,proposal_id,allocation_json,status FROM research_child_runs WHERE parent_task_id=? AND packet_json IS NULL ORDER BY scope_id LIMIT 2",
+                (task_id,),
+            )
+            .fetchall()
+        )
+        for child in unfinished:
+            # A read-only snapshot exposes interrupted/cancelled work. Importing it
+            # confers no execution authority and cannot restart a child.
+            child_bundle = self.export_bundle(child[0])
+            bundle["child_archives"].append(
+                {
+                    "child_task_id": child[0],
+                    "parent_task_id": task_id,
+                    "proposal_id": child[1],
+                    "scope": json.loads(child[2]),
+                    "status": child[3] if child[3] in {"failed", "cancelled"} else "partial",
+                    "evidence": child_bundle,
+                    "interpretations": [],
+                    "unresolved_objections": ["uncommitted_child_snapshot:" + child[3]],
+                    "evidence_role": "child_archive_unreviewed",
+                }
+            )
+        if total_characters + sum(len(row[0]) for row in rows) > 20_000_000:
+            raise ReceiptConflictError("Family evidence export exceeds bounded payload contract")
+        if len(json.dumps(bundle, ensure_ascii=False)) > 20_000_000:
+            raise ReceiptConflictError("Family evidence serialization exceeds payload ceiling")
         return bundle

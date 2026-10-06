@@ -105,6 +105,7 @@ class ResearchEvidenceStore:
         version = input_hash(
             {
                 "representation": representation,
+                "observed_at": acquired_at.isoformat() if acquired_at and content else None,
                 "text_hash": text_hash(content),
                 "quality": quality.model_dump(mode="json"),
                 "unavailable_reason": unavailable_reason if not content else None,

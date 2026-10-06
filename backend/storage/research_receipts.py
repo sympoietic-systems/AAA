@@ -28,6 +28,7 @@ class ProviderAttemptReceipt(ReceiptModel):
     error_category: str | None = None
     usage: dict[str, int] | None = None
     known_cost_usd: float | None = Field(default=None, ge=0)
+    budget_reserved_usd: float | None = Field(default=None, ge=0)
     elapsed_seconds: float | None = Field(default=None, ge=0)
 
 
@@ -67,6 +68,8 @@ class ActionObservation(ReceiptModel):
     phase_elapsed_seconds: float | None = Field(default=None, ge=0)
     scheduler_decision: dict[str, Any] | None = None
     branch_proposal_id: str | None = Field(default=None, max_length=100)
+    child_task_ids: tuple[str, ...] = Field(default=(), max_length=2)
+    child_packet_hashes: dict[str, str] = Field(default_factory=dict, max_length=2)
 
 
 class ResearchActionReceipt(ReceiptModel):

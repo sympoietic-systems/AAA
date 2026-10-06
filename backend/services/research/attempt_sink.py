@@ -32,6 +32,7 @@ class DurableAttemptSink:
             model=model,
             attempt_number=number,
             started_at=datetime.now(UTC),
+            budget_reserved_usd=await asyncio.to_thread(self.repo.cost_ceiling, self.action.task_id, provider),
         )
         await asyncio.to_thread(self.repo.reserve, receipt, self.max_task_attempts)
         self.pending[attempt_id] = receipt
@@ -47,13 +48,21 @@ class DurableAttemptSink:
         truncated = raw.get("truncated")
         if reason in {"length", "max_tokens"}:
             truncated = True
+        cost = raw.get("known_cost_usd")
+        observed_cost = cost if isinstance(cost, (int, float)) and not isinstance(cost, bool) and cost >= 0 else None
+        ceiling_exceeded = (
+            observed_cost is not None
+            and initial.budget_reserved_usd is not None
+            and observed_cost > initial.budget_reserved_usd
+        )
         receipt = ProviderAttemptReceipt.model_validate(
             {
                 **initial.model_dump(),
                 "completed_at": datetime.now(UTC),
-                "outcome": outcome,
+                "outcome": "partial" if ceiling_exceeded and outcome == "complete" else outcome,
                 "elapsed_seconds": elapsed,
-                "error_category": error,
+                "known_cost_usd": observed_cost,
+                "error_category": "declared_cost_ceiling_exceeded" if ceiling_exceeded else error,
                 "cancelled": outcome == "cancelled",
                 "finish_reason": reason if isinstance(reason, str) else None,
                 "provider_request_id": provider_request_id if isinstance(provider_request_id, str) else None,

@@ -62,6 +62,7 @@ class PipelineTransition:
 
 
 PIPELINE_GRAPH = {
+    "branch_gathering": [PipelineTransition(target_phase="consolidating")],
     "planning": [
         PipelineTransition(
             target_phase="document_digestion",
@@ -461,10 +462,12 @@ class SomaticResearchOrchestrator:
             state["action_journal_policy"] = None
         if state.get("action_journal_policy") is None:
             enabled = self.config.get("action_receipts_enabled", False) is True or task_policy == "propose"
-            contract = ResearchEvidenceStore.initial_contract(task_id, state, 6) if enabled else None
+            contract = ResearchEvidenceStore.initial_contract(task_id, state, 7) if enabled else None
             state["contract_revision"] = 1
             state["action_journal_policy"] = {
-                "version": 6,
+                "version": 7,
+                "child_execution_version": 1,
+                "branch_provider_cost_ceilings_usd": dict(self.config.get("branch_provider_cost_ceilings_usd", {})),
                 "subresearch_policy": task_policy if enabled else "off",
                 "scheduler_version": 1,
                 "acquisition_policy": AcquisitionPolicy.model_validate(
@@ -578,6 +581,7 @@ class SomaticResearchOrchestrator:
                 loader,
                 initial.acquisition_id,
                 observe,
+                namespace=task_id,
             )
             return result
         except BaseException as exc:

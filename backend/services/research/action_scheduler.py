@@ -6,6 +6,7 @@ from backend.services.research.action_journal import input_hash
 
 KINDS = frozenset(
     {
+        "branch_gathering",
         "planning",
         "document_digestion",
         "searching",
@@ -46,6 +47,10 @@ def reason(kind: str, state: dict[str, Any], afferent: list[dict[str, Any]]) -> 
         return None
     if kind not in KINDS:
         return "unregistered_action"
+    if state.get("research_child") and kind not in {"searching", "parsing", "digesting"}:
+        return "child_capability_forbidden"
+    if kind == "branch_gathering" and not state.get("approved_branch_proposal_id"):
+        return "missing_branch_approval"
     scheduler = state.get("scheduler_state") or {}
     if scheduler.get("actions", 0) >= 64:
         return "action_ceiling"

@@ -67,7 +67,13 @@ def setup(tmp_path, request, monkeypatch):
         )
     )
     app = SimpleNamespace(
-        config={"research_orchestrator": {"action_receipts_enabled": True}, "research_tasks": {"manual_mode": True}},
+        config={
+            "research_orchestrator": {
+                "action_receipts_enabled": True,
+                "branch_provider_cost_ceilings_usd": {"nvidia_fixture": 0, "priced_fixture": 0.06},
+            },
+            "research_tasks": {"manual_mode": True},
+        },
         research_task_repo=repo,
         research_plan_repo=None,
         research_step_repo=None,
@@ -154,7 +160,7 @@ async def test_v113_approve_edit_is_immutable_and_preserves_deadline(setup):
     with pytest.raises(ReceiptConflictError, match="immutable"):
         proposals.resolve("task", original.proposal_id, "approved", manual=True)
     state = SomaticResearchOrchestrator(app).init_task("task")
-    assert state["phase"] == original.resume_phase
+    assert state["phase"] == "branch_gathering"
     assert state["action_journal_policy"] == before
     assert len(tasks.list_all()) == 1
     await orch.aclose()

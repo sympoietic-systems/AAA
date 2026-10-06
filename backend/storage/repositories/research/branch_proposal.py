@@ -62,7 +62,25 @@ class ResearchBranchProposalRepository(BaseRepository):
             raise ReceiptConflictError("Branch allocation requires the frozen parent contract")
         contract = ResearchContract.model_validate_json(contract_row[0])
         ceiling = min(task["budget_limit_usd"], contract.resource_ceilings.get("budget_limit_usd", 0))
-        remaining = max(0, ceiling - (task.get("budget_spent_usd") or 0))
+        spend = (
+            self._conn()
+            .execute(
+                "SELECT COALESCE(SUM(MAX(COALESCE(json_extract(receipt_json,'$.known_cost_usd'),0),COALESCE(json_extract(receipt_json,'$.budget_reserved_usd'),0))),0) FROM research_provider_attempts WHERE task_id=?",
+                (task["id"],),
+            )
+            .fetchone()[0]
+        )
+        unknown = (
+            self._conn()
+            .execute(
+                "SELECT 1 FROM research_provider_attempts WHERE task_id=? AND json_extract(receipt_json,'$.known_cost_usd') IS NULL AND json_extract(receipt_json,'$.budget_reserved_usd') IS NULL LIMIT 1",
+                (task["id"],),
+            )
+            .fetchone()
+        )
+        if unknown and state["action_journal_policy"].get("child_execution_version") == 1:
+            raise ReceiptConflictError("Branch monetary capacity is unknown; declare provider ceilings before research")
+        remaining = max(0, ceiling - max(task.get("budget_spent_usd") or 0, spend))
         if sum(scope.budget_allocation_usd for scope in draft.scopes) + draft.parent_budget_reserve_usd > remaining:
             raise ReceiptConflictError("Branch allocation exceeds remaining parent budget")
 
@@ -223,10 +241,16 @@ class ResearchBranchProposalRepository(BaseRepository):
                 "UPDATE research_branch_proposals SET proposal_json=?,status=? WHERE proposal_id=? AND status='pending'",
                 (resolved.model_dump_json(), status, proposal_id),
             )
+            state["branch_review_complete"] = True
             state["pending_branch_proposal_id"] = None
             state["approved_branch_proposal_id"] = proposal_id if status == "approved" else None
             deadline = datetime.fromisoformat(state["action_journal_policy"]["provider_policy"]["deadline"])
-            state["phase"] = proposal.resume_phase if now < deadline else "complete"
+            resume = (
+                "branch_gathering"
+                if status == "approved" and state["action_journal_policy"].get("child_execution_version") == 1
+                else proposal.resume_phase
+            )
+            state["phase"] = resume if now < deadline else "complete"
             if now >= deadline:
                 state["delivery_degraded"] = True
                 state["stop_reason"] = "parent_deadline_expired_while_waiting"

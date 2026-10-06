@@ -86,6 +86,17 @@ async def analyze_source_content(
         logger.warning("Failed to build research context persona for node digest")
         pass
 
+    child = orch._get_state(task_id).get("research_child")
+    if isinstance(child, dict) and child:
+        user_text += "\nApproved child scope (parent objective remains fixed):\n" + json.dumps(
+            {
+                "parent_objective": child["parent_objective"],
+                "scope": child["scope"],
+                "instruction": "Apply this validation norm. Preserve disagreement and unresolved objections; do not synthesize the parent conclusion.",
+            },
+            ensure_ascii=False,
+        )
+
     # Log prompt
     trunc_meta_log = getattr(orch, "_TRUNC_META_LOG", 2000)
     orch._log_meta(
