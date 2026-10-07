@@ -327,6 +327,7 @@ def validate_safe_url(
         raise ValueError(f"Access to local hostname '{hostname}' is forbidden")
 
     if not allow_private:
+
         def _is_restricted(target_ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
             return bool(
                 target_ip.is_loopback

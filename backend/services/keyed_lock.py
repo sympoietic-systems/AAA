@@ -10,7 +10,7 @@ from dataclasses import dataclass
 class _LockEntry:
     lock: asyncio.Lock
     users: int = 0
-    holder: asyncio.Task | None = None
+    holder: asyncio.Task[object] | None = None
     depth: int = 0
 
 

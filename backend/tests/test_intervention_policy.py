@@ -72,7 +72,7 @@ def test_regulator_rejects_unknown_benchmark_policy():
 def test_rejected_progressive_policy_is_not_production_default():
     regulator = HomeostaticRegulatorModule()
 
-    assert regulator._intervention_policy_mode == "legacy"
+    assert regulator._intervention_policy_mode == "paskian"
 
 
 def test_v73_pole_vacancy_escalation_ladder():

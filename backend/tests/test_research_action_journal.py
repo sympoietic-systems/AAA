@@ -56,6 +56,38 @@ def install_step(monkeypatch, execute):
 
 
 @pytest.mark.asyncio
+async def test_v118_invalid_structured_fallback_cannot_complete_task(setup, monkeypatch):
+    from backend.services.research.task_state import SynthesizePayload
+
+    orch, tasks, _ = setup
+    orch._get_state("task")["phase"] = "synthesizing"
+    provider = SimpleNamespace(
+        provider_name="fixture",
+        generate=AsyncMock(
+            return_value={
+                "content": '{"answer": }',
+                "finish_reason": "stop",
+                "truncated": False,
+            }
+        ),
+    )
+
+    async def execute(_, envelope):
+        result = await generate_unified(
+            provider, user_prompt="fixture", expect_json=True, fallback_value={"answer": "Fallback"}
+        )
+        return StepOutput(payload=SynthesizePayload(sources_analyzed=0, result_summary=result["json_data"]["answer"]))
+
+    install_step(monkeypatch, execute)
+    result = await orch.execute_step("task")
+    assert result["status"] == "partial"
+    assert tasks.get("task")["status"] == "partial"
+    assert orch._action_journal.repo.get("task", result["action_id"]).status == "partial"
+    assert orch._get_state("task")["delivery_degraded"]
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
 async def test_acquisition_receipts_persist_cache_access_without_new_observation(setup, monkeypatch):
     import backend.services.research.orchestrator as orchestration
     from backend.services.research.acquisition import AcquisitionRuntime

@@ -14,6 +14,10 @@ def _setup_db(name="aaa_skill_test.db"):
     if os.path.exists(db_path):
         os.remove(db_path)
     conn = init_db(db_path)
+    # CRUD fixtures isolate their subjects from the authored migration seed.
+    conn.execute("DELETE FROM belief_nodes WHERE label = ?", ("skill:pole-vacancy-rupture",))
+    conn.execute("DELETE FROM skill_nodes WHERE name = ?", ("pole-vacancy-rupture",))
+    conn.commit()
     conn.close()
     return db_path
 
@@ -588,3 +592,16 @@ def test_skills_events_api():
     assert len(events) >= 1
     assert events[0]["skill_name"] == "api-event-skill"
     assert events[0]["event_type"] == "emergence"
+
+
+def test_authored_skill_migration_preserves_seed(tmp_path):
+    path = str(tmp_path / "migration.db")
+    conn = init_db(path)
+    conn.close()
+    repo = SkillRepository(path)
+    assert repo.get_skill_by_name("pole-vacancy-rupture") is not None
+    beliefs = BeliefRepository(path).list_beliefs("symbia")
+    assert any(b.label == "skill:pole-vacancy-rupture" for b in beliefs)
+    conn = init_db(path)
+    conn.close()
+    assert repo.skill_count() == 1

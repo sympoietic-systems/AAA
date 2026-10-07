@@ -100,7 +100,7 @@ async def get_metrics(
     # If live homeostatic recommendations are cached in app state, merge them to surface prompt interventions
     live_recs = getattr(state, "latest_homeostatic_recommendations", None)
     if live_recs:
-        live_model = MetricsService.build_recommendations(live_recs)
+        live_model = await asyncio.to_thread(MetricsService.build_recommendations, live_recs)
         if live_model:
             if recommendations is None:
                 recommendations = live_model

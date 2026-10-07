@@ -174,5 +174,3 @@ async def test_homeostatic_regulator_injects_paskian_directive_before_user_query
     assert "PASKIAN TEACHBACK & OPERATIONAL FORK DIRECTIVE" in messages[1]["content"]
     assert messages[2]["role"] == "user"
     assert messages[2]["content"] == "Why can't we just reboot the database instance every time?"
-
-

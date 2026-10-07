@@ -242,7 +242,7 @@ def _compute_presence_penalty(
         p += (0.05 - entropy) * 1.5
 
     # Continuous presence penalty surge on collapse pressure (H_2):
-    # As CP_t climbs above 0.45, gently penalize recent token space
+    # ADR-098 retains bounded penalty modulation with the reduced gain.
     if collapse_pressure is not None and collapse_pressure > 0.45:
         p += 0.5 * ((collapse_pressure - 0.45) ** 2)
 

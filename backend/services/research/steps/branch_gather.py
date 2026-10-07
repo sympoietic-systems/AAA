@@ -57,7 +57,7 @@ class BranchGatherStep(BaseResearchStep):
             except asyncio.CancelledError:
                 await asyncio.to_thread(repo.cancel_parent, parent_id)
                 raise
-            except Exception as exc:
+            except (OSError, ValueError, RuntimeError) as exc:
                 status = "failed"
                 objections.append(type(exc).__name__)
             bundle = EvidenceBundle.model_validate(

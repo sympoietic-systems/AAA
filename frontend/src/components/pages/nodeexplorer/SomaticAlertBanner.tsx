@@ -6,7 +6,6 @@ interface SomaticAlertBannerProps {
   title?: string
   comment?: string
   children?: React.ReactNode
-  [key: string]: any
 }
 
 function extractText(children: React.ReactNode): string {
@@ -15,10 +14,10 @@ function extractText(children: React.ReactNode): string {
   if (typeof children === "number") return String(children)
   const array = Children.toArray(children)
   return array
-    .map((c: any) => {
+    .map(c => {
       if (!c) return ""
       if (typeof c === "string" || typeof c === "number") return String(c)
-      if (c.props && c.props.children) return extractText(c.props.children)
+      if (React.isValidElement<{ children?: React.ReactNode }>(c)) return extractText(c.props.children)
       return ""
     })
     .join(" ")

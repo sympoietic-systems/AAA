@@ -1,7 +1,7 @@
 import { safeMathPlugins } from "../../../utils/markdownPolicy"
 import { useState, memo, useRef, useEffect } from "react"
 import React from "react"
-import ReactMarkdown from "react-markdown"
+import ReactMarkdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkBreaks from "remark-breaks"
 import remarkMath from "remark-math"
@@ -385,13 +385,13 @@ export const MessageBubble = memo(function MessageBubble({
                   'research-proposal': ResearchProposalCard,
                   'somatic-alert': SomaticAlertBanner,
                   'somatic_alert': SomaticAlertBanner,
-                  'rupture_site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
-                  'rupture-site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
-                  'line_of_flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
-                  'line-of-flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
-                  'new_plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
-                  'new-plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
-                } as any}
+                  'rupture_site': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'rupture-site': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'line_of_flight': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'line-of-flight': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'new_plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                  'new-plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                } as Components}
               >
                 {processedContent}
               </ReactMarkdown>
@@ -412,13 +412,13 @@ export const MessageBubble = memo(function MessageBubble({
                   'research-proposal': ResearchProposalCard,
                   'somatic-alert': SomaticAlertBanner,
                   'somatic_alert': SomaticAlertBanner,
-                  'rupture_site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
-                  'rupture-site': (props: any) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
-                  'line_of_flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
-                  'line-of-flight': (props: any) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
-                  'new_plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
-                  'new-plateau': (props: any) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
-                } as any}
+                  'rupture_site': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'rupture-site': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="rupture_site" {...props} />,
+                  'line_of_flight': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'line-of-flight': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
+                  'new_plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                  'new-plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                } as Components}
               >
                 {processedContent}
               </ReactMarkdown>

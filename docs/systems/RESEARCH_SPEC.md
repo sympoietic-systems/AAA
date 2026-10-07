@@ -1,6 +1,6 @@
 # Research V2 Specification
 
-Status: partially implemented; T62–T70 and explicitly requested T73–T74 complete; T69 complete with Jev non-adoption for research selection; T71–T72 release gates open; future parser accuracy TODO T75. Not a completed release.
+Status: T62–T74 implemented and evaluated; T69 concludes with Jev non-adoption. T71/T72 rollout is explicitly authorized on assumed research improvement, pending production quality review. Future parser accuracy TODO T75; no VPS deployment certification.
 Owner: Research V2 task sequence in root [SPEC.md](../../SPEC.md).
 Rationale and evidence: [RESEARCH_V2_PROPOSAL.md](RESEARCH_V2_PROPOSAL.md).
 Implementation snapshot and operating references: [RESEARCH_V2_PROGRESS.md](../guides/RESEARCH_V2_PROGRESS.md).
@@ -17,7 +17,7 @@ Deliver evidence-grounded research with adaptive but auditable action order, rel
 - Scheduler selects only registered actions. Deterministic validation enforces prerequisites, artifact versions, remaining budget, deadlines, fanout and task state before execution.
 - Reflection may inspect initial framing. A second consecutive pass requires an afferent trace that makes current categories or retrieval coordinates fail, and must change the inquiry cut. Internal reflection adds no empirical warrant.
 - Initial consecutive-reflection cap: 2 passes total. First pass is framing; second requires an explicit contradiction, category failure or consequential exclusion. Zero cut change exits reflection.
-- Subresearch MVP policies: `off|propose`; default `off`. `bounded_auto` stays disabled until independent branch calibration passes T71 and each task carries an explicit bounded covenant.
+- Subresearch policies: `off|propose|bounded_auto`; default `off`. `bounded_auto` is explicitly authorized for assumption-based rollout on 2026-10-07 with trusted user-dispatch consent and a frozen bounded covenant; independent branch calibration remains unknown (ADR-113).
 - Branch only after initial afferent contact reveals genuinely incommensurable retrieval vocabularies or validation norms. Complexity, facet count, or expected speedup alone does not justify a cut.
 - Child gathering is isolated. Child outputs preserve raw evidence and conflict; only parent Cortex synthesizes. Do not branch coupled relational questions whose meaning depends on interaction among facets.
 - Child work shares one parent budget and deadline. MVP cap: 2 children; no grandchildren. Reserve capacity for parent verification and synthesis before approving any child spend.
@@ -29,7 +29,7 @@ Deliver evidence-grounded research with adaptive but auditable action order, rel
 
 ### Dispatch
 
-Extend `POST /api/research/dispatch` payload with optional `subresearch_policy: off|propose`. Omitted value = `off`. Keep current `{task_id,status}` response shape. Persist selected policy with task so resume/restart cannot change it silently. Do not enable `bounded_auto` in MVP.
+Extend `POST /api/research/dispatch` payload with optional `subresearch_policy: off|propose|bounded_auto`. Omitted value = `off`. Keep current `{task_id,status}` response shape. Persist selected policy with task so resume/restart cannot change it silently. The unchecked Allow branching checkbox sends `off`; checked sends `bounded_auto`. It waives the additional review checkpoint for witnessed qualifying cuts, preserving all child ceilings and parent-objective constraints.
 
 Add durable task state `waiting_for_branch_approval`. Proposal includes branch question, rationale, evidence for incommensurability, distinct evidence/validation plan, overlap, risk and shared-budget allocation. Approval may edit scopes within parent objective and budget. Decline/expiry resumes parent without child spend.
 
@@ -53,7 +53,7 @@ V3: One initial framing reflection allowed; each additional consecutive pass nee
 V4: Internal reflection weight = 0; interpretations retain provenance; contradictions cannot be smoothed into unsupported consensus.
 V5: Zero cut delta forces available evidence action, focused clarification, or explicit partial stop; ⊥ unbounded reflection loop.
 V6: Branch proposal occurs only after afferent incommensurability is recorded; latency/facet count alone ⊥ warrant.
-V7: MVP policy ∈ `off|propose`; child execution requires approval. `bounded_auto` requires T71 calibration + explicit task covenant.
+V7: policy ∈ `off|propose|bounded_auto`; default off; child execution requires reviewed approval or frozen trusted user-dispatch covenant. Explicit 2026-10-07 rollout uses quality assumption; afferent witnesses and shared ceilings remain mandatory; independent calibration unknown.
 V8: Child count ≤2, no grandchildren, one hard shared budget/deadline; synthesis reserve cannot be spent on children.
 V9: Child packet preserves source/version/span, claim-support relations, extraction quality, exclusions, unavailable evidence, disagreement and gaps.
 V10: Parent Cortex alone merges packets; conflicting claims remain visible with provenance and are not majority-voted away.
@@ -80,8 +80,8 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 | T68 | Child execution and merge | ≤2 isolated children; source spans and conflicts preserved; parent Cortex owns synthesis; restart/cancel/failure paths tested. |
 | T69 | Jev selection | Held-out provisional comparison complete; user withdrew experimental rollout on 2026-10-06. Jev not adopted for research selection; standard selector active. Independent release review remains T71. See [Report 042](../reports/042-jev-experimental-promotion/README.md). |
 | T70 | Specialist parsing | Three-arm benchmark and review tooling complete on supplied native-text corpus; no default promotion. User deferred genuine scans, independent accuracy and specialist/resource/license certification to T75. See [Report 043](../reports/043-parser-evaluation/README.md). |
-| T71 | Release evaluation | Compare v1, evidence/retrieval, Jev, reflection and proposal branches; include outages, late/truncated results and restarts; publish quality, latency and cost evidence. |
-| T72 | Bounded automatic branching | Enable only after T71 branch calibration; explicit covenant, ≤2 children, shared budget/deadline and synthesis reserve enforced. |
+| T71 | Release evaluation | Global technical gates repaired; automated offline and NVIDIA comparisons recorded in [Report 044](../reports/044-research-release-evaluation/README.md). Assumption-based rollout explicitly authorized by user; independent downstream/branch quality unknown. Jev remains off; parser accuracy TODO T75. |
+| T72 | Bounded automatic branching | Unchecked Allow branching checkbox supplies explicit trusted dispatch covenant; afferent witnesses, ≤2 children, shared budget/deadline and synthesis reserve enforced. Independent branch calibration remains unknown under the authorized rollout exception. |
 | T73 | Optional standard-first Docling fallback | Default-off environment switch; isolated bounded CPU worker; standard extraction first; preserve both representations and unknown quality; cancellation/hash/cache regression checks. See [ADR-112](../decisions/ADR-112-standard-first-docling-fallback.md) and [usage guide](../guides/DOCLING.md). Independent parser accuracy is deferred to T75. |
 | T74 | Automated provisional source labeling | NVIDIA command validates exact source coverage, checkpoints/resumes, preserves model/input provenance and failure receipts; automated labels do not bypass independent-gold gates. See [labeling guide](../guides/RESEARCH_LABELING.md). |
 

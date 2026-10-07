@@ -147,8 +147,8 @@
       "generate_unified": 2
     },
     "backend/modules/llm_pool.py": {
-      "ModelPoolProvider.generate": 2,
-      "ModelPoolProvider.validate_connection": 1
+      "ModelPoolProvider.validate_connection": 1,
+      "ModelPoolProvider._generate": 2
     },
     "backend/modules/providers/typesafe_provider.py": {
       "TypeSafeDecisionClient.evaluate": 1
@@ -231,8 +231,8 @@
     },
     "backend/services/chat.py": {
       "ChatService._process_chat_impl": 1,
-      "ChatService.generate_response": 10,
-      "ChatService.save_message": 3
+      "ChatService.save_message": 3,
+      "ChatService._generate_response_impl": 10
     },
     "backend/services/consolidation.py": {
       "ConsolidationService.fire_and_forget._do_consolidate": 1
@@ -282,15 +282,15 @@
       "_is_valid_http_url": 1,
       "_search_ddg_lite": 1,
       "clean_ddg_url": 1,
-      "search_via_crawl4ai": 1,
-      "web_search": 1
+      "web_search": 1,
+      "_search_via_crawl4ai": 1
     },
     "backend/services/research/sensory_affordances.py": {
       "crawl_via_firecrawl": 1,
-      "fetch_via_crawl4ai": 1,
       "fetch_via_jina": 1,
       "search_via_firecrawl": 1,
-      "select_and_fetch": 1
+      "select_and_fetch": 1,
+      "_fetch_via_crawl4ai": 1
     },
     "backend/services/research/step_executor.py": {
       "ResearchStepExecutor.execute": 6

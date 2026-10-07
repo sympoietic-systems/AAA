@@ -332,7 +332,8 @@ class ChatService:
                         user_message_id,
                         conversation_id,
                     )
-                    return self._build_chat_response_from_message(
+                    return await asyncio.to_thread(
+                        self._build_chat_response_from_message,
                         response_msg=existing,
                         user_msg=msg,
                         conversation_id=conversation_id,
@@ -745,21 +746,21 @@ class ChatService:
             try:
                 user_sig = np.frombuffer(user_msg.structural_signature, dtype="float32")
                 user_sig_list = user_sig.tolist()
-            except Exception:
+            except (TypeError, ValueError):
                 user_sig_list = None
 
         active_skills_list: list[str] = []
         if response_msg.active_skills:
             try:
                 active_skills_list = json.loads(response_msg.active_skills)
-            except Exception:
+            except (TypeError, ValueError):
                 active_skills_list = [response_msg.active_skills]
 
         active_beliefs_list: list[str] = []
         if response_msg.active_beliefs:
             try:
                 active_beliefs_list = json.loads(response_msg.active_beliefs)
-            except Exception:
+            except (TypeError, ValueError):
                 active_beliefs_list = [response_msg.active_beliefs]
 
         metrics_info = None
@@ -769,8 +770,8 @@ class ChatService:
                 rec = metrics_repo.get_by_message_id(response_msg.id)
                 if rec:
                     metrics_info = MetricsService.build_history(rec.__dict__)
-            except Exception:
-                logger.debug("Could not load metrics record for message %d", response_msg.id)
+            except (TypeError, ValueError):
+                logger.warning("Invalid metrics record for message %d", response_msg.id)
 
         return ChatResponse(
             id=response_msg.id,
@@ -799,4 +800,3 @@ class ChatService:
             parent_message_id=response_msg.parent_message_id,
             proposed_branches=None,
         )
-

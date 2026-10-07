@@ -12,6 +12,7 @@ Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-ass
 
 ## §C
 
+- 2026-10-07 user authorizes assumption-based Research V2 production rollout, fixes/global checks, dispatch branching consent, live NVIDIA comparison, documentation/commits/merge; user deploys VPS; independent quality stays unknown; ADR-113.
 - 2026-10-06 user withdraws experimental Jev research rollout after provisional comparison; research_triage.enabled=false; standard selection active; T69 complete with non-adoption decision; independent release review remains T71.
 
 - Python 3.11+, FastAPI, Pydantic 2, httpx, SQLite WAL.
@@ -175,12 +176,12 @@ V109: chat collapse_pressure ⊥ automatic thinking_override or completion-budge
 V110: ∀ research action → registered kind + validated prerequisites/budget/deadline; immutable input/dependency/output receipt survives restart
 V111: consecutive reflection ! afferent trace changes inquiry boundary; internal pass evidential weight = 0; zero cut delta → external action, focused question or partial
 V112: reflection preserves source disagreement + provenance; interpretation ⊥ independent corroboration; no-progress loop bounded
-V113: branch proposal ! post-afferent incommensurability; facet count/latency goal alone ⊥ warrant; default `off`; execution ! approval or calibrated bounded covenant; declined/expired proposal → parent continues, child spend = 0
+V113: branch proposal ! post-afferent incommensurability; facet count/latency goal alone ⊥ warrant; default `off`; execution ! approval or explicit user-dispatch bounded covenant (2026-10-07 assumption-based rollout exception; independent calibration unknown); declined/expired proposal → parent continues, child spend = 0
 V114: child evidence ! raw spans + source/version IDs + claim-support relations + exclusions + disagreement; Cortex alone merges; conflict remains visible
 V115: child/provider work shares hard parent budget + deadline; bounded fanout/retries; cancellation/partial/failure explicit; no invisible sibling budget transfer
 V116: late/regenerated completion → idempotent parent/action linkage; stale result ⊥ duplicate or overwrite newer committed output
 V117: ∀ provider attempt → correlated request/turn/task IDs + duration + outcome + retry + finish reason/truncation/cancel provenance
-V118: research completion label ∈ `complete|partial|failed|cancelled`; support/coverage contract satisfied for `complete`; UI exposes pending/degraded/partial state
+V118: research completion label ∈ `complete|partial|failed|cancelled`; support/coverage contract satisfied for `complete`; invalid structured fallback / truncated / failed delivery cannot complete; UI exposes pending/degraded/partial state
 
 V119: acquisition cache publication ! durable origin receipt; cache access preserves observation/config/source lineage; expired/unsafe/cancelled output ⊥ current acquisition; shared provider/CPU capacity held until actual work exits
 V120: optional Docling default off; standard first → mechanical degradation/expected failure triggers bounded CPU fallback; immutable PDF hash + parser-specific representations/spans retain both observations/exclusions; quality unknown; rejected fallback keeps standard; capacity/input lifetime ! physical worker exit
@@ -265,8 +266,8 @@ T67|x|add `off|propose` MVP; allow post-afferent proposal only; persist approval
 T68|x|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
 T69|x|54 held-out comparison trials; Jev not adopted for research selection by user decision; research triage disabled; standard selection restored; independent release review remains T71|V112,V114,V118,I.benchmark
 T70|x|bounded three-arm parser benchmark + review tooling; supplied native corpus compared; no default parser promotion; user defers genuine scans/independent accuracy/license-resource certification to T75|V114,V118,I.domain
-T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
-T72|.|enable `bounded_auto` only after T71 branch calibration; enforce explicit covenant + shared fanout/budget/deadline|V113,V115,V116,I.api,I.internal
+T71|x|global verification repaired; 661 combined tests + 131 frontend tests; offline ablations + NVIDIA replay (V2 partial timeout) + report 044; explicit user assumption-based rollout; independent quality/cost unknown; Jev off; parser review T75|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
+T72|~|user-requested unchecked Allow branching checkbox; trusted dispatch `bounded_auto`; frozen covenant + afferent witnesses + shared fanout/budget/deadline; ADR-113; independent branch calibration unknown|V113,V115,V116,I.api,I.internal
 T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent parser accuracy deferred to T75|V69,V105,V114,V119,V120,I.env,I.domain
 T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; independent release review remains T71|V108,V114,V117,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
@@ -390,3 +391,10 @@ B100|2026-10-06|initial annotation pass lacked incremental checkpoint and HTTP s
 B101|2026-10-06|Jev abstention bypassed standard selector, returning raw top results; initial exploratory lint found nested contexts|standard-selector fallback on abstention/unavailability; separate fallback IDs preserve Jev receipt; regression assertions; lint fixed under V30,V108; Windows temp permission failure → isolated workspace basetemp, 46 tests pass
 
 B102|2026-10-07|two-label review omitted OCR; unbounded total run duration; initial status narration missed OCR timeout|three-arm/partial-status regression + total deadline no-new-worker assertion + receipt-derived report; V114,V118,V120; independent accuracy deferred by user to T75
+
+B103|2026-10-07|focused green tests cannot certify release; full gate exposes unrelated baseline failures and absent independent quality/branch calibration|fail-closed evaluation assembly + missing/skipped/failed scenario assertions; preserve unknown quality/cost and T72 gate; V108,V113,V118; no new runtime invariant
+
+B104|2026-10-07|full backend exposed 23 failures: migration-seeded subjects, stale ADR-098 expectations/parser signatures, renamed debt owners, thinking-control mismatch, missing chat metrics lookup; synthesis also imported absent embedding helper and counted phase groups as children|subject-scoped fixtures + explicit seed regression; preserve latest accepted sampling policy; actual repository lookup off event loop; thinking receipt controls; real child count + app-owned embedding service; full backend/branch/live-harness checks; V18,V23,V30,V39,V43,V56,V108,V113,V119
+B105|2026-10-07|live harness omitted explicit migrations, selected undersized fixture content, and attempted DNS against frozen replay; short snippet guard correctly stopped V2; scripted edit hit wrong row initializer|explicit isolated migration; valid authored fixture; exact frozen URL allowlist with no retrieval network; observable failures + immutable dataset hash; preserve real short-content exclusions; V56,V108,V114,V118; no new runtime invariant
+
+B106|2026-10-07|live Super comparison exposed invalid-JSON fallback reported error=null, enabling empty reflection to look successful; synthesis reported repeated analyses as distinct sources; regression fixtures omitted required envelope fields/step repository seam|safe parse-error marker + delivery_failed propagation + durable partial terminal test; unique usable parent/child source/document counts; cancellation observations terminal and incomplete count explicit; preserve pre-fix receipts, rerun live after fix; V108,V114,V118; no new invariant

@@ -138,7 +138,7 @@ background_llm:
   cooldown_seconds: 300        # Cooldown in seconds for rate-limited keys/models (default: 300)
 ```
 
-The homeostatic regulator clamps chat temperature to a default range of `0.3`–`1.0` (base `0.7`). Collapse pressure still informs the intervention and temperature/penalty controls, but it no longer enables thinking or increases the chat completion-token cap. Provider-configured thinking and explicit per-call overrides remain available. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md) and [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md).
+The homeostatic regulator clamps chat temperature to a default range of `0.5`–`0.8` (base `0.7`, ADR-098). Collapse pressure still informs interventions and bounded penalty controls; stagnation-induced temperature surges remain deprecated, but it no longer enables thinking or increases the chat completion-token cap. Provider-configured thinking and explicit per-call overrides remain available. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md) and [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md).
 
 ## Stateful Model Pool & Fallback Prioritization
 
@@ -507,3 +507,7 @@ To disable LLM scoring for a single request, send `"include_structural_scoring":
 *   [Setup & Deployment Guide](SETUP.md) — Advanced setup and database seeding.
 *   [Agent Personality Customization Guide](CUSTOMIZE_PERSONALITY.md) — Configuring identity, beliefs, skills, and prompts.
 *   [Documentation Index](../README.md) — Navigation hub for all architecture documents.
+
+### Research V2 rollout settings
+
+`research_orchestrator.action_receipts_enabled: true` enables durable V2 policy for new tasks. Existing tasks retain frozen policy. Jev research triage remains off; PDF parsing remains standard-first with optional `AAA_DOCLING_ENABLED=false` by default. Allow branching is a per-task creation checkbox, unchecked by default; it requests `bounded_auto` with a frozen user covenant and qualified source witnesses. NVIDIA branch cost reservations use the user's free-price assumption; actual billing remains unknown. See [rollout instructions](RESEARCH_V2_ROLLOUT.md) and [ADR 113](../decisions/ADR-113-research-v2-authorized-rollout.md).

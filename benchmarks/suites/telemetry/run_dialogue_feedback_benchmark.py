@@ -32,7 +32,6 @@ INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
 PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
 
 
-
 @dataclass(frozen=True)
 class ParticipantCompletion:
     """Auditable simulator completion used as the next participant turn."""
@@ -567,6 +566,16 @@ def _paired_delta_ci(candidate: list[float], baseline: list[float]) -> tuple[flo
 def _scorecard(runs: list[dict[str, Any]], candidate_policy: str = "paskian") -> dict[str, Any]:
     policies = ("legacy", candidate_policy) if candidate_policy != "legacy" else ("legacy", "progressive")
     by_policy = {policy: [run for run in runs if run["policy"] == policy] for policy in policies}
+    validity = bool(runs) and all(bool(run.get("participant_validity", {}).get("passed")) for run in runs)
+    if not validity or any(not arm for arm in by_policy.values()):
+        return {
+            "arms": {},
+            "candidate_minus_legacy": {},
+            "progressive_minus_legacy": {},
+            "decision": "invalid_participant_completions" if not validity else "missing_policy_arm",
+            "participant_validity_passed": validity,
+            "acceptance_checks": {},
+        }
     fields = (
         "mean_outcome_score",
         "mean_uptake",
@@ -722,7 +731,9 @@ def main() -> None:
                         scenario_id=scenario_id,
                     )
                     runs.append(arm_receipt)
-                    (out_dir / "telemetry_receipts.json").write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8")
+                    (out_dir / "telemetry_receipts.json").write_text(
+                        json.dumps(runs, indent=2) + "\n", encoding="utf-8"
+                    )
     production_after = {str(path): _database_fingerprint(path) for path in production_paths}
     if production_after != production_before:
         raise RuntimeError("benchmark modified a production database")

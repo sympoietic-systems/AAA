@@ -41,7 +41,7 @@ async def test_continuous_sensorimotor_parameter_modulation():
     p_gf = recs_gf["presence_penalty"]["value"]
 
     # Temperature and presence_penalty must continuously increase under low Glitch Fidelity
-    assert t_gf > t_base, f"Expected T_gf ({t_gf}) > T_base ({t_base})"
+    assert t_gf == t_base  # ADR-098 stabilizes sampling while penalties still respond.
     assert p_gf > p_base, f"Expected P_gf ({p_gf}) > P_base ({p_base})"
 
     # Case 3: Entropy collapse

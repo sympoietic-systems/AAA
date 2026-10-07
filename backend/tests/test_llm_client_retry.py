@@ -31,7 +31,7 @@ class TestParseMessage:
             "model": "gpt-4",
             "choices": [{"finish_reason": "stop"}],
         }
-        result = p._parse_message(message, data)
+        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
         assert result["content"] == "Hello, world!"
         assert result["model"] == "gpt-4"
         assert result["truncated"] is False
@@ -41,7 +41,7 @@ class TestParseMessage:
         p = _make_provider()
         message = {"role": "assistant", "content": "Truncated..."}
         data = {"choices": [{"finish_reason": "length"}]}
-        result = p._parse_message(message, data)
+        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
         assert result["truncated"] is True
         assert result["finish_reason"] == "length"
 
@@ -51,20 +51,20 @@ class TestParseMessage:
         data = {"choices": [{"finish_reason": "length"}]}
 
         with pytest.raises(EmptyTruncatedCompletionError, match="without returning final content"):
-            p._parse_message(message, data)
+            p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
 
     def test_detects_truncation_from_max_tokens(self):
         p = _make_provider()
         message = {"role": "assistant", "content": "Truncated..."}
         data = {"choices": [{"finish_reason": "max_tokens"}]}
-        result = p._parse_message(message, data)
+        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
         assert result["truncated"] is True
 
     def test_uses_reasoning_when_content_empty(self):
         p = _make_provider()
         message = {"role": "assistant", "content": None, "reasoning": "I think therefore I am"}
         data = {"choices": [{"finish_reason": "stop"}]}
-        result = p._parse_message(message, data)
+        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
         assert result["content"] == "I think therefore I am"
         assert result["reasoning"] == "I think therefore I am"
 
@@ -79,7 +79,7 @@ class TestParseMessage:
             ],
         }
         data = {"choices": [{"finish_reason": "stop"}]}
-        result = p._parse_message(message, data)
+        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
         assert "Step 1: analyze" in result["reasoning"]
         assert "Step 2: conclude" in result["reasoning"]
 
@@ -87,7 +87,7 @@ class TestParseMessage:
         p = _make_provider(provider_name="my-custom-provider")
         message = {"role": "assistant", "content": "hi"}
         data = {"choices": [{"finish_reason": "stop"}]}
-        result = p._parse_message(message, data)
+        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
         assert result["provider_used"] == "my-custom-provider"
 
 

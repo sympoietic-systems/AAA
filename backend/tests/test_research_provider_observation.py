@@ -24,6 +24,27 @@ def receipt(action_id):
 
 
 @pytest.mark.asyncio
+async def test_v118_invalid_json_preserves_http_success_but_marks_delivery_failed():
+    provider = SimpleNamespace(
+        provider_name="fixture",
+        generate=AsyncMock(
+            return_value={
+                "content": '{"unclosed": }',
+                "finish_reason": "stop",
+                "truncated": False,
+            }
+        ),
+    )
+    fallback = {"completeness_score": 0.5, "key_insights": []}
+    with observe_provider_calls(receipt("action")) as records:
+        result = await generate_unified(provider, user_prompt="fixture", expect_json=True, fallback_value=fallback)
+    assert result["json_data"] == fallback
+    assert result["error"] == "invalid_json_completion"
+    assert records[0].outcome == "complete"
+    assert records.delivery_failed
+
+
+@pytest.mark.asyncio
 async def test_provider_scopes_are_isolated_under_concurrent_calls():
     async def run(action_id):
         provider = SimpleNamespace(

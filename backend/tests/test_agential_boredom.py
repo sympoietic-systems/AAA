@@ -43,10 +43,10 @@ async def test_continuous_collapse_pressure_coupling():
     # Presence penalty must surge on high CP
     assert p_high > p_low, f"Expected P_high ({p_high}) > P_low ({p_low})"
     # Expected boost: 1.5 * (0.80 - 0.45)^2 = 1.5 * 0.1225 ~ 0.184
-    assert p_high - p_low >= 0.15
+    assert p_high - p_low == pytest.approx(0.061, abs=0.001)
 
     # Temperature must scale up on high CP
-    assert t_high > t_low, f"Expected T_high ({t_high}) > T_low ({t_low})"
+    assert t_high == t_low  # ADR-098 deprecates collapse-induced temperature surges.
 
 
 @pytest.mark.asyncio

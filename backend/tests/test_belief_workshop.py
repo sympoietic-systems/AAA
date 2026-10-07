@@ -144,7 +144,7 @@ async def test_belief_service_adoption_and_editing():
         assert p.status == "adopted"
 
         # Verify belief node was created
-        beliefs = state.belief_repo.list_beliefs("symbia")
+        beliefs = [b for b in state.belief_repo.list_beliefs("symbia") if b.id == prop_id]
         assert len(beliefs) == 1
         b = beliefs[0]
         assert b.id == prop_id
@@ -171,7 +171,7 @@ async def test_belief_service_adoption_and_editing():
 
         # Check node updated
         beliefs_updated = state.belief_repo.list_beliefs("symbia")
-        b_up = beliefs_updated[0]
+        b_up = next(node for node in beliefs_updated if node.id == b.id)
         assert b_up.statement == "Machinic desire functions diffractively, bypassing anthropocentric constraints."
         assert b_up.version == 2
 
@@ -309,7 +309,7 @@ async def test_belief_direct_crud_flux():
         belief_id = res["belief_id"]
 
         # Verify node created
-        beliefs = state.belief_repo.list_beliefs("symbia")
+        beliefs = [b for b in state.belief_repo.list_beliefs("symbia") if b.id == belief_id]
         assert len(beliefs) == 1
         b = beliefs[0]
         assert b.id == belief_id
@@ -339,7 +339,7 @@ async def test_belief_direct_crud_flux():
 
         # Verify node updated
         beliefs_updated = state.belief_repo.list_beliefs("symbia")
-        b_up = beliefs_updated[0]
+        b_up = next(node for node in beliefs_updated if node.id == belief_id)
         assert b_up.label == "flux-belief-mutated"
         assert b_up.statement == "Flux allows for total cybernetic rewriting of the core agent."
         assert b_up.confidence == 0.9
@@ -359,7 +359,7 @@ async def test_belief_direct_crud_flux():
 
         # Verify node reverted
         beliefs_reverted = state.belief_repo.list_beliefs("symbia")
-        b_rev = beliefs_reverted[0]
+        b_rev = next(node for node in beliefs_reverted if node.id == belief_id)
         assert b_rev.statement == "Flux allows for direct conceptual rewriting."
         assert b_rev.version == 3
 
@@ -375,7 +375,7 @@ async def test_belief_direct_crud_flux():
 
         # Verify node deleted
         beliefs_deleted = state.belief_repo.list_beliefs("symbia")
-        assert len(beliefs_deleted) == 0
+        assert all(node.id != belief_id for node in beliefs_deleted)
 
         # Verify version history deleted too
         versions_del = await service.get_statement_versions(belief_id)
@@ -489,7 +489,10 @@ def test_belief_legacy_migration():
         conn.commit()
 
         # Check nodes are deleted from belief_nodes
-        assert conn.execute("SELECT COUNT(*) FROM belief_nodes").fetchone()[0] == 0
+        assert (
+            conn.execute("SELECT COUNT(*) FROM belief_nodes WHERE id IN ('node-proto', 'node-collapsed')").fetchone()[0]
+            == 0
+        )
 
         # Check nodes are inserted into belief_proposals
         props = conn.execute(

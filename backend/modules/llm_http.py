@@ -356,6 +356,9 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 merged_params["frequency_penalty"] = max(-2.0, min(0.4, float(merged_params["frequency_penalty"])))
 
         # ── Provider-specific parameter sanitization ──────────────────
+        if use_thinking:
+            merged_params.pop("temperature", None)
+
         if is_google:
             merged_params = sanitize_google_params(merged_params)
         elif is_openrouter:

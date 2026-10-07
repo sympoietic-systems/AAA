@@ -150,4 +150,8 @@ async def generate_unified(provider: Any, *args: Any, **kwargs: Any) -> Any:
     if scope is not None:
         receipt, records = scope
         provider = _ObservedProvider(provider, receipt, records)
-    return await _generate_unified(provider, *args, **kwargs)
+    result = await _generate_unified(provider, *args, **kwargs)
+    if scope is not None and result.get("error"):
+        # A successful HTTP completion is distinct from a usable structured result.
+        scope[1].delivery_failed = True
+    return result

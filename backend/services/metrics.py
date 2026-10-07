@@ -33,7 +33,11 @@ class MetricsService:
         phase_shifts_json = json.dumps(phase_shifts) if phase_shifts else None
 
         cpi_val = metrics.get("cpi") if metrics.get("cpi") is not None else metrics.get("conversational_progress_index")
-        cp_val = metrics.get("collapse_pressure") if metrics.get("collapse_pressure") is not None else metrics.get("boringness")
+        cp_val = (
+            metrics.get("collapse_pressure")
+            if metrics.get("collapse_pressure") is not None
+            else metrics.get("boringness")
+        )
 
         metrics_repo.insert(
             message_id=message_id,
@@ -101,7 +105,9 @@ class MetricsService:
             cpi=metrics.get("cpi") if metrics.get("cpi") is not None else metrics.get("conversational_progress_index"),
             teachback_ratio=metrics.get("teachback_ratio"),
             actionability=metrics.get("actionability"),
-            collapse_pressure=metrics.get("collapse_pressure") if metrics.get("collapse_pressure") is not None else metrics.get("boringness"),
+            collapse_pressure=metrics.get("collapse_pressure")
+            if metrics.get("collapse_pressure") is not None
+            else metrics.get("boringness"),
             phase_transition_magnitude=metrics.get("phase_transition_magnitude"),
         )
 
@@ -128,7 +134,9 @@ class MetricsService:
             cpi=row.get("cpi"),
             teachback_ratio=row.get("teachback_ratio"),
             actionability=row.get("actionability"),
-            collapse_pressure=row.get("collapse_pressure") if row.get("collapse_pressure") is not None else row.get("boringness"),
+            collapse_pressure=row.get("collapse_pressure")
+            if row.get("collapse_pressure") is not None
+            else row.get("boringness"),
             phase_transition_magnitude=row.get("phase_transition_magnitude"),
         )
 

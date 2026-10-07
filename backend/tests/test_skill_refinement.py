@@ -20,6 +20,10 @@ def _setup_db(name="aaa_skill_refinement_test.db"):
     if os.path.exists(db_path):
         os.remove(db_path)
     conn = init_db(db_path)
+    # CRUD fixtures isolate their subjects from the authored migration seed.
+    conn.execute("DELETE FROM belief_nodes WHERE label = ?", ("skill:pole-vacancy-rupture",))
+    conn.execute("DELETE FROM skill_nodes WHERE name = ?", ("pole-vacancy-rupture",))
+    conn.commit()
     conn.close()
     return db_path
 

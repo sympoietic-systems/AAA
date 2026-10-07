@@ -278,3 +278,10 @@ def test_v57_observability_requires_every_controller_control_accounted():
     assert _control_receipt_observable(turn) is True
     turn["applied_controls"]["not_forwarded"] = []
     assert _control_receipt_observable(turn) is False
+
+
+def test_missing_candidate_arm_is_explicit_without_empty_bootstrap():
+    result = _scorecard([{"policy": "legacy", "participant_validity": {"passed": True}}])
+    assert result["decision"] == "missing_policy_arm"
+    assert result["arms"] == {}
+    assert result["candidate_minus_legacy"] == {}

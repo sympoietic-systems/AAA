@@ -1,5 +1,9 @@
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -8,8 +12,19 @@ from fastapi.testclient import TestClient
 from backend.main import app
 
 
-def test_decoupled_chat_flow():
+def test_decoupled_chat_flow(monkeypatch):
     with TestClient(app) as client:
+        pipeline = SimpleNamespace(
+            run=AsyncMock(
+                return_value=SimpleNamespace(
+                    status="ok", payload={"response": "Deterministic test response"}, errors=[]
+                )
+            )
+        )
+        monkeypatch.setattr(app.state, "pipeline", pipeline)
+        monkeypatch.setattr(app.state, "background_engine", None)
+        scorer = SimpleNamespace(score_async=AsyncMock(return_value=np.zeros(16, dtype=np.float32)))
+        monkeypatch.setattr("backend.services.chat.CompositeStructuralScorer", lambda **kwargs: scorer)
         import os
 
         password = os.environ.get("AAA_PASSWORD", "").strip()
@@ -60,4 +75,3 @@ def test_decoupled_chat_flow():
         regen_data = regen_response.json()
         assert regen_data["id"] != first_apparatus_id
         assert regen_data["parent_message_id"] == user_msg_id
-

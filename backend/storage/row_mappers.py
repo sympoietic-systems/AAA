@@ -115,9 +115,7 @@ def _row_to_metrics(row: sqlite3.Row) -> MetricsRecord:
         teachback_ratio=row["teachback_ratio"] if "teachback_ratio" in keys else None,
         actionability=row["actionability"] if "actionability" in keys else None,
         collapse_pressure=row["collapse_pressure"] if "collapse_pressure" in keys else None,
-        phase_transition_magnitude=row["phase_transition_magnitude"]
-        if "phase_transition_magnitude" in keys
-        else None,
+        phase_transition_magnitude=row["phase_transition_magnitude"] if "phase_transition_magnitude" in keys else None,
     )
 
 

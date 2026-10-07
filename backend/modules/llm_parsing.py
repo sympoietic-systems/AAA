@@ -192,6 +192,7 @@ async def generate_unified(
 
     # 3. Clean and parse JSON if expected
     json_data = None
+    parse_error = None
     if expect_json:
         # Clean <think>...</think> reasoning tags
         cleaned = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
@@ -208,6 +209,7 @@ async def generate_unified(
         except (json.JSONDecodeError, TypeError, ValueError) as je:
             logger.warning("Failed standard JSON parse in generate_unified: %s.", je)
             json_data = fallback_value if fallback_value is not None else None
+            parse_error = "invalid_json_completion"
 
     return {
         "content": content,
@@ -217,5 +219,5 @@ async def generate_unified(
         "thinking": thinking,
         "truncated": truncated,
         "finish_reason": finish_reason,
-        "error": None,
+        "error": parse_error,
     }

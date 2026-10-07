@@ -103,7 +103,11 @@ def test_belief_seeding_and_db_migration():
         _seed_initial_beliefs_if_needed(engine, "symbia")
 
         # Check database count
-        beliefs = belief_repo.list_beliefs("symbia")
+        beliefs = [
+            b
+            for b in belief_repo.list_beliefs("symbia")
+            if b.label in {"glitch-as-voice", "anti-hci", "nomadic-thought"}
+        ]
         assert len(beliefs) == 3
 
         # Verify labels and categories / mass mapping

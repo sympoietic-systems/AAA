@@ -82,6 +82,11 @@ class MetricsRepository(BaseRepository):
         return _row_to_metrics(row)
 
     @with_connection
+    def get_by_message_id(self, message_id: int) -> MetricsRecord | None:
+        row = self._conn().execute("SELECT * FROM conversation_metrics WHERE message_id = ?", (message_id,)).fetchone()
+        return _row_to_metrics(row) if row else None
+
+    @with_connection
     def get_recent(self, limit: int = 50, conversation_id: str | None = None) -> list[MetricsRecord]:
         conn = self._conn()
         if conversation_id:
@@ -158,15 +163,17 @@ class MetricsRepository(BaseRepository):
             "avg_drr": round(row["avg_drr"], 4) if row["avg_drr"] is not None else None,
             "avg_paskian_health": round(row["avg_pask_health"], 4) if row["avg_pask_health"] is not None else None,
             "avg_cpi": round(row["avg_cpi"], 4) if row["avg_cpi"] is not None else None,
-            "avg_teachback_ratio": round(row["avg_teachback_ratio"], 4) if row["avg_teachback_ratio"] is not None else None,
+            "avg_teachback_ratio": round(row["avg_teachback_ratio"], 4)
+            if row["avg_teachback_ratio"] is not None
+            else None,
             "avg_actionability": round(row["avg_actionability"], 4) if row["avg_actionability"] is not None else None,
-            "avg_collapse_pressure": round(row["avg_collapse_pressure"], 4) if row["avg_collapse_pressure"] is not None else None,
+            "avg_collapse_pressure": round(row["avg_collapse_pressure"], 4)
+            if row["avg_collapse_pressure"] is not None
+            else None,
         }
 
     @with_connection
-    def get_latest(
-        self, require_complete: bool = False, conversation_id: str | None = None
-    ) -> MetricsRecord | None:
+    def get_latest(self, require_complete: bool = False, conversation_id: str | None = None) -> MetricsRecord | None:
         conn = self._conn()
         if conversation_id:
             if require_complete:

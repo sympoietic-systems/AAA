@@ -410,3 +410,64 @@ async def test_v114_parent_cortex_prompt_preserves_conflict_and_ignores_stale_pr
     assert context in prompt and "existing finding" in prompt
     assert "preserve contrary claims" in prompt and "Shared sources are not independent corroboration" in prompt
     assert "STALE_PREVIEW" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_v114_synthesis_counts_unique_parent_and_child_sources(setup, monkeypatch):
+    from backend.services.research.steps import synthesize
+    from backend.services.research.task_state import StepEnvelope, SynthesizePayload
+    from backend.storage.research_evidence import SourceArtifact, SourceSnapshot, text_hash
+
+    orch, tasks, _, _ = await approved(setup)
+    action = gathering_action(orch)
+    repo = ResearchChildRunRepository(tasks._db_path)
+    rows = repo.allocate("task", action.action_id)
+    text = "Captured source evidence with explicit limits. " * 10
+    for row in rows:
+        child_id = row["child_task_id"]
+        repo.start(child_id, action.action_id)
+        snapshots = tuple(
+            SourceSnapshot(
+                artifact=SourceArtifact(
+                    task_id=child_id,
+                    source_id=str(index),
+                    source_version="1",
+                    canonical_url=url,
+                    representation="text",
+                    representation_hash=text_hash(text),
+                    fetch_status="available",
+                ),
+                representation_text=text,
+            )
+            for index, url in enumerate(("https://example.org/shared", "https://example.org/child"))
+        )
+        repo.finish(
+            ChildEvidencePacket(
+                child_task_id=child_id,
+                parent_task_id="task",
+                proposal_id=row["proposal_id"],
+                scope=json.loads(row["allocation_json"]),
+                status="partial",
+                evidence=EvidenceBundle(task_id=child_id, sources=snapshots),
+            ),
+            action.action_id,
+        )
+    monkeypatch.setattr(orch, "_get_parsed_urls", lambda _: [{"url": "https://example.org/shared", "status": "ok"}])
+    monkeypatch.setattr(synthesize, "run_synthesis", AsyncMock(return_value="Bounded report"))
+    monkeypatch.setattr(orch, "_create_or_update_step", lambda *args: "fixture-synthesis")
+    orch._state.research_step_result_repo = object()
+    output = await synthesize.SynthesizeStep().execute(
+        orch,
+        StepEnvelope(
+            task_id="task",
+            objective="Compare evidence",
+            max_depth=1,
+            budget=1.0,
+            current_depth=0,
+            all_findings=[],
+            payload=SynthesizePayload(sources_analyzed=99),
+        ),
+    )
+    assert output.payload.sources_analyzed == 2
+    assert tasks.get("task")["branches_created"] == 2
+    await orch.aclose()

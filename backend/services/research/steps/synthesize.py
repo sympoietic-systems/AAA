@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import json
 import logging
@@ -248,6 +249,44 @@ class SynthesizeStep(BaseResearchStep):
         if state.get("plan") and isinstance(state["plan"], dict):
             goal = state["plan"].get("goal", objective)
 
+        from backend.storage.repositories.research.child_run import ResearchChildRunRepository
+        from backend.storage.research_children import ChildEvidencePacket
+
+        children = []
+        if orch.task_repo and hasattr(orch.task_repo, "_db_path"):
+            children = await asyncio.to_thread(ResearchChildRunRepository(orch.task_repo._db_path).list_parent, task_id)
+        branch_count = len(children)
+
+        if orch.step_result_repo:
+            # Repeated queries/analysis passes are not independent sources.
+            parsed = await asyncio.to_thread(orch._get_parsed_urls, task_id)
+            web_sources = {source["url"] for source in parsed if source.get("status") == "ok"}
+            documents = {
+                doc.get("file_id")
+                for doc in (state.get("injected_documents") or [])
+                if state.get("document_digested") and isinstance(doc, dict) and doc.get("file_id")
+            }
+            if state.get("document_digested") and state.get("inject_file_id"):
+                documents.add(state["inject_file_id"])
+            from backend.services.research.steps.source_utils import classify_source_status
+
+            for child in children:
+                if not child.get("packet_json"):
+                    continue
+                packet = await asyncio.to_thread(ChildEvidencePacket.model_validate_json, child["packet_json"])
+                for snapshot in packet.evidence.sources:
+                    artifact = snapshot.artifact
+                    if (
+                        artifact.fetch_status != "available"
+                        or classify_source_status(snapshot.representation_text) != "ok"
+                    ):
+                        continue
+                    if artifact.canonical_url:
+                        web_sources.add(artifact.canonical_url)
+                    elif artifact.authorized_file_id:
+                        documents.add(artifact.authorized_file_id)
+            sources_analyzed = len(web_sources) + len(documents)
+
         result_summary = await run_synthesis(
             orch,
             task_id,
@@ -257,8 +296,6 @@ class SynthesizeStep(BaseResearchStep):
             sources_analyzed,
             step_id=step_id,
         )
-
-        branch_count = state.get("phase_group", current_depth + 2)
 
         if orch.task_repo:
             orch.task_repo.update(
@@ -306,9 +343,9 @@ class SynthesizeStep(BaseResearchStep):
         if result_summary and sources_analyzed > 0:
             # Compute stability_delta — compare with prior cycle synthesis if exists
             try:
-                from backend.modules.embedder import generate_embedding
-
-                current_emb = generate_embedding(result_summary[:2000])
+                embedder = getattr(orch._state, "embedder", None)
+                service = getattr(embedder, "service", None)
+                current_emb = await asyncio.to_thread(service.encode, result_summary[:2000]) if service else None
                 prior_emb = None
                 if orch.step_repo and current_depth > 0:
                     steps = orch.step_repo.get_by_task(task_id)
@@ -323,7 +360,9 @@ class SynthesizeStep(BaseResearchStep):
                         prior_data = json.loads(prior_synth_steps[-1].get("step_data") or "{}")
                         prior_report = prior_data.get("report_markdown", "")
                         if prior_report:
-                            prior_emb = generate_embedding(prior_report[:2000])
+                            prior_emb = (
+                                await asyncio.to_thread(service.encode, prior_report[:2000]) if service else None
+                            )
                 stability_delta = 0.0
                 if prior_emb is not None and current_emb is not None:
                     import numpy as np
