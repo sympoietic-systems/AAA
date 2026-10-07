@@ -90,12 +90,12 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 - T66 corrected the `pure_reflection` envelope mapping and persists finite routing decisions, patch TTL, and reroute count. Unsupported insert/remove patches fail explicitly; they are not implemented capabilities. See [Report 037](../reports/037-research-finite-actions/README.md).
 - T62–T66 add durable action/dependency/version boundaries and finite prerequisites. They do not authorize arbitrary model-authored replanning; legacy phase behavior remains available under frozen policy.
 - Current production log excerpt showed truncation, upstream 503s, timeouts and delayed sibling outputs. It lacks conversation-level correlation; treat as reliability fixture, not a calibrated latency baseline.
-- T69 concludes with non-adoption of Jev for research selection; T71 still requires integrated release evidence; independent parser review and scanned-PDF coverage are deferred to T75. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
+- T69 concludes with non-adoption of Jev for research selection; T71 records integrated technical evidence under the user-authorized quality assumption; independent parser review and scanned-PDF coverage are deferred to T75. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
 
 ## Non-goals
 
 - ⊥ activate Jev source selection before held-out calibration.
-- ⊥ automatic child creation in MVP.
+- ⊥ automatic child creation without explicit trusted dispatch consent or reviewed approval.
 - ⊥ arbitrary model-authored phases, recursive child trees, or branch-for-speed policy.
 - ⊥ replace every parser before a frozen comparative corpus demonstrates need.
 - ⊥ call reflective prose independent evidence or resolve productive contradiction merely to complete a report.

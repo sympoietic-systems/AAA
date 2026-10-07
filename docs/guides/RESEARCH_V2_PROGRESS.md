@@ -24,7 +24,7 @@ Reports describe verification at each task's completion. Their test counts overl
 
 ## Operator settings and boundaries
 
-Subresearch defaults to `off`. An explicit per-task `propose` request can create a review checkpoint after qualifying source contact; approval authorizes the reviewed child scopes and allocations. Exactly two child lines gather under their parent's deadline and shared resource ceilings. Children cannot create grandchildren or perform final synthesis. Monetary provider ceilings must be configured as described in Report 039 before family calls are admitted. Missing billing metadata remains unknown.
+Subresearch defaults to `off`. An explicit per-task `propose` request can create a review checkpoint after qualifying source contact; approval authorizes the reviewed child scopes and allocations. Exactly two child lines gather under their parent's deadline and shared resource ceilings. Children cannot create grandchildren or perform final synthesis. NVIDIA reservations use the configured zero-price assumption; other provider ceilings must be configured as described in Report 039 before family calls are admitted. Missing billing metadata remains unknown.
 
 Checking **Allow branching** at creation explicitly requests `bounded_auto`. Trusted user dispatch freezes a covenant allowing at most two qualified children under the parent deadline and shared resource limits. Source witnesses and separated scopes remain required. Restart does not renew consent. Model-authored tasks cannot request this mode. The user authorized this rollout before independent branch calibration; that calibration remains unknown. The [manual-mode guide](RESEARCH_MANUAL_MODE.md) covers phase stepping; proposal review is a separate durable checkpoint.
 
@@ -40,7 +40,6 @@ The [automated labeling command](RESEARCH_LABELING.md) prepares provisional sour
 | --- | --- |
 | T75 (future TODO) | User-deferred genuine scans and independent parser references/review; OCR/specialists, VPS resource/cost/model-license certification |
 | Production quality review | Compare source support, useful coverage, contrary retention and branch value using independently reviewed cases. No claim of quality superiority is established. |
-
 
 The supplied PDF corpus enabled local native-text routing checks and a side-by-side review packet. It contains no genuine scanned-PDF test case and has not received independent accuracy labels; the user deferred those requirements to future T75 on 2026-10-07. T73 is the separately authorized opt-in mechanism; its routing checks do not establish independent parser accuracy or a general speedup.
 
