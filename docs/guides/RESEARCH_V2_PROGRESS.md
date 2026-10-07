@@ -14,6 +14,7 @@ Snapshot: 2026-10-06, branch `codex/research-v2`. Root [SPEC.md](../../SPEC.md) 
 | T67 | Durable human branch proposals, source review, edited approval, decline and expiry | [Report 038](../reports/038-research-branch-proposals/README.md) |
 | T68 | Approved isolated child gathering, shared family budgets, raw-evidence archives, parent-owned merge | [Report 039](../reports/039-approved-research-children/README.md) |
 | T69 | Jev comparison completed; candidate not adopted for research selection; standard selector restored | [Report 042](../reports/042-jev-experimental-promotion/README.md) |
+| T70 | Bounded native/OCR parser comparisons and three-arm review; no default promotion; independent scan review deferred to T75 | [Report 043](../reports/043-parser-evaluation/README.md) |
 | T73 | Optional standard-first Docling PDF fallback with bounded CPU worker and preserved parser observations | [Report 040](../reports/040-docling-fallback/README.md) |
 | T74 | Automated provisional source labeling, checkpointed resume, explicit annotator provenance | [Report 041](../reports/041-research-provisional-labeling/README.md) |
 
@@ -35,11 +36,11 @@ The [automated labeling command](RESEARCH_LABELING.md) prepares provisional sour
 
 | Task | Work still required |
 | --- | --- |
-| T70 | Independent parser annotations and review, genuine scan/OCR coverage, measured accuracy/resource/license fit |
+| T75 (future TODO) | User-deferred genuine scans and independent parser references/review; OCR/specialists, VPS resource/cost/model-license certification |
 | T71 | Integrated release comparison and ablations, reviewed quality/latency/cost evidence, failure/restart evaluation |
 | T72 | Automatic branching only after T71 branch calibration and an explicit bounded covenant |
 
-The supplied PDF corpus enabled local native-text routing checks and a side-by-side review packet. It contains no genuine scanned-PDF test case and has not received independent accuracy labels. T73 is the separately authorized opt-in mechanism; it does not complete T70 or establish a general speedup.
+The supplied PDF corpus enabled local native-text routing checks and a side-by-side review packet. It contains no genuine scanned-PDF test case and has not received independent accuracy labels; the user deferred those requirements to future T75 on 2026-10-07. T73 is the separately authorized opt-in mechanism; its routing checks do not establish independent parser accuracy or a general speedup.
 
 Live LLM testing/debugging uses NVIDIA under the user's instruction. The user separately authorized Jev's endpoint for the T69 comparison. Local Docling conversion uses document models on CPU and makes no LLM provider call.
 

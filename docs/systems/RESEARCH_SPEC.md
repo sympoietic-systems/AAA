@@ -1,6 +1,6 @@
 # Research V2 Specification
 
-Status: partially implemented; T62–T69 and explicitly requested T73–T74 complete; T69 complete with Jev non-adoption for research selection; T70–T72 release gates open. Not a completed release.
+Status: partially implemented; T62–T70 and explicitly requested T73–T74 complete; T69 complete with Jev non-adoption for research selection; T71–T72 release gates open; future parser accuracy TODO T75. Not a completed release.
 Owner: Research V2 task sequence in root [SPEC.md](../../SPEC.md).
 Rationale and evidence: [RESEARCH_V2_PROPOSAL.md](RESEARCH_V2_PROPOSAL.md).
 Implementation snapshot and operating references: [RESEARCH_V2_PROGRESS.md](../guides/RESEARCH_V2_PROGRESS.md).
@@ -79,10 +79,10 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 | T67 | Proposal UX | `off` unchanged; `propose` waits durably; approve/edit/decline/expiry tested; no child spend before approval. |
 | T68 | Child execution and merge | ≤2 isolated children; source spans and conflicts preserved; parent Cortex owns synthesis; restart/cancel/failure paths tested. |
 | T69 | Jev selection | Held-out provisional comparison complete; user withdrew experimental rollout on 2026-10-06. Jev not adopted for research selection; standard selector active. Independent release review remains T71. See [Report 042](../reports/042-jev-experimental-promotion/README.md). |
-| T70 | Specialist parsing | Docling/OCR/specialist candidates evaluated on frozen corpus; adopt only measured accuracy/latency/resource/license fit; preserve locators. |
+| T70 | Specialist parsing | Three-arm benchmark and review tooling complete on supplied native-text corpus; no default promotion. User deferred genuine scans, independent accuracy and specialist/resource/license certification to T75. See [Report 043](../reports/043-parser-evaluation/README.md). |
 | T71 | Release evaluation | Compare v1, evidence/retrieval, Jev, reflection and proposal branches; include outages, late/truncated results and restarts; publish quality, latency and cost evidence. |
 | T72 | Bounded automatic branching | Enable only after T71 branch calibration; explicit covenant, ≤2 children, shared budget/deadline and synthesis reserve enforced. |
-| T73 | Optional standard-first Docling fallback | Default-off environment switch; isolated bounded CPU worker; standard extraction first; preserve both representations and unknown quality; cancellation/hash/cache regression checks. See [ADR-112](../decisions/ADR-112-standard-first-docling-fallback.md) and [usage guide](../guides/DOCLING.md). T70 remains open. |
+| T73 | Optional standard-first Docling fallback | Default-off environment switch; isolated bounded CPU worker; standard extraction first; preserve both representations and unknown quality; cancellation/hash/cache regression checks. See [ADR-112](../decisions/ADR-112-standard-first-docling-fallback.md) and [usage guide](../guides/DOCLING.md). Independent parser accuracy is deferred to T75. |
 | T74 | Automated provisional source labeling | NVIDIA command validates exact source coverage, checkpoints/resumes, preserves model/input provenance and failure receipts; automated labels do not bypass independent-gold gates. See [labeling guide](../guides/RESEARCH_LABELING.md). |
 
 ## §B Initial findings and remaining gaps
@@ -90,7 +90,7 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 - T66 corrected the `pure_reflection` envelope mapping and persists finite routing decisions, patch TTL, and reroute count. Unsupported insert/remove patches fail explicitly; they are not implemented capabilities. See [Report 037](../reports/037-research-finite-actions/README.md).
 - T62–T66 add durable action/dependency/version boundaries and finite prerequisites. They do not authorize arbitrary model-authored replanning; legacy phase behavior remains available under frozen policy.
 - Current production log excerpt showed truncation, upstream 503s, timeouts and delayed sibling outputs. It lacks conversation-level correlation; treat as reliability fixture, not a calibrated latency baseline.
-- T69 concludes with non-adoption of Jev for research selection; T70–T71 still require independent labels/review and integrated release evidence. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
+- T69 concludes with non-adoption of Jev for research selection; T71 still requires integrated release evidence; independent parser review and scanned-PDF coverage are deferred to T75. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
 
 ## Non-goals
 

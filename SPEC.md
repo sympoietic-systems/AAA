@@ -264,11 +264,12 @@ T66|x|implement adaptive finite-action routing + persisted dependencies; gate co
 T67|x|add `off|propose` MVP; allow post-afferent proposal only; persist approval/edit/decline/expiry state|V113,V115,I.api,I.internal
 T68|x|execute user-approved children under shared budget; add evidence packets + Cortex-owned diffractive merge; reject unbounded fanout|V113,V114,V115,V116,I.internal
 T69|x|54 held-out comparison trials; Jev not adopted for research selection by user decision; research triage disabled; standard selection restored; independent release review remains T71|V112,V114,V118,I.benchmark
-T70|.|benchmark Docling parser adapter + selected OCR/specialists on frozen corpus; adopt only measured quality/cost winner|V114,V118,I.domain
+T70|x|bounded three-arm parser benchmark + review tooling; supplied native corpus compared; no default parser promotion; user defers genuine scans/independent accuracy/license-resource certification to T75|V114,V118,I.domain
 T71|.|run v1/v2, Jev, reflection, branch and parser ablations; exercise outage/truncation/late completion/restart; publish release evidence|V110,V111,V112,V113,V114,V115,V116,V117,V118,I.benchmark,I.quality
 T72|.|enable `bounded_auto` only after T71 branch calibration; enforce explicit covenant + shared fanout/budget/deadline|V113,V115,V116,I.api,I.internal
-T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent T70 accuracy gate remains open|V69,V105,V114,V119,V120,I.env,I.domain
-T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; T69 independent review still open|V108,V114,V117,I.benchmark
+T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent parser accuracy deferred to T75|V69,V105,V114,V119,V120,I.env,I.domain
+T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; independent release review remains T71|V108,V114,V117,I.benchmark
+T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 
 ## §B
 
@@ -387,3 +388,5 @@ B99|2026-10-06|35% heading threshold missed 29.8% degraded extraction; shared th
 B100|2026-10-06|initial annotation pass lacked incremental checkpoint and HTTP status; live NVIDIA 503/malformed JSON/timeout; catalog entry returned inference 404|atomic per-query checkpoint + same-model/input resume + safe status receipts + pacing; failures never create gold; 30 NVIDIA + 40 explicit Codex provisional labels; V108,V114,V117
 
 B101|2026-10-06|Jev abstention bypassed standard selector, returning raw top results; initial exploratory lint found nested contexts|standard-selector fallback on abstention/unavailability; separate fallback IDs preserve Jev receipt; regression assertions; lint fixed under V30,V108; Windows temp permission failure → isolated workspace basetemp, 46 tests pass
+
+B102|2026-10-07|two-label review omitted OCR; unbounded total run duration; initial status narration missed OCR timeout|three-arm/partial-status regression + total deadline no-new-worker assertion + receipt-derived report; V114,V118,V120; independent accuracy deferred by user to T75
