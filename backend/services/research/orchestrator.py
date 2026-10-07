@@ -457,11 +457,16 @@ class SomaticResearchOrchestrator:
         state = self._state_mgr.init_task(task_id)
         task = self.task_repo.get(task_id) or {}
         task_policy = task.get("subresearch_policy", "off")
-        initial = json.loads(task.get("orchestrator_state") or "{}") if task_policy == "propose" else {}
-        if task_policy == "propose" and "action_journal_policy" not in initial:
+        initial = (
+            json.loads(task.get("orchestrator_state") or "{}") if task_policy in {"propose", "bounded_auto"} else {}
+        )
+        if task_policy in {"propose", "bounded_auto"} and "action_journal_policy" not in initial:
             state["action_journal_policy"] = None
         if state.get("action_journal_policy") is None:
-            enabled = self.config.get("action_receipts_enabled", False) is True or task_policy == "propose"
+            enabled = self.config.get("action_receipts_enabled", False) is True or task_policy in {
+                "propose",
+                "bounded_auto",
+            }
             contract = ResearchEvidenceStore.initial_contract(task_id, state, 7) if enabled else None
             state["contract_revision"] = 1
             state["action_journal_policy"] = {
@@ -482,6 +487,14 @@ class SomaticResearchOrchestrator:
                 if contract
                 else input_hash({key: state.get(key) for key in ("objective", "max_depth", "budget")}),
             }
+            if task_policy == "bounded_auto":
+                state["action_journal_policy"]["branch_covenant"] = {
+                    "version": 1,
+                    "consent": "user_dispatch",
+                    "max_children": 2,
+                    "recursive": False,
+                    "deadline": state["action_journal_policy"]["provider_policy"]["deadline"],
+                }
             if self._action_journal is not None:
                 persisted = self._action_journal.repo.initialize_task_state(
                     task_id,

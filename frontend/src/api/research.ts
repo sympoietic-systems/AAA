@@ -49,7 +49,7 @@ export interface InjectedDocSpec {
 }
 
 export interface DispatchPayload {
-  subresearch_policy?: "off" | "propose"
+  subresearch_policy?: "off" | "propose" | "bounded_auto"
   objective: string
   title?: string
   conversation_id?: string

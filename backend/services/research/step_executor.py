@@ -35,6 +35,28 @@ class ResearchStepExecutor:
         self._phase_block = phase_block
         self._phase_sub_sequence = phase_sub_sequence
 
+    async def _resolve_dispatch_consent(self, task_id: str, state: dict[str, Any]) -> None:
+        if (
+            state.get("phase") != "waiting_for_branch_approval"
+            or (state.get("action_journal_policy") or {}).get("subresearch_policy") != "bounded_auto"
+        ):
+            return
+        from backend.storage.repositories.research.branch_proposal import ResearchBranchProposalRepository
+
+        orchestrator = self._orchestrator
+        repo = ResearchBranchProposalRepository(orchestrator.task_repo._db_path)
+        await asyncio.to_thread(
+            repo.resolve,
+            task_id,
+            state["pending_branch_proposal_id"],
+            "approved",
+            boundary_acknowledged=True,
+            manual=True,
+            from_dispatch_covenant=True,
+        )
+        task = await asyncio.to_thread(orchestrator.task_repo.get, task_id)
+        state.update(json.loads(task["orchestrator_state"]))
+
     async def execute(self, task_id: str) -> dict[str, Any]:
         orchestrator = self._orchestrator
         """Execute exactly ONE phase of the research pipeline.
@@ -47,6 +69,7 @@ class ResearchStepExecutor:
 
         async with orchestrator._state_mgr.locks[task_id]:
             s = await asyncio.to_thread(orchestrator._get_state, task_id)
+            await self._resolve_dispatch_consent(task_id, s)
             phase = s["phase"]
             if phase == "waiting_for_branch_approval":
                 return {
@@ -320,7 +343,8 @@ class ResearchStepExecutor:
                 if (
                     output.branch_proposal
                     and not s.get("branch_review_complete")
-                    and (s.get("action_journal_policy") or {}).get("subresearch_policy", "off") == "propose"
+                    and (s.get("action_journal_policy") or {}).get("subresearch_policy", "off")
+                    in {"propose", "bounded_auto"}
                 ):
                     assert receipt is not None and journal is not None
                     import uuid
@@ -456,6 +480,14 @@ class ResearchStepExecutor:
                 )
             else:
                 orchestrator._persist_state(task_id)
+            if (
+                s["phase"] == "waiting_for_branch_approval"
+                and (s.get("action_journal_policy") or {}).get("subresearch_policy") == "bounded_auto"
+            ):
+                await self._resolve_dispatch_consent(task_id, s)
+                result["next_phase"] = s["phase"]
+                result["status"] = "active" if s["phase"] != "complete" else "partial"
+                result["branch_authorization"] = "dispatch_covenant"
             if s["phase"] == "waiting_for_branch_approval":
                 manager = getattr(orchestrator._state, "research_task_manager", None)
                 if manager is not None:

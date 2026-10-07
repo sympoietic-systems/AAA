@@ -166,8 +166,10 @@ class ResearchTaskManager:
         """Create a new research task and persist it. Returns task_id."""
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status: {status}")
-        if subresearch_policy not in {"off", "propose"}:
-            raise ValueError("Only off/propose subresearch policies are available")
+        if subresearch_policy not in {"off", "propose", "bounded_auto"}:
+            raise ValueError("Unsupported subresearch policy")
+        if subresearch_policy == "bounded_auto" and trigger_source not in {"user_console", "user_inline"}:
+            raise ValueError("Automatic branching requires consent from user dispatch")
 
         task_id = task_id or str(uuid.uuid4())
         task_data = {

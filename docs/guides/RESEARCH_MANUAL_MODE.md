@@ -4,7 +4,7 @@ When `AAA_RESEARCH_MANUAL_MODE=true` and orchestrator is enabled,
 every research task runs phase-by-phase with human confirmation at each step.
 This guide documents the workflow, UI, and debugging loops.
 
-Research V2 also supports a separate durable branch-approval checkpoint under per-task `subresearch_policy=propose`. Manual phase confirmation and branch approval are different controls. Decline or expiry resumes one parent line without child spending; approved gathering is implemented under T68, while `bounded_auto` remains gated. See [implementation progress](RESEARCH_V2_PROGRESS.md) and [Report 038](../reports/038-research-branch-proposals/README.md) for review behavior.
+Research V2 also supports a separate durable branch-approval checkpoint under per-task `subresearch_policy=propose`. Manual phase confirmation and branch approval are different controls. Decline or expiry resumes one parent line without child spending; approved gathering is implemented under T68, while checking **Allow branching** at creation supplies bounded dispatch consent for qualified proposals. It remains independent of manual phase confirmation; source witnesses, two-child limits and the frozen deadline still apply. See [implementation progress](RESEARCH_V2_PROGRESS.md) and [Report 038](../reports/038-research-branch-proposals/README.md) for review behavior.
 
 ## Enabling
 

@@ -19,7 +19,7 @@ class ResearchActionReceiptRepository(BaseRepository):
         """Freeze policy before the first action; a competing initializer wins once."""
         with self.atomic():
             cursor = self._conn().execute(
-                "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ? AND (orchestrator_state IS NULL OR orchestrator_state = '' OR CASE WHEN subresearch_policy='propose' AND json_valid(orchestrator_state) THEN json_type(orchestrator_state,'$.action_journal_policy') IS NULL ELSE 0 END)",
+                "UPDATE research_tasks SET orchestrator_state = ? WHERE id = ? AND (orchestrator_state IS NULL OR orchestrator_state = '' OR CASE WHEN subresearch_policy IN ('propose','bounded_auto') AND json_valid(orchestrator_state) THEN json_type(orchestrator_state,'$.action_journal_policy') IS NULL ELSE 0 END)",
                 (state_json, task_id),
             )
             if cursor.rowcount == 1 and contract is not None:

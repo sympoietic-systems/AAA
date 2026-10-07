@@ -110,7 +110,10 @@ async def run_deep_reflection(
 
     prompt_data = get_prompts_dict("research/orchestrator_reflection.yaml")
     persona = await orch._build_orchestrator_persona(objective)
-    if (orch._get_state(task_id).get("action_journal_policy") or {}).get("subresearch_policy", "off") == "propose":
+    if (orch._get_state(task_id).get("action_journal_policy") or {}).get("subresearch_policy", "off") in {
+        "propose",
+        "bounded_auto",
+    }:
         import asyncio
 
         from backend.storage.research_branch_proposal import BranchProposalDraft
@@ -595,6 +598,6 @@ class ReflectionStep(BaseResearchStep):
             step_ids=[step_id],
             transition_rationale=rationale,
             branch_proposal=reflection.get("branch_proposal")
-            if (s.get("action_journal_policy") or {}).get("subresearch_policy", "off") == "propose"
+            if (s.get("action_journal_policy") or {}).get("subresearch_policy", "off") in {"propose", "bounded_auto"}
             else None,
         )

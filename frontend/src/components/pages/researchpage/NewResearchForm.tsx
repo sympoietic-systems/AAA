@@ -28,7 +28,7 @@ interface SelectedDocItem {
 }
 
 export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClose, conversationId }: Props) {
-  const [subresearchPolicy, setSubresearchPolicy] = useState<"off" | "propose">("off")
+  const [allowBranching, setAllowBranching] = useState(false)
   const [objective, setObjective] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
@@ -168,11 +168,11 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
           // keep polling
         }
       }, POLL_INTERVAL)
-    } catch (err: any) {
+    } catch (err: unknown) {
       setInjectedDocs(prev =>
         prev.map(d =>
           d.id === tempId
-            ? { ...d, is_uploading: false, upload_status: "error", upload_error: err.message || "Upload failed" }
+            ? { ...d, is_uploading: false, upload_status: "error", upload_error: err instanceof Error ? err.message : "Upload failed" }
             : d
         )
       )
@@ -201,7 +201,7 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
         max_breadth: breadth,
         is_agonistic: agonistic,
         budget_limit_usd: budget,
-        subresearch_policy: subresearchPolicy,
+        subresearch_policy: allowBranching ? "bounded_auto" : "off",
         inject_file_id: firstDoc?.file_id,
         inject_conversation_id: firstDoc?.conversation_id,
         document_mode: firstDoc?.document_mode,
@@ -210,9 +210,9 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
       })
       setObjective("")
       onClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Dispatch failed:", err)
-      alert(`Dispatch failed: ${err?.message || err || "Unknown error"}`)
+      alert(`Dispatch failed: ${err instanceof Error ? err.message : String(err || "Unknown error")}`)
     } finally {
       setSending(false)
     }
@@ -225,12 +225,11 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
     <form onSubmit={handleSubmit} className="mb-4">
       <TerminalHeader className="mb-2">[ new research ]</TerminalHeader>
 
-      <label className="block text-xs text-white">Branching
-        <select className="ml-2 border border-white/40 bg-black p-1 text-white focus-visible:outline" value={subresearchPolicy} onChange={event => setSubresearchPolicy(event.target.value as "off" | "propose")}>
-          <option value="off">Keep one research line</option>
-          <option value="propose">Ask before branching</option>
-        </select>
+      <label className="flex items-center gap-2 text-xs text-white mb-2">
+        <input type="checkbox" checked={allowBranching} onChange={event => setAllowBranching(event.target.checked)} disabled={sending} />
+        Allow branching
       </label>
+      <p className="text-xs text-white/60 mb-2">Allow up to two child research lines when the sources warrant a split. They share this task's budget and deadline; no further approval is required.</p>
       {/* Objective */}
       <TerminalInput
         value={objective}

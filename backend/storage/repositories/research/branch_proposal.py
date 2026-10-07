@@ -97,7 +97,7 @@ class ResearchBranchProposalRepository(BaseRepository):
             policy = state.get("action_journal_policy") or {}
             if (
                 task["status"] != "active"
-                or policy.get("subresearch_policy", "off") != "propose"
+                or policy.get("subresearch_policy", "off") not in {"propose", "bounded_auto"}
                 or state.get("active_action_id") != proposal.action_id
             ):
                 raise ReceiptConflictError("Branch proposal is not authorized by the active parent action")
@@ -188,6 +188,7 @@ class ResearchBranchProposalRepository(BaseRepository):
         scopes: tuple[BranchScope, ...] | None = None,
         boundary_acknowledged: bool = False,
         manual: bool = False,
+        from_dispatch_covenant: bool = False,
     ) -> BranchProposal:
         with self.atomic():
             proposal = self.current(task_id)
@@ -206,6 +207,19 @@ class ResearchBranchProposalRepository(BaseRepository):
             state = json.loads(task["orchestrator_state"])
             if task["status"] != "waiting_for_branch_approval" or state.get("active_action_id"):
                 raise ReceiptConflictError("Parent is not ready for proposal review")
+            if from_dispatch_covenant:
+                policy = state.get("action_journal_policy") or {}
+                covenant = policy.get("branch_covenant") or {}
+                if (
+                    task.get("subresearch_policy") != "bounded_auto"
+                    or policy.get("subresearch_policy") != "bounded_auto"
+                    or covenant.get("version") != 1
+                    or covenant.get("consent") != "user_dispatch"
+                    or covenant.get("max_children") != 2
+                    or covenant.get("recursive") is not False
+                    or covenant.get("deadline") != policy["provider_policy"]["deadline"]
+                ):
+                    raise ReceiptConflictError("Automatic approval requires a frozen dispatch covenant")
             now = datetime.now(UTC)
             expired = now >= proposal.expires_at
             status = "expired" if expired else decision
@@ -232,9 +246,15 @@ class ResearchBranchProposalRepository(BaseRepository):
                 update={
                     "status": status,
                     "resolved_at": now,
-                    "reviewed_by": "user" if status != "expired" else None,
+                    "reviewed_by": ("user_dispatch" if from_dispatch_covenant else "user")
+                    if status != "expired"
+                    else None,
                     "approved_scopes": approved,
-                    "resolution_reason": "expiry" if status == "expired" else "human_review",
+                    "resolution_reason": "expiry"
+                    if status == "expired"
+                    else "dispatch_covenant"
+                    if from_dispatch_covenant
+                    else "human_review",
                 }
             )
             self._conn().execute(

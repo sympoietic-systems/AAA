@@ -342,3 +342,92 @@ async def test_v113_per_task_opt_in_preserves_context_and_restores_expiry_monito
     await manager.close_branch_watch()
     await orch.aclose()
     await other.aclose()
+
+
+@pytest.mark.parametrize("setup", ["bounded_auto"], indirect=True)
+@pytest.mark.asyncio
+async def test_dispatch_covenant_authorizes_witnessed_cut_and_survives_restart(setup):
+    orch, tasks, app, proposals = setup
+    frozen = dict(orch._get_state("task")["action_journal_policy"])
+    result = await orch.execute_step("task")
+    assert result["next_phase"] == "branch_gathering"
+    proposal = proposals.current("task")
+    assert proposal.status == "approved"
+    assert proposal.reviewed_by == "user_dispatch"
+    assert len(proposal.approved_scopes) == 2
+    assert len(tasks.list_all()) == 1  # Approval itself never launches children.
+    resumed = SomaticResearchOrchestrator(app).init_task("task")
+    assert resumed["phase"] == "branch_gathering"
+    assert resumed["action_journal_policy"] == frozen
+    assert frozen["branch_covenant"]["recursive"] is False
+    await orch.aclose()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_covenant_cannot_be_invented_for_manual_proposal(setup):
+    orch, tasks, _, proposals = setup
+    await orch.execute_step("task")
+    proposal = proposals.current("task")
+    with pytest.raises(ReceiptConflictError, match="frozen dispatch covenant"):
+        proposals.resolve(
+            "task",
+            proposal.proposal_id,
+            "approved",
+            boundary_acknowledged=True,
+            manual=True,
+            from_dispatch_covenant=True,
+        )
+    assert proposals.current("task").status == "pending"
+    assert len(tasks.list_all()) == 1
+    await orch.aclose()
+
+
+@pytest.mark.parametrize("setup", ["bounded_auto"], indirect=True)
+@pytest.mark.asyncio
+async def test_dispatch_pending_checkpoint_resumes_without_renewing_consent(setup, monkeypatch):
+    orch, tasks, app, proposals = setup
+    monkeypatch.setattr(orch._step_executor, "_resolve_dispatch_consent", AsyncMock())
+    await orch.execute_step("task")
+    assert proposals.current("task").status == "pending"
+    persisted = json.loads(tasks.get("task")["orchestrator_state"])
+    resumed_orch = SomaticResearchOrchestrator(app)
+    resumed = resumed_orch.init_task("task")
+    await resumed_orch._step_executor._resolve_dispatch_consent("task", resumed)
+    assert proposals.current("task").status == "approved"
+    assert resumed["phase"] == "branch_gathering"
+    assert resumed["action_journal_policy"] == persisted["action_journal_policy"]
+    await orch.aclose()
+
+
+@pytest.mark.parametrize("setup", ["bounded_auto"], indirect=True)
+@pytest.mark.asyncio
+async def test_dispatch_missing_covenant_cannot_auto_approve(setup, monkeypatch):
+    orch, tasks, _, proposals = setup
+    monkeypatch.setattr(orch._step_executor, "_resolve_dispatch_consent", AsyncMock())
+    await orch.execute_step("task")
+    persisted = json.loads(tasks.get("task")["orchestrator_state"])
+    del persisted["action_journal_policy"]["branch_covenant"]
+    tasks.update("task", orchestrator_state=json.dumps(persisted))
+    proposal = proposals.current("task")
+    with pytest.raises(ReceiptConflictError, match="frozen dispatch covenant"):
+        proposals.resolve(
+            "task",
+            proposal.proposal_id,
+            "approved",
+            boundary_acknowledged=True,
+            manual=True,
+            from_dispatch_covenant=True,
+        )
+    assert proposals.current("task").status == "pending"
+    assert len(tasks.list_all()) == 1
+    await orch.aclose()
+
+
+def test_dispatch_consent_cannot_be_requested_by_model_source(setup):
+    from backend.services.research.task_manager import ResearchTaskManager
+
+    _, tasks, app, _ = setup
+    manager = ResearchTaskManager(app)
+    with pytest.raises(ValueError, match="consent from user dispatch"):
+        manager.create_task("Model authored inquiry", "symbia_conversation", subresearch_policy="bounded_auto")
+    assert len(tasks.list_all()) == 1
