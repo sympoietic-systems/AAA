@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: implementation started; T1,T2 complete locally; T3–T18 pending. Date: 2026-10-08.
+Status: implementation started; T1,T2 complete locally; T3 complete locally; T4–T18 pending. Date: 2026-10-08.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -31,6 +31,9 @@ Consequential new distinctions + strong conflicts → source-bound, reviewable b
 
 ## §I
 
+T3 executable contract: `backend/services/belief_review_contracts.py`; reserved command shapes: `backend/api/belief_review_schemas.py`. [Contract](../architecture/BELIEFS_V2_CONTRACT.md), [ADR-116](../decisions/ADR-116-belief-review-standing-contract.md), [verification](../reports/048-belief-v2-contracts/README.md). No runtime routes/storage/intake installed by T3. Decision commands bind expected statement hash; linked target mutations also bind target version/hash.
+
+
 I.intake: extend `backend/services/belief_admission.py` → shared origin-aware intake. Origins: explicit chat/dream, passive chat, document perception, shared note, web, conversation pattern, scar-fold fallback creation. Skill bridge creation ! separate derived-skill provenance/authority contract; no semantic adoption inferred from bridge projection. Inventory actual call sites before migration; bypasses prohibited once origin promoted.
 
 I.encounter: typed encounter → `{id,agent_id,origin,source_type,source_id,source_version_or_hash,source_timestamp,received_at,statement,statement_hash,scope,temporal_scope,source_quote_or_reference,lineage,context_status}`. Source binding/availability explicit; missing fields retain reason. Event identity includes agent + stable source identity/version + emission/segment identity; claim identity separate from encounter identity.
@@ -39,7 +42,7 @@ I.assessment: extend existing admission receipt → `{receipt_id,encounter_id,ca
 
 I.decision: workshop decision → `{id,candidate_or_belief_id,actor,authority,policy,expected_version,previous_state,next_state,scope,rationale,positions,dissent,receipt_ids,timestamp}`. No fabricated bilateral agreement. Stale version → conflict response; no overwrite.
 
-I.state: review state proposed `candidate/awaiting_context/under_review/adopted/deferred/declined/superseded`; participation + situated standing separate. Mapping to existing proposal/lifecycle fields frozen in T3 before migration; legacy API behavior preserved or explicitly versioned.
+I.state: frozen review state `candidate/awaiting_context/under_review/adopted/deferred/declined/superseded`; participation + situated standing separate. Mapping to existing proposal/lifecycle fields frozen in [T3 contract](../architecture/BELIEFS_V2_CONTRACT.md) before migration; legacy API behavior preserved or explicitly versioned.
 
 I.relations: candidate relation `equivalent/extension/contradiction/distinct/insufficient_context`; adapter maps existing `independent/insufficient` and ADR-100 triage vocabulary explicitly. Pair relation distinct from candidate importance. Semantic relations reference statement/context hashes + scope/time; stale results remain historical, not active verdicts.
 
@@ -83,6 +86,7 @@ V21: additive migration preserves legacy beliefs/proposals/receipts; rollback re
 V22: frozen evaluation distinguishes redundant candidate reduction from useful distinction/conflict retention; held-out annotations independent of author/evaluator; disagreement + uncertainty reported.
 V23: staged enablement requires exact build/migration/config identity + full gates + frozen evaluation target + rollback receipt + explicit rollout decision; offline checks ≠ production certification.
 V24: adoption declined → attributable counter-trace; exploratory dissent remains recoverable; repeated objections bounded without silently deleting history.
+V25: reviewed standing ! attributable adoption receipt bound to agent, record, current statement hash + scope; legacy lifecycle/skill application ⊥ semantic adoption; supersession retains adoption provenance; no belief standing grants tool authority.
 
 ## §T
 
@@ -91,7 +95,7 @@ V24: adoption declined → attributable counter-trace; exploratory dissent remai
 id|status|task|cites
 T1|x|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verification gaps; record production identity or unknown; inventory every origin/direct creator|V1,V21,V23,I.intake
 T2|x|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
-T3|.|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
+T3|x|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,V25,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
 T4|.|recover source passages for saved incubating candidates + adopted/rejected comparisons; annotate lineage/consequence/conflict/context; independent review; frozen tuning/held-out corpus|V7,V8,V22,I.lineage,I.eval
 T5|.|add additive persistence extending admission/workshop; encounter/claim identities, immutable assessment links, versioned decisions; agent isolation, concurrent retry/restart tests|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|.|adapt explicit chat/dream emission to new shared intake; preserve existing receipts/UI contracts and inert historical XML|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
@@ -151,6 +155,8 @@ B1|2026-10-08|scar-fold fallback creates crystallized belief without admission; 
 B2|2026-10-08|generic impact serialized as confidence delta; wall-clock sweep repeatedly charges total inactivity; event insert failure swallowed|T2 resolved locally; V17,V18; typed nullable actual deltas + atomic checkpoint/mass/event; shared legacy helper route; report 047
 B3|2026-10-08|accretion could label delta from stale caller snapshot as measured persisted change|T2 resolved locally; V17; writer-lock reread + mutation/event transaction; rollback + stale snapshot tests; report 047
 B4|2026-10-08|post-annotation import edit missed final formatter run|ruff format + full format check; mechanical; existing completion gate sufficient
+B5|2026-10-08|adapter constant inferred broad str while contract requires literal version|explicit literal annotation; root V30; mechanical typing repair
+B6|2026-10-08|draft decision lacked statement-bound hash, allowing receipt reuse after text change; standing enum alone could launder legacy/skill authority|T3 resolved locally; V25; explicit standing variants + receipt/statement/scope/agent binding; Symbia critique recovered
 
 Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 

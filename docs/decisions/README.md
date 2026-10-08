@@ -154,6 +154,8 @@ What becomes easier/harder?
 | [112](ADR-112-standard-first-docling-fallback.md) | Optional Standard-First Docling Fallback | accepted | 2026-10-06 |
 | [114](ADR-114-response-quality-exclusion.md) | Persistent Response Quality and Context Exclusion | accepted for implementation | 2026-10-08 |
 
+| [116](ADR-116-belief-review-standing-contract.md) | Belief Review and Situated Standing Contract | accepted for staged implementation | 2026-10-08 |
+
 ## Creating a New ADR
 
 1. Copy an existing ADR as a template
