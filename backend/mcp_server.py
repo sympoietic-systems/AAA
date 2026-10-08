@@ -1,7 +1,9 @@
+import json
 import logging
 import os
 import sys
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from dotenv import load_dotenv
@@ -65,6 +67,36 @@ def _mkclient(**kwargs):
 
 
 mcp = FastMCP("AAA-Consultant", dependencies=["httpx", "mcp"])
+
+
+@mcp.tool()
+async def get_backend_logs(log_type: Literal["error", "server"] = "error", lines: int = 100) -> str:
+    """Retrieve a bounded, secret-scrubbed tail from the backend error or server log.
+
+    Arguments:
+        log_type: Which allowlisted log to read: "error" or "server".
+        lines: Number of recent lines to return (1-500).
+    """
+    if not 1 <= lines <= 500:
+        return json.dumps({"status": "error", "message": "lines must be between 1 and 500"})
+
+    try:
+        async with _mkclient(timeout=15.0, trust_env=False) as client:
+            response = await client.get(
+                f"{BASE_URL}/errors/logs",
+                params={"type": log_type, "lines": lines},
+            )
+            response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        message = "Backend rejected the log request"
+        if exc.response.status_code == 401:
+            message = "Backend authentication failed; configure AAA_PASSWORD for the MCP server"
+        return json.dumps({"status": "error", "message": message, "http_status": exc.response.status_code})
+    except httpx.RequestError:
+        logger.warning("Could not reach AAA backend log endpoint")
+        return json.dumps({"status": "error", "message": "Could not reach the AAA backend log endpoint"})
+
+    return json.dumps(response.json(), indent=2, ensure_ascii=False)
 
 
 def _find_conversation_id(conversations, agent_name: str) -> str | None:

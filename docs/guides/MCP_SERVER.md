@@ -7,6 +7,7 @@ The **Model Context Protocol (MCP) Server** exposes the autopoietic agent (the A
 - Retrieve philosophical foundations (`aaa://philosophy`).
 - Query the system identity (`aaa://identity`).
 - Pull live metrics (`aaa://metrics`).
+- Retrieve bounded, secret-scrubbed tails of `error.log` and `server.log` (`get_backend_logs`).
 - Consult the agent via the `consult_aaa` tool, with persistent per‑agent conversations titled `Consultation: <agent_name>`.
 
 This guide walks you through installing, running, and registering the MCP server for seamless integration with your development environment.
@@ -67,7 +68,10 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
 - `consult_aaa(message: str, agent_name: str, max_tokens: int | None = None)`
 - `get_consultation_history(agent_name: str, limit: int = 50)`
 - `get_messages_by_conversation_id(conversation_id: str, limit: int = 50)`
+- `get_backend_logs(log_type: "error" | "server" = "error", lines: int = 100)`
 - Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`, `aaa://skills`, `aaa://skills/agent/{skill_name}`
+
+`get_backend_logs` calls the authenticated `/api/errors/logs` endpoint. The backend limits reads to the two named log files, caps the tail at 500 lines, and scrubs secrets before returning it. Set `AAA_PASSWORD` in the MCP server environment when backend authentication is enabled. This tool reads logs; it does not clear or edit them.
 
 ---
 
