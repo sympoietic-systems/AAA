@@ -398,6 +398,10 @@ class ResearchTaskManager:
                 result = await self.orchestrator.execute(task_id)
                 if result.get("status") == "waiting_for_branch_approval":
                     return
+                persisted = await asyncio.to_thread(self.task_repo.get, task_id)
+                if persisted and persisted["status"] in TERMINAL_STATUSES:
+                    logger.info("Research task %s already finalized as %s", task_id, persisted["status"])
+                    return
 
                 summary = result.get("result_summary", "")
                 if not summary:
@@ -413,7 +417,9 @@ class ResearchTaskManager:
                 raise
             except Exception:
                 logger.exception("Research task %s failed", task_id)
-                self.fail(task_id, "Unhandled exception during research execution")
+                persisted = await asyncio.to_thread(self.task_repo.get, task_id)
+                if persisted and persisted["status"] not in TERMINAL_STATUSES:
+                    await asyncio.to_thread(self.fail, task_id, "Unhandled exception during research execution")
             finally:
                 self._active_tasks.pop(task_id, None)
                 if not self.config.get("manual_mode", False):

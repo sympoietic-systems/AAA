@@ -15,6 +15,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   const [data, setData] = useState<TaskStepsResponse | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stepping, setStepping] = useState(false)
+  const [stepError, setStepError] = useState<string | null>(null)
   const [preview, setPreview] = useState<StepPreview | null>(null)
   const [prevLoading, setPrevLoading] = useState(false)
   const loadSequence = useRef(0)
@@ -83,8 +84,9 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   }, [load, taskStatus, selectedId, taskId, orchPhase])
 
   const doStep = async () => {
+    setStepError(null)
     setStepping(true)
-    try { await executeStep(taskId) } catch {}
+    try { await executeStep(taskId) } catch (error) { setStepError(error instanceof Error ? error.message : "Research step failed") }
     setStepping(false)
     load()
     fetchPreview()
@@ -101,8 +103,9 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   }
 
   const doRerunPhase = async (stepType: string) => {
+    setStepError(null)
     setStepping(true)
-    try { await executeStep(taskId, stepType) } catch {}
+    try { await executeStep(taskId, stepType) } catch (error) { setStepError(error instanceof Error ? error.message : "Research step failed") }
     setStepping(false)
     load()
     fetchPreview()
@@ -112,6 +115,8 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   return (
     <TwoPanelLayout
       left={
+        <div>
+        {stepError && <p role="alert" className="text-semantic-red text-[10px]">{stepError}</p>}
         <StepPipeline
           data={data}
           preview={preview}
@@ -124,6 +129,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
           onDoRerun={doRerun}
           onRerunPhase={doRerunPhase}
         />
+        </div>
       }
       right={
         <StepDetailPanel

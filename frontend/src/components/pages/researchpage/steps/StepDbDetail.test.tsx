@@ -1,7 +1,8 @@
-import { cleanup, render, waitFor } from "@testing-library/react"
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest"
 import type { TaskStepsResponse } from "../../../../api/research"
 import { DbStepDetail } from "./StepDbDetail"
+import { executeStep } from "../../../../api/research"
 
 vi.mock("../../../../api/research", () => ({
   getTaskMetaLog: vi.fn().mockResolvedValue({ entries: [] }),
@@ -24,4 +25,7 @@ it("renders empty failed-step tabs without undefined counts", async () => {
   await waitFor(() => expect(view.getByRole("button", { name: "input" })).toBeTruthy())
   for (const label of ["result", "log", "notes"]) expect(view.getByRole("button", { name: label })).toBeTruthy()
   expect(view.container.textContent).not.toContain("undefined")
+  vi.mocked(executeStep).mockRejectedValueOnce(new Error("A research phase is already running; wait for it to finish."))
+  fireEvent.click(view.getByRole("button", { name: /rerun step/ }))
+  await waitFor(() => expect(view.getByRole("alert").textContent).toContain("already running"))
 })

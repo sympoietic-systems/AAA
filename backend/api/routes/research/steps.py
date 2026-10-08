@@ -41,6 +41,9 @@ async def execute_step(
     task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    phase_lock = manager.orchestrator._state_mgr.locks.get(task_id)
+    if phase_lock is not None and phase_lock.locked():
+        raise HTTPException(status_code=409, detail="A research phase is already running; wait for it to finish")
     if task["status"] not in ("active", "queued", "completed", "failed"):
         raise HTTPException(
             status_code=400,

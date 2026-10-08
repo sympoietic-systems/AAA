@@ -26,6 +26,15 @@ from backend.modules.provider_attempts import (
 logger = logging.getLogger(__name__)
 
 
+def _configured_model(model: str) -> str:
+    """Apply the operator's NVIDIA Nemotron policy to legacy environment pools."""
+    if model.startswith("nvidia_router/deepseek-ai/"):
+        replacement = "nvidia_router/nvidia/nemotron-3-super-120b-a12b"
+        logger.warning("NVIDIA DeepSeek route disabled by configuration policy; using %s", replacement)
+        return replacement
+    return model
+
+
 class KeyManager:
     """Manages rotation and cooldowns for a list of API keys."""
 
@@ -83,8 +92,8 @@ class ModelPoolProvider(BaseLLMProvider):
         openrouter_providers_map: LLMResult | None = None,
     ) -> None:
         self._api_key = api_key
-        self._models = models
-        self._fallback_model = fallback_model
+        self._models = list(dict.fromkeys(_configured_model(model) for model in models))
+        self._fallback_model = _configured_model(fallback_model)
         self._api_base = api_base
         self._google_api_base = google_api_base
         self._deepseek_api_base = deepseek_api_base
@@ -183,7 +192,7 @@ class ModelPoolProvider(BaseLLMProvider):
         # instead of the sticky last-working fallback. Fallback on failure still applies.
         prefer_primary = bool(params.pop("prefer_primary", False))
         if model_override:
-            models_to_try = [model_override]
+            models_to_try = [_configured_model(model_override)]
         else:
             models_to_try = self._all_models()
             if not prefer_primary and self._last_model_used and self._last_model_used in models_to_try:

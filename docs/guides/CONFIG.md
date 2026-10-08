@@ -497,6 +497,14 @@ AAA_STRUCTURAL_FALLBACK_MODEL=openrouter_router/google/gemma-4-26b-a4b-it:free
 
 Model prefix routing is automatic — `google_router/` uses the Google Gemini API endpoint, `nvidia_router/` uses NVIDIA hosted NIM, and `openrouter_router/` uses OpenRouter. No `AAA_STRUCTURAL_API_BASE` is required unless routing to a custom proxy.
 
+NVIDIA model pools use Nemotron. Legacy `nvidia_router/deepseek-ai/...` entries in model pools, fallback models, or per-call overrides are replaced with `nvidia_router/nvidia/nemotron-3-super-120b-a12b`, with a startup/request warning. This preserves the operator's model policy when a VPS retains an older `.env`; other providers' DeepSeek routes are unaffected. Remove the obsolete entries from `AAA_LLM_MODELS`, `AAA_BACKGROUND_MODELS`, and `AAA_STRUCTURAL_MODELS` when updating that file. Restart the backend to reload environment configuration. A NVIDIA-only pool can be configured as:
+
+```dotenv
+AAA_LLM_MODELS=nvidia_router/nvidia/nemotron-3-super-120b-a12b,nvidia_router/nvidia/nemotron-3-ultra-550b-a55b
+```
+
+Use the same list for background or structural pools if those should also run exclusively through NVIDIA. This changes provider selection; the existing provider deadlines and failure reporting still apply.
+
 To disable LLM scoring (use only lexicon + topology scorers):
 ```bash
 AAA_LLM_SCORER_ENABLED=false

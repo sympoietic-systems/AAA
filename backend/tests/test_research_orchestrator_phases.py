@@ -997,6 +997,7 @@ class TestDynamicReroutingAndCacheClearance:
             args, kwargs = mock_gen.call_args
             assert kwargs["temperature"] == 0.1
             assert kwargs["max_tokens"] == 500
+            assert kwargs["thinking_override"] is False
 
     @pytest.mark.asyncio
     async def test_pure_reflection_step_execution(self):

@@ -244,6 +244,7 @@ export async function executeStep(taskId: string, rerunStepType?: string, rerunS
   const qs = params.toString()
   const url = qs ? `${BASE}/research/tasks/${taskId}/step?${qs}` : `${BASE}/research/tasks/${taskId}/step`
   const res = await apiFetch(url, { method: "POST" })
+  if (res.status === 409) throw new Error("A research phase is already running; wait for it to finish.")
   if (!res.ok) throw new Error(`Step failed: ${res.status}`)
   return res.json()
 }

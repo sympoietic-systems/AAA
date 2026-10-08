@@ -5,6 +5,7 @@ import re
 import uuid
 from urllib.parse import quote
 
+from backend.modules.provider_attempts import AttemptBudgetExceeded, bounded_call
 from backend.modules.sensory.evidence_triage import EvidenceTriage
 from backend.services.research.provider_observation import generate_unified
 from backend.services.research.search_tool import web_search
@@ -13,10 +14,17 @@ from backend.services.research.task_state import SearchPayload, StepEnvelope, St
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")
+SEARCH_SELECTION_TIMEOUT_SECONDS = 15.0
 
 
 async def _select_high_fidelity_results(
-    llm, objective: str, query: str, results: list[dict], target_count: int
+    llm,
+    objective: str,
+    query: str,
+    results: list[dict],
+    target_count: int,
+    *,
+    timeout_seconds: float = SEARCH_SELECTION_TIMEOUT_SECONDS,
 ) -> list[dict]:
     """Uses a lightweight LLM call to filter/rank and select the most high-fidelity, high-relevance search results from the pool, avoiding commercial noise and SEO landing pages."""
     if not results:
@@ -53,14 +61,18 @@ async def _select_high_fidelity_results(
         "rationale": "Fallback to top results",
     }
     try:
-        resp = await generate_unified(
-            llm,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            expect_json=True,
-            fallback_value=fallback,
-            temperature=0.1,
-            max_tokens=500,
+        resp = await bounded_call(
+            lambda: generate_unified(
+                llm,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                expect_json=True,
+                fallback_value=fallback,
+                temperature=0.1,
+                max_tokens=500,
+                thinking_override=False,
+            ),
+            timeout_seconds,
         )
         data = resp.get("json_data") or {}
         indices = data.get("selected_indices")
@@ -214,7 +226,7 @@ class SearchStep(BaseResearchStep):
             )
             group_steps[direct_group] = step_id
 
-        search_results_list = []
+        search_results = []
         triage_receipts = []
         triage = EvidenceTriage.from_config(orch._state.config)
         config_orchestrator = orch._state.config.get("research_orchestrator") or {}
@@ -261,18 +273,25 @@ class SearchStep(BaseResearchStep):
                 acquired_results[i] if acquisition_enabled else await web_search(q, candidate_count, orch._state.config)
             )
             if triage is not None:
-                selected_res, receipt = await _select_with_triage(
-                    llm, triage, envelope.objective, q, raw_res, orch.default_top_n
-                )
-                triage_receipts.append(receipt)
+                try:
+                    selected_res, receipt = await bounded_call(
+                        lambda query=q, candidates=raw_res: _select_with_triage(
+                            llm, triage, envelope.objective, query, candidates, orch.default_top_n
+                        ),
+                        SEARCH_SELECTION_TIMEOUT_SECONDS,
+                    )
+                    triage_receipts.append(receipt)
+                except AttemptBudgetExceeded:
+                    logger.warning("Search triage timed out; preserving retrieved candidate order")
+                    selected_res = raw_res[: orch.default_top_n]
+                    triage_receipts.append(
+                        {"fallback": True, "reason": "selection_timeout", "fallback_selector": "retrieved_order"}
+                    )
             else:
                 selected_res = await _select_high_fidelity_results(
                     llm=llm, objective=envelope.objective, query=q, results=raw_res, target_count=orch.default_top_n
                 )
-            search_results_list.append(selected_res)
-
-        search_results = []
-        for i, results in enumerate(search_results_list):
+            results = selected_res
             q_group = i + 1
             step_id = group_steps[q_group]
             orch._log_meta(
@@ -284,16 +303,6 @@ class SearchStep(BaseResearchStep):
                 },
                 step_id=step_id,
             )
-
-            if orch.step_repo:
-                if not results:
-                    await asyncio.to_thread(
-                        orch.step_repo.update, step_id, status="completed", result_summary="no results"
-                    )
-                else:
-                    await asyncio.to_thread(
-                        orch.step_repo.update, step_id, status="completed", result_summary=f"{len(results)} results"
-                    )
 
             for r in results:
                 url = r.get("url")
@@ -316,6 +325,14 @@ class SearchStep(BaseResearchStep):
                 r_copy = dict(r)
                 r_copy["query_group"] = q_group
                 search_results.append(r_copy)
+
+            if orch.step_repo:
+                await asyncio.to_thread(
+                    orch.step_repo.update,
+                    step_id,
+                    status="completed",
+                    result_summary=f"{len(results)} results" if results else "no results",
+                )
 
         if direct_group and direct_urls:
             step_id = group_steps[direct_group]

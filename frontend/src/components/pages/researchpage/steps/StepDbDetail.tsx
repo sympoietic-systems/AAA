@@ -40,6 +40,7 @@ export const DbStepDetail = memo(function DbStepDetail({ taskId, data, selectedI
 
 const SelectedStepDetail = memo(function SelectedStepDetail({ taskId, data, selectedId, selected }: DbStepDetailProps & { selected: ResearchStep }) {
   const selectedResults = data ? (data.results_by_step[selectedId] || []) : []
+  const [rerunError, setRerunError] = useState<string | null>(null)
   const noteHook = useNotes("research_step", selectedId)
 
   // Fallback to find search/digest results for a query_group if the step itself has no saved results (older runs or digest updates stored under parse step)
@@ -301,8 +302,9 @@ const SelectedStepDetail = memo(function SelectedStepDetail({ taskId, data, sele
   }, [responseEntries, data, selected])
 
   const handleRerunStep = async () => {
+    setRerunError(null)
     setLogLoading(true)
-    try { await executeStep(taskId, selected.step_type, selectedId) } catch {}
+    try { await executeStep(taskId, selected.step_type, selectedId) } catch (error) { setRerunError(error instanceof Error ? error.message : "Research step failed") }
     // Step was updated in-place — reload meta log for same step ID
     getTaskMetaLog(taskId, selectedId).then(setMetaLog).catch(() => {}).finally(() => setLogLoading(false))
   }
@@ -316,6 +318,7 @@ const SelectedStepDetail = memo(function SelectedStepDetail({ taskId, data, sele
 
   return (
     <div className="space-y-2 text-[10px] font-mono">
+      {rerunError && <p role="alert" className="text-semantic-red">{rerunError}</p>}
       <div className="flex items-center justify-between">
         <div className="text-semantic-header uppercase text-[9px] tracking-wider">
           [ Step #{selected.step_number}: {STEP_LABELS[selected.step_type] || selected.step_type}
