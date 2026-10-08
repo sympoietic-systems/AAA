@@ -1,8 +1,9 @@
 import json
 import logging
+import sqlite3
 import uuid
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 
 from backend.storage.connection import with_connection
 from backend.storage.models import BeliefEvent, BeliefNode, BeliefProposal, BeliefStatementVersion
@@ -552,6 +553,7 @@ class BeliefRepository(BaseRepository):
         confidence: float = 0.15,
         status: str = "pending",
         potential_merge_target: str | None = None,
+        suppress_notification: bool = False,
     ) -> BeliefProposal:
         validated_vector = self.validate_and_format_vector(initial_signature)
         conn = self._conn()
@@ -574,12 +576,13 @@ class BeliefRepository(BaseRepository):
 
         # Automatic notification insertion
 
-        snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement}')"
-        conn.execute(
-            """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
-               VALUES (?, 'trace', ?, ?, 'belief_workshop', 0, 0)""",
-            (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet),
-        )
+        if not suppress_notification:
+            snippet = f"A new belief proposal has emerged in the workshop ('{provisional_statement}')"
+            conn.execute(
+                """INSERT INTO notifications (id, type, timestamp, snippet, source, read, dismissed)
+                   VALUES (?, 'trace', ?, ?, 'belief_workshop', 0, 0)""",
+                (str(uuid.uuid4()), datetime.now(UTC).isoformat(), snippet),
+            )
 
         self._commit(conn)
         row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (id,)).fetchone()
@@ -591,7 +594,24 @@ class BeliefRepository(BaseRepository):
         row = conn.execute("SELECT * FROM belief_proposals WHERE id = ?", (proposal_id,)).fetchone()
         if row is None:
             return None
-        return _row_to_belief_proposal(row)
+        return self._proposal_with_admission(row)
+
+    def _proposal_with_admission(self, row: sqlite3.Row) -> BeliefProposal:
+        proposal = _row_to_belief_proposal(row)
+        proposal.admission_history = self.get_admission_history(proposal.id)
+        return proposal
+
+    @with_connection
+    def get_admission_history(self, proposal_id: str) -> list[dict[str, Any]]:
+        receipts = (
+            self._conn()
+            .execute(
+                "SELECT receipt FROM belief_admission WHERE proposal_id=? ORDER BY created_at DESC LIMIT 50",
+                (proposal_id,),
+            )
+            .fetchall()
+        )
+        return [json.loads(r[0]) for r in receipts]
 
     @with_connection
     def list_proposals(self, agent_id: str) -> list[BeliefProposal]:
@@ -600,7 +620,7 @@ class BeliefRepository(BaseRepository):
             "SELECT * FROM belief_proposals WHERE LOWER(agent_id) = LOWER(?) ORDER BY created_at DESC",
             (agent_id,),
         ).fetchall()
-        return [_row_to_belief_proposal(r) for r in rows]
+        return [self._proposal_with_admission(r) for r in rows]
 
     @with_connection
     def list_pending_proposals(self, agent_id: str) -> list[BeliefProposal]:
@@ -609,7 +629,7 @@ class BeliefRepository(BaseRepository):
             "SELECT * FROM belief_proposals WHERE LOWER(agent_id) = LOWER(?) AND status IN ('pending', 'refined') ORDER BY created_at DESC",
             (agent_id,),
         ).fetchall()
-        return [_row_to_belief_proposal(r) for r in rows]
+        return [self._proposal_with_admission(r) for r in rows]
 
     @with_connection
     def update_proposal_status(self, proposal_id: str, status: str, rejection_rationale: str | None = None) -> None:

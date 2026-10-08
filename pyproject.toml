@@ -51,6 +51,17 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/utils/message_quality.py",
+    "backend/modules/response_quality.py",
+    "backend/services/response_quality.py",
+    "backend/storage/repositories/conversation/message_quality.py",
+    "backend/storage/migrations/m059_message_quality.py",
+    "backend/api/routes/response_quality.py",
+    "backend/services/belief_admission.py",
+    "backend/services/belief_admission_policy.py",
+    "backend/storage/repositories/cognitive/belief_admission.py",
+    "backend/storage/migrations/m060_belief_admission.py",
+    "backend/utils/belief_candidate.py",
     "backend/modules/pdf_extraction.py",
     "backend/modules/docling_worker.py",
     "backend/storage/repositories/research/child_run.py",

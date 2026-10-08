@@ -116,6 +116,16 @@ Captures holistic health metrics of Symbia's cognitive network over time.
 
 Beliefs flow dynamically through six lifecycle stages determined by their confidence, ontological mass, and operational history.
 
+### Explicit-emission admission
+
+An explicit `<belief_nucleate>` emission enters a review path before it becomes a nucleation proposal. The parser strips the tag from the assistant response and carries its candidate fields into a source-bound admission receipt. Chat and dream turns use the same evaluator and persistence path. The candidate must provide a concrete trigger, scope, temporal scope, consequence, and a quote found in its source message; missing or unresolved context remains visible for review.
+
+The shadow assessment compares the candidate with up to ten active beliefs and pending/refined proposals, then records its judgments, confidence, evaluator status, timestamps, and source/comparison hashes. Its recommendation is explanatory only. It cannot nucleate, adopt, merge, reject, or alter a belief. An exact statement/scope/time repeat records an occurrence against the existing target without creating another proposal. Otherwise, a candidate proposal remains pending for human review; only the existing manual adoption action crystallizes it. Historical records without a receipt remain unknown. Legacy passive concept-density nucleation and other non-tagged paths are not adjudicated by this explicit-emission gate.
+
+Each receipt produces received and assessed Creases/Traces entries. The belief detail displays the same receipt, including comparison reasoning and source links. A stable hash of the original tag is retained because tag markup is removed before the assistant message is stored. Jev is an optional shadow evaluator, independent of research triage; unavailable or uncertain evaluation leaves the candidate in review.
+
+The durable receipt schema is documented under [`belief_admission`](../architecture/DATABASE_SCHEMA.md#belief_admission), introduced by migration `m060_belief_admission`. Applying that migration to production is a separate deployment operation; this implementation work did not modify the production database. The configured Jev judgment floor is provisional and uncalibrated, and no admission-quality benchmark has been run.
+
 ```mermaid
 stateDiagram-v2
     [*] --> Seeded : Identity Yaml Initialized
@@ -149,6 +159,8 @@ stateDiagram-v2
 4.  **Senescence:** A state of cognitive erosion. Occurs only when direct negative alignment, cognitive contradiction, or authorial refactoring drives a crystallized belief below the $0.50$ threshold. Disuse alone *cannot* induce senescence for crystallized beliefs.
 5.  **Collapsed:** A belief that has lost its viability (confidence $< 0.20$ or mass $< 0.02$). This can occur when unreinforced proto-beliefs decay over hundreds of active turns, or when beliefs are contradicted or manually retired. A collapsed belief enters the **spectral margin** as a "ghost belief." It is excluded from active retrieval and slotting, but remains available for resurrection or resonance-boosting.
 6.  **Faded:** A belief that has remained collapsed or in a proto-stage without activity for over 30 days. It is faded permanently during ghost ecology processing, moving to the background archive.
+
+The explicit-emission candidate review above is a pre-proposal admission step, not a seventh metabolic lifecycle stage. Existing proposal review, manual adoption, and the six lifecycle stages remain unchanged after admission.
 
 ---
 

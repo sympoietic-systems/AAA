@@ -303,6 +303,10 @@ def process_research_proposals(
         objective = (objective_m.group(1) if objective_m else "").strip()
         rationale = (rationale_m.group(1) if rationale_m else "").strip()
 
+        if not objective:
+            logger.warning("Withheld research proposal without an objective for message %s", message_id)
+            return "[Research proposal withheld: no specific research question was provided.]"
+
         try:
             suggested_depth = int(depth_m.group(1).strip() if depth_m else "2")
         except ValueError:

@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import re
 
@@ -76,12 +77,21 @@ def parse_belief_nucleate_tags(text: str) -> tuple[str, list[dict]]:
 
         statement = content.strip()
         if statement:
+            admission_fields = {}
+            for field in ("consequence", "scope", "temporal_scope", "trigger", "evidence_quote"):
+                found = re.search(rf"""(?i){field}\s*=\s*(["'])(.*?)\1""", attribs_str, re.S)
+                if found:
+                    import html
+
+                    admission_fields[field] = html.unescape(found.group(2))
             proposed_beliefs.append(
                 {
                     "statement": statement,
                     "confidence": confidence_val,
                     "label": label_val,
                     "rationale": rationale_val,
+                    "emission_sha256": hashlib.sha256(current_text[start_idx:replace_end].encode("utf-8")).hexdigest(),
+                    **admission_fields,
                 }
             )
 

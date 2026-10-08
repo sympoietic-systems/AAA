@@ -107,6 +107,10 @@ background_llm:
   api_base: "https://openrouter.ai/api/v1"
   cooldown_seconds: 300        # Cooldown in seconds for exhausted keys/models (default: 300)
 
+# ── Explicit Belief Admission ────────────────────
+belief_admission:
+  jev_shadow: true              # Advisory assessment only; human review still controls belief changes
+
 # ── Vision Model Pool ─────────────────────────────
 vision_llm:
   models:
@@ -139,6 +143,8 @@ background_llm:
 ```
 
 The homeostatic regulator clamps chat temperature to a default range of `0.5`–`0.8` (base `0.7`, ADR-098). Collapse pressure still informs interventions and bounded penalty controls; stagnation-induced temperature surges remain deprecated, but it no longer enables thinking or increases the chat completion-token cap. Provider-configured thinking and explicit per-call overrides remain available. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md) and [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md).
+
+`belief_admission.jev_shadow` controls whether explicit belief candidates receive an optional Jev advisory assessment. Disabling it leaves candidates in human review; it does not disable candidate receipts or enable automatic admission. This setting is separate from `research_triage.enabled`.
 
 ## Stateful Model Pool & Fallback Prioritization
 

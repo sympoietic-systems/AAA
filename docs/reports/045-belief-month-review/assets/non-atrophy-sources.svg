@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="442" viewBox="0 0 1000 442" role="img" aria-label="Returned non-atrophy events by source (capped sample)">
+<rect width="100%" height="100%" fill="#000"/>
+<text x="25" y="35" fill="white" font-family="monospace" font-size="20">Returned non-atrophy events by source (capped sample)</text>
+<text x="25" y="88" fill="white" font-family="monospace" font-size="15">research_step</text>
+<rect x="260" y="70" width="540.0" height="24" fill="white"/>
+<text x="815.0" y="88" fill="white" font-family="monospace" font-size="15">171</text>
+<text x="25" y="126" fill="white" font-family="monospace" font-size="15">file</text>
+<rect x="260" y="108" width="442.10526315789474" height="24" fill="white"/>
+<text x="717.1" y="126" fill="white" font-family="monospace" font-size="15">140</text>
+<text x="25" y="164" fill="white" font-family="monospace" font-size="15">dream_turn</text>
+<rect x="260" y="146" width="401.05263157894734" height="24" fill="white"/>
+<text x="676.1" y="164" fill="white" font-family="monospace" font-size="15">127</text>
+<text x="25" y="202" fill="white" font-family="monospace" font-size="15">recalibration</text>
+<rect x="260" y="184" width="170.52631578947367" height="24" fill="white"/>
+<text x="445.5" y="202" fill="white" font-family="monospace" font-size="15">54</text>
+<text x="25" y="240" fill="white" font-family="monospace" font-size="15">dream_hotspot</text>
+<rect x="260" y="222" width="116.84210526315789" height="24" fill="white"/>
+<text x="391.8" y="240" fill="white" font-family="monospace" font-size="15">37</text>
+<text x="25" y="278" fill="white" font-family="monospace" font-size="15">chat_turn</text>
+<rect x="260" y="260" width="110.52631578947368" height="24" fill="white"/>
+<text x="385.5" y="278" fill="white" font-family="monospace" font-size="15">35</text>
+<text x="25" y="316" fill="white" font-family="monospace" font-size="15">scar_fold_monologue</text>
+<rect x="260" y="298" width="78.94736842105263" height="24" fill="white"/>
+<text x="353.9" y="316" fill="white" font-family="monospace" font-size="15">25</text>
+<text x="25" y="354" fill="white" font-family="monospace" font-size="15">shared_note</text>
+<rect x="260" y="336" width="18.94736842105263" height="24" fill="white"/>
+<text x="293.9" y="354" fill="white" font-family="monospace" font-size="15">6</text>
+<text x="25" y="392" fill="white" font-family="monospace" font-size="15">dream_consolidation</text>
+<rect x="260" y="374" width="12.631578947368421" height="24" fill="white"/>
+<text x="287.6" y="392" fill="white" font-family="monospace" font-size="15">4</text>
+</svg>

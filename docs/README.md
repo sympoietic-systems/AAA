@@ -23,7 +23,9 @@ System architecture, technical specification, and the record of architectural de
 
 - [ARCHITECTURE.md](architecture/ARCHITECTURE.md) — High-level design, data flow, modular pipeline, and component diagrams.
 - [DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) — Live database schema and table reference.
+- [BELIEFS_V2_PLAN.md](architecture/BELIEFS_V2_PLAN.md) — Proposed situated commitments, exploratory candidate participation, and staged evaluation gates.
 - [decisions/](decisions/) — Architecture Decision Records documenting significant choices with context, options, and consequences. ADR-097 and ADR-098 define the causal dialogue feedback control loop, Paskian teachback, operational accommodation, and the Pole Vacancy escalation ladder; [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records production response-quality diagnostics; [ADR-103](decisions/ADR-103-disable-metric-triggered-thinking-escalation.md) disables metric-triggered thinking escalation in chat.
+- [ADR-115](decisions/ADR-115-shadow-belief-admission.md) records source-bound explicit belief candidates, shadow-only evaluation, exact-repeat handling, and human-controlled adoption.
 
 ### systems/
 Deep-dive specifications for individual subsystems.
@@ -137,3 +139,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 037: Finite research actions](reports/037-research-finite-actions/README.md)
 - [Report 038: Human branch proposals](reports/038-research-branch-proposals/README.md)
 - [Report 039: Approved research children](reports/039-approved-research-children/README.md)
+- [Report 045: Belief system month review](reports/045-belief-month-review/README.md)

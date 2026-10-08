@@ -521,7 +521,8 @@ class ChatService:
             research_task_manager = getattr(state, "research_task_manager", None)
             if research_task_manager:
                 try:
-                    response_text = process_research_proposals(
+                    response_text = await asyncio.to_thread(
+                        process_research_proposals,
                         response_text=response_text,
                         conversation_id=conversation_id,
                         message_id=response_msg.id,
@@ -619,14 +620,16 @@ class ChatService:
                         skill_data,
                     )
 
-            if proposed_beliefs and background_engine and background_tasks:
+            if proposed_beliefs:
                 for belief_data in proposed_beliefs:
-                    background_tasks.add_task(
-                        run_background_belief_nucleation,
-                        background_engine,
-                        conversation_id,
-                        belief_data,
-                    )
+                    admission_args = (background_engine, conversation_id, belief_data, response_msg.id)
+                    admission_options = {"db_path": repo._db_path, "config": state.config}
+                    if background_tasks:
+                        background_tasks.add_task(
+                            run_background_belief_nucleation, *admission_args, **admission_options
+                        )
+                    else:
+                        await run_background_belief_nucleation(*admission_args, **admission_options)
 
             if proposed_refusals and background_tasks:
                 for refusal_data in proposed_refusals:

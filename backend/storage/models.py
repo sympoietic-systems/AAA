@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -182,6 +183,7 @@ class BeliefProposal:
     symbia_reflection: str | None = None
     symbia_friction_rationale: str | None = None
     rejection_rationale: str | None = None
+    admission_history: list[dict[str, Any]] = field(default_factory=list)
     created_at: datetime = datetime.min
     updated_at: datetime = datetime.min
 

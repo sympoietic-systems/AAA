@@ -8,6 +8,7 @@ import { CSS_VARS } from "../../../../config/colors"
 /* ── Belief Stage Colors ── */
 export function getBeliefStageColor(s: string) {
   switch (s) {
+    case "candidate": return CSS_VARS.semanticHeader
     case "nucleation": return CSS_VARS.semanticGold
     case "accretion": return CSS_VARS.semanticSand
     case "crystallized": return CSS_VARS.semanticGreen
@@ -19,6 +20,7 @@ export function getBeliefStageColor(s: string) {
 
 export function getBeliefStageLabel(s: string) {
   switch (s) {
+    case "candidate": return "needs review"
     case "nucleation": return "nucleating"
     case "accretion": return "accreting"
     case "crystallized": return "crystallized"

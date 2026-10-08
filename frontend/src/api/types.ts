@@ -87,7 +87,7 @@ export interface DiffractiveSourceInfo { type: string; source_title: string; sim
 export interface DiffractiveInfo { state: string; previous_state: string; p_diffract: number; activation_reason?: string; stagnation_index: number; r_context: number; dynamic_max: number; cohesion_timer: number; similarity_range_memory: number[]; similarity_range_files: number[]; candidates_searched: number; items_injected: number; tokens_used: number; token_budget: number; duration_ms: number; sources: DiffractiveSourceInfo[] }
 
 export interface BeliefEventInfo { id: string; timestamp: string; source_id: string; source_type: string; event_type?: string; delta_confidence: number; mass?: number | null; confidence?: number | null; description: string }
-export interface BeliefNodeInfo { id: string; label: string; statement: string; category: string; confidence: number; ontological_mass: number; version: number; vector_16d: string; origin: string; lifecycle_stage: string; last_reinforced_at: string | null; updated_at: string | null; events: BeliefEventInfo[]; is_proposal?: boolean; proposal_status?: string; suggested_label?: string | null; suggested_statement?: string | null; symbia_reflection?: string | null; symbia_friction_rationale?: string | null; rejection_rationale?: string | null; potential_merge_target?: string | null; source_trace?: any[] }
+export interface BeliefNodeInfo { id: string; label: string; statement: string; category: string; confidence: number; ontological_mass: number; version: number; vector_16d: string; origin: string; lifecycle_stage: string; last_reinforced_at: string | null; updated_at: string | null; events: BeliefEventInfo[]; is_proposal?: boolean; proposal_status?: string; suggested_label?: string | null; suggested_statement?: string | null; symbia_reflection?: string | null; symbia_friction_rationale?: string | null; rejection_rationale?: string | null; potential_merge_target?: string | null; source_trace?: any[]; admission_history?: AdmissionReceipt[] }
 export interface SomaticStateInfo { somatic_reservoir_ad: number; matrix_warping: number; immunological_directive_active: boolean }
 export interface EcosystemSnapshot { diversity: number; coherence: number; tension: number; plasticity: number; ghost_burden: number; eco_vitality: number; active_count: number; proto_count: number; ghost_count: number; self_tuning: Record<string, unknown> }
 export interface BeliefsResponse { beliefs: BeliefNodeInfo[]; proto_beliefs: BeliefNodeInfo[]; ghosts: BeliefNodeInfo[]; somatic: SomaticStateInfo | null; attractor_window: string[]; spectral_margin: string[]; ecosystem: EcosystemSnapshot | null }
@@ -124,3 +124,15 @@ export interface BasinBelief { label: string; statement: string; confidence: num
 export interface PersonalityCommitment { id: string; label: string; statement: string; lifecycle_stage: string; confidence: number; ontological_mass: number; vector_16d?: number[] | null; basin_belief_count?: number; basin_belief_labels?: string[]; basin_beliefs?: BasinBelief[]; nucleation_rationale?: string | null; collapse_rationale?: string | null; created_at?: string | null; updated_at?: string | null }
 export interface PersonalityExpertise { id: string; domain: string; description?: string; lifecycle_stage: string; ontological_mass: number; level_label: string; signal_count: number; vector_16d?: number[] | null; last_signal_at?: string | null; crystallization_rationale?: string | null; created_at?: string | null }
 export interface PersonalityResponse { traits: Record<string, number> | null; aspirational_traits: Record<string, number>; aspirational_gap: number; anti_erosion_boost: number; source_metrics: Record<string, number>; commitments: { active: PersonalityCommitment[]; proto: PersonalityCommitment[]; spectral: PersonalityCommitment[] }; expertise: { active: PersonalityExpertise[]; proto: PersonalityExpertise[]; dormant: PersonalityExpertise[] } }
+
+export interface AdmissionReceipt {
+  id: string; status: string; statement: string; label: string;
+  decision: string; reason: string; recommendation?: string;
+  created_at: string; assessed_at?: string; policy_version: string; mode: string;
+  consequence: string; scope: string; temporal_scope: string; trigger: string; evidence_quote: string;
+  emission_sha256?: string;
+  context_issues?: string[]; uncompared_count?: number;
+  source: { conversation_id: string; message_id: number; parent_message_id?: number; message_sha256: string; evidence_sha256: string };
+  comparisons?: { id: string; kind: string; label: string; statement: string; statement_sha256: string; scope?: string; temporal_scope?: string }[];
+  evaluation?: { status: string; model?: string; reason?: string; input_sha256?: string; latency_ms?: number; answers?: Record<string, { choice?: string; confidence?: number }> };
+}

@@ -37,6 +37,7 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
   const proposalId = props.id || props["data-id"]
   const { objective, rationale, depth, breadth, isAgonistic } = parseProposalChildren(props.children)
 
+  const [topic, setTopic] = useState(objective)
   const [status, setStatus] = useState<string>("proposed")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +49,7 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
         if (task && task.status) {
           setStatus(task.status)
         }
+        if (task?.objective?.trim()) setTopic((current) => current.trim() ? current : task.objective)
       })
       .catch((err) => {
         // Proposal task not yet created or loaded; leave status as "proposed"
@@ -61,6 +63,10 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
     setLoading(true)
     setError(null)
     try {
+      if (!topic.trim()) {
+        setError("Cannot dispatch: this proposal has no specific research question.")
+        return
+      }
       if (proposalId) {
         try {
           await approveProposal(proposalId)
@@ -75,7 +81,7 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
         }
       }
       // Fallback: dispatch research task directly from parsed card fields
-      const targetObjective = objective || "Research proposal"
+      const targetObjective = topic.trim()
       await dispatchResearch({
         objective: targetObjective,
         title: targetObjective.slice(0, 80),
@@ -115,9 +121,13 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
       <div className="text-[10px] text-semantic-gold font-mono font-bold tracking-wider uppercase">
         🔬 Symbia Proposes Research
       </div>
-      {objective && (
+      {topic.trim() ? (
         <div className="text-ui-primary text-xs font-mono italic my-0.5">
-          "{objective}"
+          "{topic}"
+        </div>
+      ) : (
+        <div className="text-semantic-red text-[11px] font-mono my-0.5">
+          Research question missing. This proposal cannot be dispatched.
         </div>
       )}
       {rationale && (
@@ -152,7 +162,8 @@ export function ResearchProposalCard(props: ResearchProposalCardProps) {
           <>
             <button
               onClick={handleApprove}
-              className="text-action-dim hover:text-action-hover cursor-pointer"
+              disabled={!topic.trim()}
+              className="text-action-dim hover:text-action-hover cursor-pointer disabled:text-ui-dim disabled:cursor-not-allowed"
             >
               [✓ Approve & dispatch]
             </button>

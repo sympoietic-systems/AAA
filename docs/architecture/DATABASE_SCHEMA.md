@@ -229,6 +229,22 @@ Pending belief nucleation proposals for review.
 | created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP |
 | updated_at | DATETIME | DEFAULT CURRENT_TIMESTAMP |
 
+### belief_admission
+Immutable assessment receipts for explicit `<belief_nucleate>` candidates. Migration `m060_belief_admission` creates this table. Receipts retain source and candidate provenance, bounded comparison snapshots, shadow evaluation output, decision/recommendation, and timestamps. The `proposal_id` links an exact repetition to its existing target or a new candidate to its pending proposal; `event_key` makes retries idempotent.
+
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | TEXT | PRIMARY KEY |
+| event_key | TEXT | UNIQUE NOT NULL |
+| proposal_id | TEXT | NULL; indexed |
+| statement_key | TEXT | NOT NULL; indexed |
+| status | TEXT | NOT NULL; `assessing` or `complete` |
+| receipt | TEXT | NOT NULL; secret-masked JSON |
+| created_at | TEXT | NOT NULL; UTC ISO timestamp |
+| assessed_at | TEXT | NULL; UTC ISO timestamp |
+
+The receipt stores conversation/message IDs, parent ID, source-message and evidence hashes, original-tag hash, candidate evidence fields, comparison IDs/statements/hashes, evaluator/model/confidence details when available, policy version, and the received/assessment times. Assessment recommendations do not authorize belief mutations. Human review remains required.
+
 ### belief_tensions
 Inter-belief tension tracking.
 
@@ -829,5 +845,4 @@ As enacted in [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-
 
 3. **Active Post-Baseline Migrations**:
    - **`m051_add_pole_vacancy_rupture_skill.py`** ([ADR-098](../decisions/ADR-098-paskian-teachback-and-operational-accommodation.md)): Injects the canonical `pole-vacancy-rupture` procedural skill into `skill_nodes`, records the initial version in `skill_versions`, and creates the `skill:pole-vacancy-rupture` belief bridge in `belief_nodes`.
-
 

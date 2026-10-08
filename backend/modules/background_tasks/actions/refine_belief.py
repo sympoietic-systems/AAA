@@ -113,27 +113,7 @@ Active beliefs already in Symbia's database:
                     resolved_target_id = b.id
                     break
 
-        # Math fallback check: if no target ID resolved, check cosine similarities
-        from backend.modules.belief_engine import parse_vector_16d
-        from backend.utils.vector import cosine_similarity
-
-        prop_vec = parse_vector_16d(proposal.initial_signature)
-        if prop_vec is not None:
-            best_sim = -1.0
-            best_id = None
-            for b in active_beliefs:
-                if b.lifecycle_stage in ("crystallized", "senescence", "accretion"):
-                    b_vec = parse_vector_16d(b.vector_16d)
-                    if b_vec is not None:
-                        sim = cosine_similarity(prop_vec, b_vec)
-                        if sim > best_sim:
-                            best_sim = sim
-                            best_id = b.id
-            if best_sim >= 0.70 and not resolved_target_id:
-                resolved_target_id = best_id
-                logger.info(
-                    f"Mathematical overlap threshold reached (similarity={best_sim:.2f}) for belief ID {best_id}. Auto-nominated target."
-                )
+        # Structural vectors nominate related territory, never semantic merge equivalence.
 
         # Update the proposal with daemon suggestions
         belief_repo.update_proposal_suggestions(

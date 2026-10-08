@@ -1,0 +1,123 @@
+{
+  "interval": [
+    "2026-09-08T02:05:08+00:00",
+    "2026-10-08T02:05:08+00:00"
+  ],
+  "timestamp_assumption": "Naive API timestamps interpreted as UTC",
+  "visible_beliefs": 57,
+  "lifecycle_stages": {
+    "crystallized": 57
+  },
+  "confidence_values": [
+    1.0
+  ],
+  "mass_range": [
+    0.1277995750444757,
+    0.9925000000000008
+  ],
+  "crystallized_below_local_turn_floor": 2,
+  "proposals_all_time": 54,
+  "proposal_statuses_all_time": {
+    "refined": 19,
+    "pending": 1,
+    "adopted": 32,
+    "rejected": 2
+  },
+  "proposals_updated_in_interval": 29,
+  "updated_proposal_statuses": {
+    "refined": 19,
+    "pending": 1,
+    "adopted": 9
+  },
+  "incubating": 20,
+  "incubating_with_merge_target": 19,
+  "incubating_merge_target_counts": {
+    "f5d1a986-13b2-4c42-92b2-9734a1831d83": 2,
+    "f10c82aa-e82c-4f93-b94d-3d9279ff5798": 7,
+    "bf51c31d-b351-4118-94ca-b8f0dca85f93": 2,
+    "7a5f3a34-bb75-447c-9573-20f598392f69": 1,
+    "null": 1,
+    "f2750c6a-3da2-430e-ac81-f2d406c9778d": 2,
+    "f5859a7f-b6c7-45b9-86ea-0be9f40a70fd": 1,
+    "db69a846-3ac6-46f8-aa92-6d06c798a29c": 1,
+    "8e611382-4052-4382-9e35-8a07fb4a2f7d": 1,
+    "08010cc8-409c-4ca3-a15f-4cc338748027": 1,
+    "fd3566a8-56aa-4adf-8c04-ee449b2f1a9c": 1
+  },
+  "returned_events": 5378,
+  "event_types": {
+    "support": 479,
+    "recalibration": 54,
+    "atrophy": 4779,
+    "consolidation_suture": 4,
+    "scar_monologue": 25,
+    "dream_engagement": 37
+  },
+  "source_types": {
+    "file": 140,
+    "research_step": 171,
+    "shared_note": 6,
+    "dream_turn": 127,
+    "recalibration": 54,
+    "atrophy": 4779,
+    "chat_turn": 35,
+    "dream_consolidation": 4,
+    "scar_fold_monologue": 25,
+    "dream_hotspot": 37
+  },
+  "non_atrophy_events": 599,
+  "non_atrophy_source_types": {
+    "file": 140,
+    "research_step": 171,
+    "shared_note": 6,
+    "dream_turn": 127,
+    "recalibration": 54,
+    "chat_turn": 35,
+    "dream_consolidation": 4,
+    "scar_fold_monologue": 25,
+    "dream_hotspot": 37
+  },
+  "atrophy_fraction_of_returned": 0.8886203049460766,
+  "beliefs_at_100_event_cap": 53,
+  "returned_event_time_range": [
+    "2026-09-08T17:14:30",
+    "2026-10-07T23:54:45"
+  ],
+  "daily_returned_events": {
+    "2026-09-08": 6,
+    "2026-09-09": 37,
+    "2026-09-10": 54,
+    "2026-09-14": 29,
+    "2026-09-15": 70,
+    "2026-09-16": 911,
+    "2026-09-17": 1922,
+    "2026-09-18": 1855,
+    "2026-09-19": 12,
+    "2026-09-20": 12,
+    "2026-09-21": 12,
+    "2026-09-22": 13,
+    "2026-09-23": 2,
+    "2026-09-24": 2,
+    "2026-09-25": 7,
+    "2026-09-26": 10,
+    "2026-09-27": 8,
+    "2026-09-28": 8,
+    "2026-09-29": 11,
+    "2026-09-30": 8,
+    "2026-10-01": 8,
+    "2026-10-02": 22,
+    "2026-10-03": 223,
+    "2026-10-04": 120,
+    "2026-10-05": 6,
+    "2026-10-06": 4,
+    "2026-10-07": 6
+  },
+  "support_with_negative_generic_impact": 0,
+  "sha256": {
+    "collection-metadata.json": "7d243778191d7cbb8fd43e05a134e9d9b9c00c44be8d859ba071284d979ad2fe",
+    "production-belief-events-30d.json": "4bc0783c81f32a62143d8a7963b6c6f03c4f3487d79f3e29e5686b0fdf91e3d8",
+    "production-beliefs-snapshot.json": "7a30f6c85a0bb15e26c8f0a2c78da752d87d4cad80388536f96bafe2b76f7d2d",
+    "production-proposals-snapshot.json": "0624d8cc7824ed405399be3fd735a7f9036c7b92fd360522c79afb197dc001bc",
+    "production-source-message-links.json": "3f97e158b2a8feceb46634feee3906c98f1bf9d14976caf6876dc3910511e25b"
+  }
+}

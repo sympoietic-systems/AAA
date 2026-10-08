@@ -107,16 +107,17 @@ class ContextCollectorModule(ProcessingModule):
         parent_message_id = payload.get("parent_message_id")
 
         if parent_message_id is None and conversation_id:
-            last_msgs = self._repo.get_recent(limit=1, conversation_id=conversation_id)
+            last_msgs = await asyncio.to_thread(self._repo.get_recent, limit=1, conversation_id=conversation_id)
             if last_msgs:
                 parent_message_id = last_msgs[0].id
 
         if parent_message_id is not None:
-            raw_msgs = self._repo.get_ancestor_path(parent_message_id, limit=self._max_history)
+            raw_msgs = await asyncio.to_thread(self._repo.get_ancestor_path, parent_message_id, limit=self._max_history)
             payload["branch_context_tag"] = f"msg_{parent_message_id}"
             payload["ancestor_message_ids"] = [msg.id for msg in raw_msgs if msg.id is not None]
         else:
-            raw_msgs = self._repo.get_recent(
+            raw_msgs = await asyncio.to_thread(
+                self._repo.get_recent,
                 limit=self._max_history,
                 conversation_id=conversation_id if conversation_id else None,
             )

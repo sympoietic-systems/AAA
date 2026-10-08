@@ -3,6 +3,8 @@ import { getNotification, getNotifications, dismissNotification, markNotificatio
 import type { SedimentNotification } from "../../../api/client"
 import { syncNotifications } from "../../../stores/notificationStore"
 import { formatTimestamp } from "../../../utils/dateFormat"
+import { AdmissionReasoning } from "./beliefs/AdmissionReasoning"
+import { traceReceipt, traceSummary } from "../../../utils/beliefAdmission"
 
 interface Props {
   onNavigateToEntity?: (type: string, id: string) => void
@@ -112,6 +114,8 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
       if (n.sourceId) onNavigateToEntity(n.sourceType, n.sourceId)
     } else if (n.sourceType === "belief" || n.sourceType === "skill") {
       window.open(`/agent?tab=${n.sourceType}s&id=${n.sourceId || ""}`, "_blank")
+    } else if (n.sourceType === "research" && n.sourceId) {
+      window.open(`/research?id=${encodeURIComponent(n.sourceId)}`, "_blank")
     } else if (n.sourceType === "conversation" || n.conversationId) {
       const convId = n.sourceId || n.conversationId
       if (convId) window.open(`/nodes?c=${convId}${n.messageId ? `&m=${n.messageId}` : ""}`, "_blank")
@@ -265,6 +269,9 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
                     {(t.sourceType === "belief" || t.sourceType === "skill" || t.sourceType === "conversation" || !!t.conversationId) && (
                       <button onClick={() => handleJump(t)} className="text-[10px] text-[#666] hover:text-[#4ade80] transition-colors cursor-pointer select-none font-mono font-bold">[jump]</button>
                     )}
+                    {t.sourceType === "research" && t.sourceId && (
+                      <button onClick={() => handleJump(t)} className="text-[10px] text-[#60a5fa] hover:text-[#4ade80] transition-colors cursor-pointer select-none font-mono font-bold">[review research]</button>
+                    )}
                     <button onClick={() => handleToggleRead(t)} className="text-[10px] text-[#666] hover:text-[#ccc] transition-colors cursor-pointer select-none font-mono font-bold">{t.read ? "[unread]" : "[read]"}</button>
                   </div>
                   {!t.dismissed && (
@@ -273,7 +280,8 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
                 </div>
 
                 {/* Message — full text, no wrapper */}
-                <div className="text-[#ccc] leading-relaxed whitespace-pre-wrap break-words">{t.snippet}</div>
+                <div className="text-[#ccc] leading-relaxed whitespace-pre-wrap break-words">{traceSummary(t.snippet)}</div>
+                {traceReceipt(t.snippet) && <AdmissionReasoning receipts={[traceReceipt(t.snippet)!]} />}
 
                 {/* Metadata + links — single inline line */}
                 <div className="text-[10px]">
@@ -287,6 +295,9 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
                     <span>
                       {(t.sourceType === "belief" || t.sourceType === "skill") && t.sourceId && (
                         <button onClick={() => handleJump(t)} className="text-[#a78bfa] hover:underline cursor-pointer select-none font-mono ml-1">[{t.sourceType}]</button>
+                      )}
+                      {t.sourceType === "research" && t.sourceId && (
+                        <button onClick={() => handleJump(t)} className="text-[#60a5fa] hover:underline cursor-pointer select-none font-mono ml-1">[research]</button>
                       )}
                       {(t.sourceType === "conversation" || t.conversationId) && (
                         <button onClick={() => handleJump(t)} className="text-[#a78bfa] hover:underline cursor-pointer select-none font-mono ml-1">[conv]</button>

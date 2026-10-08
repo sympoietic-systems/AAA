@@ -45,7 +45,10 @@ def serialize_proposal(p) -> dict:
 
     Used by get_beliefs, list_proposals, and get_proposal.
     """
+    admission_history = getattr(p, "admission_history", [])
     lifecycle_stage = "nucleation" if p.status in ("pending", "refined") else "collapsed"
+    if admission_history and p.status in ("pending", "refined"):
+        lifecycle_stage = "candidate"
     return {
         "id": p.id,
         "label": p.suggested_label or "emergent-belief",
@@ -67,6 +70,7 @@ def serialize_proposal(p) -> dict:
         "rejection_rationale": p.rejection_rationale,
         "potential_merge_target": p.potential_merge_target,
         "source_trace": _parse_source_trace(p.source_trace),
+        "admission_history": admission_history,
     }
 
 

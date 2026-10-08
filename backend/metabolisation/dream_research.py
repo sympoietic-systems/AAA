@@ -90,7 +90,8 @@ class DreamResearchMixin:
             )
 
             try:
-                task_id = manager.create_task(
+                task_id = await asyncio.to_thread(
+                    manager.create_task,
                     objective=objective,
                     trigger_source="symbia_dream",
                     title=f"Dream Proposal: {belief_label}",
@@ -105,20 +106,6 @@ class DreamResearchMixin:
                     ),
                     proposal_rationale=rationale,
                 )
-
-                # Dispatch notification
-                try:
-                    notif_repo = getattr(self.app_state, "notification_repo", None)
-                    if notif_repo:
-                        notif_repo.create(
-                            type="trace",
-                            snippet=f"Dream proposal: {belief_label} (stress: {stress_score:.2f})",
-                            source="dream_daemon:proposal",
-                            source_type="research",
-                            source_id=task_id,
-                        )
-                except Exception:
-                    pass
 
                 logger.info(
                     "Dream Daemon proposed research: '%s' (stress=%.2f) -> %s",

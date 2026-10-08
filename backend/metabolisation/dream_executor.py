@@ -10,7 +10,10 @@ import numpy as np
 
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
+from backend.services.annotations import process_research_proposals
+from backend.services.belief_admission import admit_candidate
 from backend.services.response_quality import assess_message
+from backend.utils.parsers.belief import parse_belief_nucleate_tags
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.vector import cosine_similarity
 
@@ -111,6 +114,7 @@ class DreamExecutorMixin:
         try:
             result = await self.pipeline.run(payload)
             response_text = result.payload.get("response", "")
+            response_text, belief_candidates = parse_belief_nucleate_tags(response_text)
             thinking = result.payload.get("thinking")
             embedding = result.payload.get("embedding", b"")
             embedding_model = result.payload.get("embedding_model", "unknown")
@@ -193,6 +197,18 @@ class DreamExecutorMixin:
             generation_receipt=result.payload.get("generation_receipt"),
         )
 
+        research_task_manager = getattr(self.app_state, "research_task_manager", None)
+        if research_task_manager:
+            response_text = await asyncio.to_thread(
+                process_research_proposals,
+                response_text=response_text,
+                conversation_id=dream_convo_id,
+                message_id=assistant_msg.id,
+                task_manager=research_task_manager,
+                message_repo=self.message_repo,
+            )
+            assistant_msg.content = response_text
+
         quality = await assess_message(
             self.message_repo,
             self.app_state.config,
@@ -200,6 +216,16 @@ class DreamExecutorMixin:
             getattr(self.app_state, "response_quality_semaphore", None),
         )
         assistant_msg.quality_status = quality["status"]
+
+        for candidate in belief_candidates:
+            await admit_candidate(
+                str(self.message_repo._db_path),
+                dream_convo_id,
+                assistant_msg.id,
+                candidate,
+                config=self.app_state.config,
+                origin="dream",
+            )
 
         # Embed assistant response
         response_embedder = getattr(self.app_state, "embedder", None)

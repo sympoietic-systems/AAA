@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useMemo, memo } from "react"
 import { listConversations } from "../../../api/client"
 import type { ConversationInfo, SedimentNotification } from "../../../api/client"
 import { formatTime, formatTimeShort } from "../../../utils/dateFormat"
+import { AdmissionReasoning } from "../agentpage/beliefs/AdmissionReasoning"
+import { traceReceipt, traceSummary } from "../../../utils/beliefAdmission"
 import {
   useNotifications,
   dismissNotification,
@@ -62,6 +64,13 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
     }
   }
 
+  const handleResearchReview = (n: SedimentNotification) => {
+    if (!n.sourceId) return
+    dismissNotification(n.id)
+    setCreasesOpen(false)
+    window.location.href = `/research?id=${encodeURIComponent(n.sourceId)}`
+  }
+
   // Filter and enrich sediment notifications with conversation titles for display
   const enrichedSediment = useMemo(() => {
     const sedimentNotifs = notifications.filter((n) => n.type === 'sediment' || !n.type)
@@ -101,7 +110,9 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
         }`}
         title={
           unreadGlitchesCount > 0
-            ? `${unreadGlitchesCount} unread glitch(es) present`
+            ? `${unreadGlitchesCount} unread glitch(es) present${unreadTracesCount ? `; ${unreadTracesCount} unread trace(s)` : ""}`
+            : unreadTracesCount > 0
+            ? `${unreadTracesCount} unread trace(s) present`
             : enrichedSediment.length > 0
             ? `${enrichedSediment.length} sediment arrival(s)`
             : "No pending creases"
@@ -118,7 +129,10 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
 
         {/* Unread glitches pulse marker */}
         {unreadGlitchesCount > 0 && (
-          <span className="w-1.5 h-1.5 rounded-full bg-[#f43f5e] animate-pulse absolute -top-0.5 -right-0.5" />
+          <span className={`w-1.5 h-1.5 rounded-full bg-[#f43f5e] animate-pulse absolute -top-0.5 ${unreadTracesCount > 0 ? "-right-2.5" : "-right-0.5"}`} />
+        )}
+        {unreadTracesCount > 0 && (
+          <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] animate-pulse absolute -top-0.5 -right-0.5" />
         )}
       </button>
 
@@ -231,7 +245,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                       </span>
                     </div>
                     <p className="text-[10px] text-[#fca5a5]/90 font-mono leading-normal break-words whitespace-pre-wrap select-text">
-                      {notif.snippet}
+                      {traceSummary(notif.snippet)}
                     </p>
                     <div className="flex justify-end gap-2 mt-1.5">
                       {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
@@ -271,9 +285,19 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                       </span>
                     </div>
                     <p className="text-[10px] text-[#93c5fd]/90 font-mono leading-normal break-words select-text">
-                      {notif.snippet}
+                      {traceSummary(notif.snippet)}
                     </p>
+                    {traceReceipt(notif.snippet) && <details className="text-[10px] text-[#bbb] mt-1">
+                      <summary className="cursor-pointer">Admission reasoning</summary>
+                      <AdmissionReasoning receipts={[traceReceipt(notif.snippet)!]} />
+                    </details>}
                     <div className="flex justify-end gap-2 mt-1.5">
+                      {notif.sourceType === "research" && notif.sourceId && (
+                        <button onClick={() => handleResearchReview(notif)}
+                          className="text-[9px] text-[#60a5fa] hover:text-action-hover font-mono cursor-pointer select-none mr-auto">
+                          [review proposal]
+                        </button>
+                      )}
                       {(notif.sourceType === "belief" || notif.sourceType === "skill" || notif.sourceType === "conversation" || !!notif.conversationId) && (
                         <button
                           onClick={() => handleJump(notif)}
@@ -296,4 +320,3 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
     </div>
   )
 })
-

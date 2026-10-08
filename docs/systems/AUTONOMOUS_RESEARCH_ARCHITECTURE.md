@@ -3041,7 +3041,7 @@ async def evaluate_evidence_perturbation(
 
 ### 13.1 Trigger Logic (Proposal-Based)
 
-> **Phase 1:** The Dream Daemon does NOT execute research directly. It creates `PROPOSED` research tasks that wait for user approval in the Research Console. This maintains user sovereignty while preserving the daemon's role as a cognitive monitor.
+> **Phase 1:** The Dream Daemon does NOT execute research directly. It creates `PROPOSED` research tasks that wait for approval in the Research Console or an inline proposal card. This maintains user sovereignty while preserving the daemon's role as a cognitive monitor.
 
 The Dream Daemon's existing idle loop is enhanced to scan for Tension Hotspots and create research proposals for user review:
 
@@ -3138,6 +3138,14 @@ When the user approves a daemon proposal, the task executes normally through the
 ### 13.3 Startup Proposal Scanning
 
 On system boot, the daemon performs a one-time scan for beliefs that significantly decayed during downtime. For each belief with confidence drop > 0.3 since last check, a research proposal is created (capped at `max_startup_proposals`, default 3). This ensures the user is aware of cognitive drift that occurred while the system was offline.
+
+### 13.4 Proposals Emitted During Dream Conversations
+
+Dream assistant turns can also emit the same `<research-proposal>` tag used in ordinary conversations. After inserting the assistant message, `DreamExecutorMixin` runs `process_research_proposals` in a worker thread with the dream conversation ID and assistant message ID. A valid proposal creates a `proposed` task linked to that source message; it does not start research until the user approves it.
+
+Symbia-created proposed tasks emit a trace notification containing the research question and rationale. The notification points to the research task and retains the conversation/message reference, so Creases and Traces can offer both a research review link and a jump back to the dream message. Empty objectives are rejected at proposal processing and task creation; the inline card reports when its question is missing and disables dispatch.
+
+The sanitizer must preserve the proposal's nested `objective`, `rationale`, `suggested_depth`, `suggested_breadth`, and `is_agonistic` tags. If those field tags are stripped, the card loses the proposal text and falls back to default depth and breadth even though the stored message contains the fields.
 
 ---
 
@@ -3429,6 +3437,8 @@ When Symbia responds with a `<research-proposal>` tag (Section 4.4.2), the front
 ```
 
 **Frontend parsing:** The `<research-proposal>` XML block is extracted during markdown rendering (similar to how `<scar-fold>` and `<aaa-note>` tags are processed). The proposal data is rendered as a card, and the buttons trigger `POST /api/research/proposals/{id}/approve` or `reject`.
+
+The sanitization schema must allow the proposal's nested field tags through to `ResearchProposalCard`. Proposal traces in Creases and Traces link to the research task; when a source conversation is available, they also link back to the originating message.
 
 ### 15.4 Frontend Polling & State Updates
 

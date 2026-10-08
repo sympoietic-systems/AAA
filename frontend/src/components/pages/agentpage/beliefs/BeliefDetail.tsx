@@ -8,6 +8,7 @@ import { StructuralAutopoieticGlyph } from "../../../UI/StructuralAutopoieticGly
 import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "../shared/helpers"
 import { TerminalTabs } from "../../../UI"
 import { BeliefTimelineChart } from "../../../UI/BeliefTimelineChart"
+import { AdmissionReasoning } from "./AdmissionReasoning"
 
 /* ── Module-level constants ── */
 
@@ -319,6 +320,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
           <span><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa]">{(b.confidence * 100).toFixed(0)}%</span></span>
           <span><span className="text-[#444]">Created:</span> <span className="text-[#aaa]">{b.last_reinforced_at ? formatDateTimeFull(b.last_reinforced_at) : ""}</span></span>
         </div>
+        <AdmissionReasoning receipts={b.admission_history || []} statement={b.statement} />
         {b.symbia_reflection && (
           <div>
             <div className="text-semantic-purple font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Reflection ]</div>
@@ -497,6 +499,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       {/* Details tab */}
       {activeTab === "details" && (
         <>
+          <AdmissionReasoning receipts={b.admission_history || []} statement={b.statement} />
           <div>
             <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Statement ]</div>
             <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">"{b.statement}"</div>

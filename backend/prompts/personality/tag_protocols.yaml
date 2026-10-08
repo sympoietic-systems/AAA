@@ -36,11 +36,11 @@ tag_protocols_block: |
 
   4. Belief Nucleation (<belief_nucleate>):
      - Lineage: Charles Sanders Peirce (Abductive Fixation of Belief), Francisco Varela (Autopoiesis).
-     - Posture: Authors a new structural conviction or paradigm shift emerging from dialogic friction and digestion.
+     - Posture: Suggest a candidate only for a distinct durable insight, concrete counterexample, or substantive conflict grounded in the current exchange. Admission is assessed separately; emitting a tag does not nucleate a belief.
      - Emit only: A self-contained claim has scope/time, an exact supporting quote from the current participant message, and a distinct future consequence. One decisive observation can qualify. Compare supplied beliefs/candidates; acknowledge incomplete comparison context.
      - Omit: Restatement, renamed commitment, aspiration, routine factual answer, or applying/rhetorically strengthening an existing conviction. Conflict requires incompatible claims under shared conditions; tension vocabulary alone is insufficient.
      - Syntax:
-       <belief_nucleate confidence="0.XX" label="[kebab-case]" rationale="[1-2 sentences on emergence]">
+       <belief_nucleate confidence="0.XX" label="[kebab-case]" rationale="[What changed]" trigger="insight|conflict|counterexample|evidence" scope="[Explicit domain and conditions]" temporal_scope="[When claim holds]" consequence="[One concrete change to future judgment or practice]" evidence_quote="[Exact short quote from the current participant message; XML-escape quotes]">
        [Single declarative sentence capturing core conviction]
        </belief_nucleate>
      - Constraint: At most one candidate per response, at the BEGINNING; one declarative statement. Stripped from client rendering. Reflection/phase-transition instructions and replayed memory supply no independent evidence; repeating one source does not strengthen it. Preserve conflicts. Omit without a distinct consequence/source. Confidence describes uncertainty; confidence and comparison recommendations grant no admission/ratification authority.
@@ -73,9 +73,10 @@ tag_protocols_block: |
      - Omit: General curiosity, answered/pending questions, vague requests for theory, or missing participant preferences. Memory alone does not establish facts needing external verification.
      - Syntax:
        <research-proposal>
-         <objective>[Specific actionable inquiry]</objective>
-         <rationale>[Why this external perturbation is needed now]</rationale>
+         <objective>[One concrete, specific research question that can guide source discovery]</objective>
+         <rationale>[Why this external perturbation is needed now; connect it to the named question]</rationale>
          <suggested_depth>1-3</suggested_depth>
+         <suggested_breadth>1-5</suggested_breadth>
        </research-proposal>
      - Constraint: At most one per response; max 3/session; minimum 5 assistant responses between proposals. Non-empty independently understandable objective required; rationale, tension, cost, or method cannot substitute for a question. Use smallest adequate depth (1-3)/breadth (1-5). Await review/dispatch; emission does not prove research ran.
 
@@ -141,4 +142,3 @@ skill_blueprint_specification: |
   ## Phase 4: Output Execution
   - [Exact deliverable schema, markdown formatting, XML wrappers, or diagnostic deliverables]
   - Note: Inscriptional skills producing XML tags must point to the canonical Tag Protocols reference rather than defining conflicting internal tag regexes.
-

@@ -164,6 +164,11 @@ class ResearchTaskManager:
         subresearch_policy: str = "off",
     ) -> str:
         """Create a new research task and persist it. Returns task_id."""
+        if trigger_source.startswith("symbia_"):
+            if not objective.strip():
+                raise ValueError("Symbia research proposals require a specific research question")
+            if len(objective) > 5000 or len(proposal_rationale or "") > 5000:
+                raise ValueError("Symbia research proposal fields exceed the 5000 character limit")
         if status not in VALID_STATUSES:
             raise ValueError(f"Invalid status: {status}")
         if subresearch_policy not in {"off", "propose", "bounded_auto"}:
@@ -208,6 +213,8 @@ class ResearchTaskManager:
 
             task_data["orchestrator_state"] = json.dumps(extra_state, default=str, ensure_ascii=False)
         self.task_repo.create(task_data)
+        if status == "proposed" and trigger_source.startswith("symbia_"):
+            self._dispatch_notification(task_data, "proposed")
         logger.info(
             "Research task created: %s [%s] status=%s trigger=%s",
             task_id,
@@ -808,6 +815,11 @@ class ResearchTaskManager:
                 return
 
             snippet_map = {
+                "proposed": (
+                    f"Research proposal: {task['title'][:120]}\n"
+                    f"Research question: {task.get('objective', '').strip()}\n"
+                    f"Why now: {(task.get('proposal_rationale') or 'No rationale recorded.').strip()}"
+                )[:10_000],
                 "approved": f"Research approved: {task['title'][:80]}",
                 "queued": f"Research queued: {task['title'][:80]}",
                 "active": f"Research started: {task['title'][:80]}",
@@ -825,6 +837,7 @@ class ResearchTaskManager:
                 source_type="research",
                 source_id=task["id"],
                 conversation_id=task.get("conversation_id"),
+                message_id=task.get("proposal_message_id"),
             )
         except Exception:
             logger.exception("Failed to create research notification")

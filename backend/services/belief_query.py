@@ -61,6 +61,7 @@ class BeliefQueryUseCases(BeliefUseCase):
                     "last_reinforced_at": b.last_reinforced_at.isoformat() if b.last_reinforced_at else None,
                     "updated_at": b.updated_at.isoformat() if b.updated_at else None,
                     "events": [serialize_belief_event(e) for e in events],
+                    "admission_history": belief_repo.get_admission_history(b.id),
                 }
             )
 

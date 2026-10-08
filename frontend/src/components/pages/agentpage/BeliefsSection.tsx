@@ -15,7 +15,7 @@ const NodeListItem = memo(function NodeListItem({
 }) {
   const catColor = getCategoryColor(b.category)
   const stage = b.lifecycle_stage || "crystallized"
-  const isProto = stage === "nucleation" || stage === "accretion"
+  const isProto = stage === "nucleation" || stage === "accretion" || stage === "candidate"
   const isGhost = ghost || stage === "collapsed" || stage === "faded"
   const isSkill = b.label?.startsWith("skill:") ?? false
 
@@ -111,7 +111,8 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const { beliefs: rawBeliefs, proto_beliefs: rawProtos, ghosts: rawGhosts } = data
 
   const beliefs = rawBeliefs || []
-  const proto_beliefs = rawProtos || []
+  const candidates = (rawProtos || []).filter(b => b.lifecycle_stage === "candidate")
+  const proto_beliefs = (rawProtos || []).filter(b => b.lifecycle_stage !== "candidate")
   const ghosts = rawGhosts || []
 
   const sortFunc = (a: BeliefNodeInfo, b: BeliefNodeInfo) => {
@@ -128,7 +129,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const sortedProtos = sortBy === "default" ? proto_beliefs : [...proto_beliefs].sort(sortFunc)
   const sortedGhosts = sortBy === "default" ? ghosts : [...ghosts].sort(sortFunc)
 
-  const allBeliefs = [...beliefs, ...proto_beliefs, ...ghosts]
+  const allBeliefs = [...beliefs, ...proto_beliefs, ...candidates, ...ghosts]
   const selected = (selectedId ? allBeliefs.find(b => b.id === selectedId) : null) || null
 
   const handleUpdate = (updatedBelief: BeliefNodeInfo) => {
@@ -237,6 +238,11 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
             onClick={handleListClick}
             className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none"
           >
+            {candidates.length > 0 && (
+              <CollapsibleSection label="Candidates awaiting review" count={candidates.length} icon="◇" iconColor="#bbb">
+                {candidates.map(b => <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge="needs review" stageBadgeColor="#bbb" />)}
+              </CollapsibleSection>
+            )}
             {sortedProtos.length > 0 && (
               <CollapsibleSection label="Incubating Proto-Beliefs" count={sortedProtos.length} icon="◇" iconColor="#f59e0b">
                 {sortedProtos.map(b => {

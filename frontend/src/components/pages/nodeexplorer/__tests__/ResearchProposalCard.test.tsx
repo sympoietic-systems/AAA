@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { ResearchProposalCard } from '../ResearchProposalCard'
 
 const { getResearchTask, approveProposal, rejectProposal } = vi.hoisted(() => ({
-  getResearchTask: vi.fn().mockResolvedValue({ status: 'proposed' }),
+  getResearchTask: vi.fn().mockResolvedValue({ status: 'proposed', objective: 'Test the proposal' }),
   approveProposal: vi.fn().mockResolvedValue(undefined),
   rejectProposal: vi.fn().mockResolvedValue(undefined),
 }))
@@ -49,7 +49,7 @@ describe('ResearchProposalCard', () => {
   })
 
   it('shows approve and dismiss buttons when proposed', async () => {
-    getResearchTask.mockResolvedValue({ status: 'proposed' })
+    getResearchTask.mockResolvedValue({ status: 'proposed', objective: 'Test the proposal' })
     render(<ResearchProposalCard id="r1" />)
     await waitFor(() => {
       expect(screen.getByText(/Approve & dispatch/)).toBeInTheDocument()
@@ -58,7 +58,7 @@ describe('ResearchProposalCard', () => {
   })
 
   it('calls approveProposal on approve click', async () => {
-    render(<ResearchProposalCard id="r1" />)
+    render(<ResearchProposalCard id="r1">{el('objective', 'Test the proposal')}</ResearchProposalCard>)
     await waitFor(() => {
       fireEvent.click(screen.getByText(/Approve & dispatch/))
     })
@@ -67,7 +67,7 @@ describe('ResearchProposalCard', () => {
 
   it('shows queued status after approve', async () => {
     approveProposal.mockResolvedValue(undefined)
-    render(<ResearchProposalCard id="r1" />)
+    render(<ResearchProposalCard id="r1">{el('objective', 'Test the proposal')}</ResearchProposalCard>)
     await waitFor(() => {
       fireEvent.click(screen.getByText(/Approve & dispatch/))
     })

@@ -15,6 +15,7 @@ from backend.modules.llm_protocol import (
     ProviderResponseError,
     RateLimitError,
 )
+from backend.utils.belief_candidate import inert_belief_history
 
 __all__ = [
     "BaseLLMProvider",
@@ -45,6 +46,24 @@ class LLMClientModule(ProcessingModule):
 
     async def process(self, payload: LLMResult) -> LLMResult:
         messages = cast(list[LLMMessage], payload.get("messages", []))
+        messages = [
+            {**message, "content": inert_belief_history(message["content"])}
+            if message["role"] == "assistant"
+            or (
+                message["role"] == "system"
+                and any(
+                    marker in message["content"]
+                    for marker in (
+                        "[Memory from",
+                        "[Source: Nomadic Fragment",
+                        "<diffractive_interference_zone>",
+                    )
+                )
+            )
+            else message
+            for message in messages
+        ]
+        payload["messages"] = messages
         payload["context_sent"] = _format_context(messages)
 
         params: dict[str, Any] = {}
