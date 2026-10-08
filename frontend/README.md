@@ -70,7 +70,7 @@ npm run preview
 
 ## Browser sessions and quality gates
 
-Login exchanges the password for a seven-day HttpOnly session (configurable via AAA_SESSION_TTL). Logout revokes it; the hashed session record persists in a SQLite sidecar beside the configured database across server restarts. Remote access requires HTTPS. Loopback HTTP development remains supported. Reverse proxies must preserve the public Host and accurately forward the HTTPS scheme from trusted proxy addresses. Workers on one host share session state through the same sidecar; separate hosts require shared storage.
+Login exchanges the password for a seven-day HttpOnly session (configurable via AAA_SESSION_TTL). Logout revokes it; the hashed session record persists in the configured SQLite database across server restarts. Remote access requires HTTPS. Loopback HTTP development remains supported. Reverse proxies must preserve the public Host and accurately forward the HTTPS scheme from trusted proxy addresses. Workers on one host share session state through the same database; separate hosts require shared storage.
 
 `npm run typecheck` checks the app and the strict boundary slice in `tsconfig.strict.json`. The build also checks that slice.
 

@@ -6,22 +6,6 @@ from backend.storage.repositories.base import BaseRepository
 
 class AuthSessionRepository(BaseRepository):
     @with_connection
-    def initialize(self) -> None:
-        conn = self._conn()
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS auth_sessions (
-                   session_hash TEXT PRIMARY KEY,
-                   created_at INTEGER NOT NULL,
-                   expires_at INTEGER NOT NULL,
-                   password_digest BLOB NOT NULL,
-                   revoked_at INTEGER,
-                   revocation_reason TEXT
-               )"""
-        )
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_auth_sessions_created ON auth_sessions(created_at)")
-        conn.commit()
-
-    @with_connection
     def issue(self, session_hash: str, created_at: int, expires_at: int, password_digest: bytes, capacity: int) -> None:
         conn = self._conn()
         with self.atomic():
@@ -58,8 +42,10 @@ class AuthSessionRepository(BaseRepository):
 
     @with_connection
     def revoke(self, session_hash: str, reason: str, revoked_at: int) -> None:
-        self._conn().execute(
+        conn = self._conn()
+        conn.execute(
             """UPDATE auth_sessions SET revoked_at = ?, revocation_reason = ?
                WHERE session_hash = ? AND revoked_at IS NULL""",
             (revoked_at, reason, session_hash),
         )
+        self._commit(conn)
