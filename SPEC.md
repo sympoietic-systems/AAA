@@ -427,3 +427,4 @@ B113|2026-10-08|provider adapter promoted reasoning when final content was absen
 B114|2026-10-08|dream auxiliary context selected degraded assistant replies and themes despite chat filtering|exclude degraded statuses from both dream recency paths; add V124 regression tests
 B115|2026-10-08|browser cookie outlived its process-local session record, forcing login after restart|persist bounded token hashes + expiry/revocation in SQLite; offload repository I/O; V129
 B116|2026-10-08|session revoke UPDATE lacked commit, leaving transaction open and blocking token issuance|commit revocation before repository scope exits; V130
+B117|2026-10-08|session branches reused locals with incompatible clock and tuple types; full strict gate failed|branch-specific wall_clock/persisted_entry locals; unchanged behavior; V30; browser-session tests + strict mypy

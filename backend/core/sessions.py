@@ -47,8 +47,8 @@ class SessionStore:
         key = self._key(token)
         password_digest = self._password_digest()
         if self._repository is not None:
-            now = int(time.time())
-            self._repository.issue(key, now, now + self.ttl, password_digest, self.capacity)
+            wall_clock = int(time.time())
+            self._repository.issue(key, wall_clock, wall_clock + self.ttl, password_digest, self.capacity)
             return token
 
         now = time.monotonic()
@@ -63,10 +63,10 @@ class SessionStore:
             return False
         key = self._key(token)
         if self._repository is not None:
-            entry = self._repository.get(key)
-            if entry is None:
+            persisted_entry = self._repository.get(key)
+            if persisted_entry is None:
                 return False
-            expires_at, password_digest, revoked = entry
+            expires_at, password_digest, revoked = persisted_entry
             if revoked:
                 return False
             if expires_at <= int(time.time()):
