@@ -99,6 +99,29 @@ async def get_backend_logs(log_type: Literal["error", "server"] = "error", lines
     return json.dumps(response.json(), indent=2, ensure_ascii=False)
 
 
+@mcp.tool()
+async def clear_backend_logs(log_type: Literal["error", "server", "all"]) -> str:
+    """Clear explicitly selected active backend log file(s); rotated archives are preserved.
+
+    Arguments:
+        log_type: Required target: "error", "server", or "all".
+    """
+    try:
+        async with _mkclient(timeout=15.0, trust_env=False) as client:
+            response = await client.delete(f"{BASE_URL}/errors/logs", params={"type": log_type})
+            response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        message = "Backend rejected the log clear request"
+        if exc.response.status_code == 401:
+            message = "Backend authentication failed; configure AAA_PASSWORD for the MCP server"
+        return json.dumps({"status": "error", "message": message, "http_status": exc.response.status_code})
+    except httpx.RequestError:
+        logger.warning("Could not reach AAA backend log clear endpoint")
+        return json.dumps({"status": "error", "message": "Could not reach the AAA backend log endpoint"})
+
+    return json.dumps(response.json(), indent=2, ensure_ascii=False)
+
+
 def _find_conversation_id(conversations, agent_name: str) -> str | None:
     # 1. Try agent_id match
     for c in conversations:

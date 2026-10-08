@@ -199,6 +199,46 @@ def setup_logging(config: dict[str, Any] | None = None) -> None:
     access_logger.disabled = True
 
 
+def clear_active_log_files(file_paths: dict[str, Path]) -> dict[str, int]:
+    """Truncate active AAA rotating log files while holding their handler locks.
+
+    Rotated archives are deliberately retained. Every requested path must be
+    managed by an active RotatingFileHandler or the operation fails closed.
+    """
+    resolved_paths = {log_type: path.resolve() for log_type, path in file_paths.items()}
+    if len(set(resolved_paths.values())) != len(resolved_paths):
+        raise ValueError("Log targets must resolve to distinct files")
+
+    root_handlers = logging.getLogger().handlers
+    matched_handlers: dict[Path, list[RotatingFileHandler]] = {}
+    for path in resolved_paths.values():
+        matched = [
+            handler
+            for handler in root_handlers
+            if isinstance(handler, RotatingFileHandler) and Path(handler.baseFilename).resolve() == path
+        ]
+        if not matched:
+            raise RuntimeError("Active log handler is not configured")
+        matched_handlers[path] = matched
+
+    handlers = sorted(
+        {handler for matches in matched_handlers.values() for handler in matches},
+        key=lambda handler: handler.baseFilename,
+    )
+    for handler in handlers:
+        handler.acquire()
+
+    try:
+        bytes_cleared = {log_type: path.stat().st_size for log_type, path in resolved_paths.items()}
+        for path in resolved_paths.values():
+            with path.open("r+b") as log_file:
+                log_file.truncate(0)
+        return bytes_cleared
+    finally:
+        for handler in reversed(handlers):
+            handler.release()
+
+
 def tail_log_file(file_path: Path, max_lines: int = 100) -> list[str]:
     """Read the last `max_lines` from a file without loading the whole file into RAM.
 

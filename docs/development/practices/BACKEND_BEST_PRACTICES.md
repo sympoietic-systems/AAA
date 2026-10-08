@@ -176,6 +176,7 @@ To enable rapid production incident triage without risking disk exhaustion or se
 *   **Secure Remote Triage Endpoint**:
     *   `GET /api/errors/logs` allows web and CLI operators to inspect recent logs without SSH access.
     *   Guarded by `verify_password` authentication, strict target allowlisting (`error.log`, `server.log`), directory traversal defense (`safe_resolve_path()`), 500-line clamping, and memory-safe reverse block seeking (`tail_log_file`).
+    *   `DELETE /api/errors/logs?type=error|server|all` requires `AAA_PASSWORD`, clears explicitly selected active files under the same API allowlist, and holds active handler locks while truncating; rotated archives remain available.
 
 ### Developer Guidelines
 *   **Use `INFO` for lifecycle milestones**: e.g., service readiness, background task dispatch, model pool resets.

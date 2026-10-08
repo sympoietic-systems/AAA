@@ -54,6 +54,16 @@ class ErrorResponse(BaseModel):
     message: str
 
 
+class LogFileClearResult(BaseModel):
+    log_type: Literal["error", "server"]
+    bytes_cleared: int = Field(ge=0)
+
+
+class LogClearResponse(BaseModel):
+    status: Literal["success"]
+    files: list[LogFileClearResult]
+
+
 class AgentInfo(BaseModel):
     name: str
     version: str = ""

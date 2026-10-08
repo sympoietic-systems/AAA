@@ -69,9 +69,10 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
 - `get_consultation_history(agent_name: str, limit: int = 50)`
 - `get_messages_by_conversation_id(conversation_id: str, limit: int = 50)`
 - `get_backend_logs(log_type: "error" | "server" = "error", lines: int = 100)`
+- `clear_backend_logs(log_type: "error" | "server" | "all")`
 - Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`, `aaa://skills`, `aaa://skills/agent/{skill_name}`
 
-`get_backend_logs` calls the authenticated `/api/errors/logs` endpoint. The backend limits reads to the two named log files, caps the tail at 500 lines, and scrubs secrets before returning it. Set `AAA_PASSWORD` in the MCP server environment when backend authentication is enabled. This tool reads logs; it does not clear or edit them.
+`get_backend_logs` calls the authenticated `/api/errors/logs` endpoint. The backend limits reads to the two named log files, caps the tail at 500 lines, and scrubs secrets before returning it. `clear_backend_logs` calls `DELETE /api/errors/logs` and requires an explicit target; `all` clears both active files. Clearing requires `AAA_PASSWORD` to be configured on the backend, holds active file-handler locks, and preserves rotated archives. Set the same `AAA_PASSWORD` in the MCP server environment.
 
 ---
 
