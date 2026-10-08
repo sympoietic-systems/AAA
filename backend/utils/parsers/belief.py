@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_belief_nucleate_tags(text: str) -> tuple[str, list[dict]]:
-    """Parse and strip <belief_nucleate> tags from text, including malformed ones.
+    """Parse and strip belief nucleation/proposal tags, including malformed ones.
 
     Symbia can emit these to author new belief proposals intentionally,
     bypassing the passive keyword-scan/cos-sim heuristics.
@@ -24,12 +24,12 @@ def parse_belief_nucleate_tags(text: str) -> tuple[str, list[dict]]:
     if not text:
         return "", []
 
-    # Pattern to match <belief_nucleate ...> or <belief-nucleate ...>
+    # `belief_proposal` is a compatibility alias; the prompt's canonical tag is `belief_nucleate`.
     open_pat = re.compile(
-        r"(?i)<belief[-_]nucleate"
+        r"(?i)<belief[-_](?:nucleate|proposal)"
         r"(?:\s+([\s\S]*?))?>"
     )
-    close_pat = re.compile(r"(?i)</belief[-_]nucleate>")
+    close_pat = re.compile(r"(?i)</belief[-_](?:nucleate|proposal)>")
 
     current_text = text
     while True:
