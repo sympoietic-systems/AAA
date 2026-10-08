@@ -283,7 +283,7 @@ class DreamContextMixin:
                     continue
                 msgs = self.message_repo.get_recent(limit=5, conversation_id=c.id)
                 for msg in reversed(msgs):
-                    if msg.speaker == "apparatus" and msg.content.strip():
+                    if msg.speaker == "apparatus" and msg.quality_status != "degraded" and msg.content.strip():
                         return msg.content
             return None
         except Exception as e:
@@ -318,7 +318,7 @@ class DreamContextMixin:
                 if is_dream:
                     msgs = self.message_repo.get_recent(limit=2, conversation_id=c.id)
                     for msg in msgs:
-                        if msg.speaker == "apparatus" and msg.content.strip():
+                        if msg.speaker == "apparatus" and msg.quality_status != "degraded" and msg.content.strip():
                             recent_themes.append(c.title)
                             break
             if recent_themes:

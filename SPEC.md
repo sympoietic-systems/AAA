@@ -421,3 +421,4 @@ B112|2026-10-08|new message quality collaborator was absent from the repository 
 
 B109|2026-10-08|research proposal child tags were absent from the sanitizer allowlist; the card dropped the question/rationale and defaulted depth and breadth despite valid source markup|allow the bounded proposal field tags through sanitization; hydrate legacy cards from the task and disable dispatch only when no question exists; expose proposal details and review links in dream traces
 B113|2026-10-08|provider adapter promoted reasoning when final content was absent and accepted length-limited partial text|reject missing-final and truncated completions; correlate saved chat and dream replies with compact request/finish/usage receipts; V128
+B114|2026-10-08|dream auxiliary context selected degraded assistant replies and themes despite chat filtering|exclude degraded statuses from both dream recency paths; add V124 regression tests
