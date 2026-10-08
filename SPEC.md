@@ -85,6 +85,7 @@ internal: `ResearchActionReceipt` → action_id, kind, intent, input_version, de
 internal: `subresearch_policy` → `off|propose|bounded_auto`; proposal → branch scopes, rationale, overlap, risk, budget split
 internal: `EvidencePacket` → source/version/span refs, claims/support relations, exclusions, unavailable evidence, contradictions, gaps
 internal: `ProviderAttemptReceipt` → task/action/request IDs, provider/model, start/end, retry, status, finish_reason, truncated, cancellation
+internal: browser session → hash-only opaque token + absolute expiry in configured SQLite DB; restart-stable; logout/password rotation revoke; capacity ≤1,024
 
 ## §V
 
@@ -195,6 +196,7 @@ V123: reply quality separate from structural metrics/beliefs; bounded ending-awa
 V124: degraded assistant content ∉ generation history/compressed blocks/checkpoint summaries/retrieval; originals remain in UI/history/export; uncertainty alone ⊥ exclusion; quality traces link assistant ID; assessment covers chat + dreams regardless structural backend.
 V125: retrospective quality audit default 14 days; bounded sequential calls + checkpoint/resume + content hash; manual overrides preserved; no deletion or silent rewrite; deployment/backfill outcomes stated separately.
 V128: provider reasoning remains separate from final content; missing visible content or length-limited output ⊥ persisted reply; saved assistant generation receipt contains request ID + finish/truncation + usage/control metadata only, no duplicated prompt/reasoning; degraded quality notification → Glitch category
+V129: browser sessions survive process restart via persisted token hashes; absolute expiry, logout, password rotation, capacity eviction → reject; raw cookie token ⊥ database
 
 ## §T
 
@@ -422,3 +424,4 @@ B112|2026-10-08|new message quality collaborator was absent from the repository 
 B109|2026-10-08|research proposal child tags were absent from the sanitizer allowlist; the card dropped the question/rationale and defaulted depth and breadth despite valid source markup|allow the bounded proposal field tags through sanitization; hydrate legacy cards from the task and disable dispatch only when no question exists; expose proposal details and review links in dream traces
 B113|2026-10-08|provider adapter promoted reasoning when final content was absent and accepted length-limited partial text|reject missing-final and truncated completions; correlate saved chat and dream replies with compact request/finish/usage receipts; V128
 B114|2026-10-08|dream auxiliary context selected degraded assistant replies and themes despite chat filtering|exclude degraded statuses from both dream recency paths; add V124 regression tests
+B115|2026-10-08|browser cookie outlived its process-local session record, forcing login after restart|persist bounded token hashes + expiry/revocation in SQLite; offload repository I/O; V129

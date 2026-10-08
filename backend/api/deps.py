@@ -16,6 +16,7 @@ Usage in route files:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from dataclasses import fields
@@ -107,7 +108,7 @@ async def verify_password(
 
     token = bearer_token(authorization)
 
-    if token is None and get_session_store(request).valid(request.cookies.get(SESSION_COOKIE)):
+    if token is None and await asyncio.to_thread(get_session_store(request).valid, request.cookies.get(SESSION_COOKIE)):
         require_session_origin(request, mutation=request.method not in {"GET", "HEAD", "OPTIONS"})
         return
 

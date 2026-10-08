@@ -52,6 +52,12 @@ async def lifespan(app: FastAPI):
 
     # 1. Database + repos
     repos = _init_repos(config)
+    from backend.core.sessions import SessionStore
+    from backend.storage.database import get_db_path
+
+    app.state.auth_sessions = SessionStore(
+        db_path=str(get_db_path(config.get("database", {}).get("path", "data/aaa.db")))
+    )
 
     # 1b. Load identity (for agent name + assembler)
     identity_data, agent_name, identity_path = _load_identity(config)

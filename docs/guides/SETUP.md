@@ -310,7 +310,7 @@ Set `AAA_PASSWORD` to enable authentication; without it the application runs in 
 |---------|-------|
 | Login succeeds but the next API request returns 401 | Remote access must use HTTPS. Confirm the browser accepted the session cookie and `/api` uses the same public origin. |
 | A mutation returns 403 with “Same-origin session request required” | Preserve public Host at the proxy, forward the correct HTTPS scheme from a trusted proxy, and use `apiFetch` so the CSRF header is present. Do not disable origin validation. |
-| Login disappears after restart or requests alternate between success and 401 | Sessions are process-local. Restart requires login; multiple workers need affinity to the issuing process or shared session storage. |
+| Login disappears after restart or requests alternate between success and 401 | Confirm startup migrations ran against the configured SQLite database and every worker uses the same database path. Existing sessions issued before this persistence change require one new login. |
 | The UI reports an unavailable authentication service | Check `/api/auth/verify` reaches the backend and returns JSON rather than the SPA HTML fallback. |
 
 Existing installations prompt for login again because persisted browser passwords are removed. Bearer API clients remain supported. The Vite development proxy preserves Host to keep local origin checks consistent.

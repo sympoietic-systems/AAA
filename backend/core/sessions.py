@@ -1,4 +1,4 @@
-"""Bounded, process-local browser sessions; no persistent credentials."""
+"""Bounded browser sessions backed by memory or the application database."""
 
 import hashlib
 import os
@@ -7,6 +7,7 @@ import time
 from collections import OrderedDict
 
 from backend.core.auth import get_auth_password
+from backend.storage.repositories.auth_session import AuthSessionRepository
 
 SESSION_COOKIE = "aaa_session"
 DEFAULT_SESSION_TTL = 7 * 24 * 60 * 60
@@ -28,26 +29,49 @@ SESSION_TTL = DEFAULT_SESSION_TTL
 
 
 class SessionStore:
-    """Each app owns one store. Restart and password rotation invalidate sessions."""
+    """Store opaque sessions; persistent instances survive restarts and password rotation."""
 
-    def __init__(self, capacity: int = 1024, ttl: int | None = None) -> None:
+    def __init__(self, capacity: int = 1024, ttl: int | None = None, db_path: str | None = None) -> None:
         self.capacity = capacity
         self.ttl = ttl if ttl is not None else get_session_ttl()
         self._sessions: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
+        self._repository = AuthSessionRepository(db_path) if db_path is not None else None
 
     def issue(self) -> str:
+        token = secrets.token_urlsafe(32)
+        key = self._key(token)
+        password_digest = self._password_digest()
+        if self._repository is not None:
+            now = int(time.time())
+            self._repository.issue(key, now, now + self.ttl, password_digest, self.capacity)
+            return token
+
         now = time.monotonic()
         self._sessions = OrderedDict((key, value) for key, value in self._sessions.items() if value[0] > now)
         while len(self._sessions) >= self.capacity:
             self._sessions.popitem(last=False)
-        token = secrets.token_urlsafe(32)
-        self._sessions[self._key(token)] = (now + self.ttl, self._password_digest())
+        self._sessions[key] = (now + self.ttl, password_digest)
         return token
 
     def valid(self, token: str | None) -> bool:
         if not token or len(token) > 128:
             return False
         key = self._key(token)
+        if self._repository is not None:
+            entry = self._repository.get(key)
+            if entry is None:
+                return False
+            expires_at, password_digest, revoked = entry
+            if revoked:
+                return False
+            if expires_at <= int(time.time()):
+                self._repository.revoke(key, "expired", int(time.time()))
+                return False
+            if not secrets.compare_digest(password_digest, self._password_digest()):
+                self._repository.revoke(key, "password_rotation", int(time.time()))
+                return False
+            return True
+
         entry = self._sessions.get(key)
         if entry is None:
             return False
@@ -59,7 +83,11 @@ class SessionStore:
 
     def revoke(self, token: str | None) -> None:
         if token:
-            self._sessions.pop(self._key(token), None)
+            key = self._key(token)
+            if self._repository is not None:
+                self._repository.revoke(key, "logout", int(time.time()))
+            else:
+                self._sessions.pop(key, None)
 
     @staticmethod
     def _key(token: str) -> str:
