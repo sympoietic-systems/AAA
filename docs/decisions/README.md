@@ -156,6 +156,7 @@ What becomes easier/harder?
 
 | [116](ADR-116-belief-review-standing-contract.md) | Belief Review and Situated Standing Contract | accepted for staged implementation | 2026-10-08 |
 | [117](ADR-117-provisional-automated-belief-review.md) | Provisional Automated Belief Review | accepted for offline implementation | 2026-10-08 |
+| [118](ADR-118-belief-review-persistence.md) | Additive Belief Review Persistence | accepted for local implementation | 2026-10-09 |
 
 ## Creating a New ADR
 

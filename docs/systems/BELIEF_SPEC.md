@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: implementation started; T1,T2 complete locally; T3 complete locally; T4 in progress; T5–T18 pending. Date: 2026-10-08.
+Status: T1–T5 complete locally; T6–T18 pending. Date: 2026-10-09.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -33,6 +33,8 @@ Consequential new distinctions + strong conflicts → source-bound, reviewable b
 
 T3 executable contract: `backend/services/belief_review_contracts.py`; reserved command shapes: `backend/api/belief_review_schemas.py`. [Contract](../architecture/BELIEFS_V2_CONTRACT.md), [ADR-116](../decisions/ADR-116-belief-review-standing-contract.md), [verification](../reports/048-belief-v2-contracts/README.md). No runtime routes/storage/intake installed by T3. Decision commands bind expected statement hash; linked target mutations also bind target version/hash.
 
+
+T5 local persistence: agent-scoped encounter/claim sidecars + immutable admission-ledger assessment links + CAS decision/state versions. [ADR-118](../decisions/ADR-118-belief-review-persistence.md), [Report 052](../reports/052-belief-v2-persistence/README.md). Intake lacks decision-write capability; source availability resolved against owned records; unsupported origins remain ambiguous. HTTP auth/action matrix T11, source adapters T6–T8, rollout T18.
 
 I.intake: extend `backend/services/belief_admission.py` → shared origin-aware intake. Origins: explicit chat/dream, passive chat, document perception, shared note, web, conversation pattern, scar-fold fallback creation. Skill bridge creation ! separate derived-skill provenance/authority contract; no semantic adoption inferred from bridge projection. Inventory actual call sites before migration; bypasses prohibited once origin promoted.
 
@@ -98,7 +100,7 @@ T1|x|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verific
 T2|x|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
 T3|x|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,V25,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
 T4|x|[source packet](../reports/049-belief-v2-review-corpus/README.md) + [automated provisional freeze](../reports/051-belief-v2-automated-review/README.md); all 54 cases accounted; 80 valid outputs, 26 dual-reviewed cases; source-bound lineage/consequence/conflict/context + disagreement/failure outcomes retained; live coverage partial; independent gold remains T15 obligation|V7,V8,V22,V26,I.lineage,I.eval
-T5|.|add additive persistence extending admission/workshop; encounter/claim identities, immutable assessment links, versioned decisions; agent isolation, concurrent retry/restart tests|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
+T5|x|additive persistence: source-bound encounter/claim identities, immutable admission-ledger assessment links, CAS review decisions; agent isolation + concurrent retry/restart; [Report 052](../reports/052-belief-v2-persistence/README.md): 27 focused + 881 full tests passed, strict/static/frontend gates passed|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|.|adapt explicit chat/dream emission to new shared intake; preserve existing receipts/UI contracts and inert historical XML|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
 T7|.|adapt passive chat + conversation-pattern + scar-fold fallback creators; origins/source segments preserved; no reflection-created adopted belief; bypass audit + parity tests|V1,V2,V3,V7,V19,I.intake
 T8|.|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
@@ -163,6 +165,10 @@ B8|2026-10-08|draft CLI lambda + post-edit formatter mismatch failed static gate
 B9|2026-10-08|post-lint digest use lacked restored import; new freeze-integrity test failed|restore import + rerun static/tests; existing completion gate sufficient
 B10|2026-10-08|live Qwen preflight rate limited; DeepSeek repeatedly timed out/returned empty truncated output; NVIDIA Ultra HTTP503|V26; retain failures + two interrupted unknowns; three-failure circuit restored before resume; explicit NVIDIA Super replacement + exact Gemini reuse; no automatic replay
 B11|2026-10-08|test insertion split existing rate-limit assertions across functions; lint caught undefined locals|restore assertion ownership + rerun full benchmark/static gates; mechanical; existing completion gate sufficient
+
+B12|2026-10-09|draft storage treated source availability as caller assertion and current standing lacked stale binding visibility|T5 guarded owned source/hash/quote, unavailable-origin normalization, read binding status; V3,V20,V25 existing invariants; named regression oracles report 052
+B13|2026-10-09|draft reassessment ordering could use lexical IDs instead of committed append order; explicit unknown record link collided with nullable claim identity|T5 ledger append order + explicit scoped identity check; V2,V12; reassessment-head and explicit-unknown-link tests
+B14|2026-10-09|parallel pytest sessions share conftest cleanup of all backend test DBs; broad run had missing tables while focused run exited; causal attribution uncertain|serialize final backend runs; retain failed gates separately; existing quality isolation rule sufficient; no production impact
 
 Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 

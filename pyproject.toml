@@ -51,6 +51,10 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/storage/belief_review.py",
+    "backend/storage/migrations/m064_belief_review_persistence.py",
+    "backend/storage/repositories/cognitive/belief_review.py",
+    "backend/services/belief_review_store.py",
     "backend/services/belief_review_contracts.py",
     "backend/api/belief_review_schemas.py",
     "backend/storage/migrations/m063_belief_event_quantities_and_atrophy_clock.py",

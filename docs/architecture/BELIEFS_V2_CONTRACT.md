@@ -1,6 +1,6 @@
 # Beliefs v2 intake and review contract
 
-Status: T3 frozen contract, 2026-10-08. This document specifies the future contract; it does not describe deployed routes or completed persistence. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns implementation status. [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md) records the completed T2 repair.
+Status: T3 frozen shapes, 2026-10-08; T5 persistence implemented locally, verification in [Report 052](../reports/052-belief-v2-persistence/README.md). Reserved routes and runtime origin enablement remain future work. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns implementation status. [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md) records the completed T2 repair.
 
 ## Record ownership and authority
 
@@ -34,6 +34,14 @@ Encounter identity includes agent, origin, stable source identity/version, and s
 Empirical/traced, artistic/axiomatic, and unresolved-tension dimensions are nonexclusive, extensible names rather than an exhaustive enum. A factual component cannot borrow artistic warrant. Unknown ancestry remains unknown; internal reflection and repeat encounters cannot declare themselves independent corroboration. Completed assessments preserve source quotation, authored interpretation, and application-owned validation separately.
 
 ## Review states and compatibility
+
+### T5 storage binding
+
+Migration 064 extends the admission ledger and adds immutable encounter/claim/assessment/decision associations plus a versioned state sidecar. Assessment JSON remains in `belief_admission`; legacy history readers omit its `v2:` namespace. New candidate statements stay in existing proposal storage. Explicit legacy links retain unknown canonical state. Known scoped claim keys and source-operation keys are separate; unknown scope/time or source binding cannot manufacture those keys. Explicit record links must retain their scoped identity.
+
+`BeliefReviewStore` / `BeliefReviewRepository` expose intake and assessment operations without decision-write capability. `BeliefDecisionStore` / `BeliefDecisionRepository` require a matching trusted actor and atomically check version/state/current statement and completed record-bound assessment links. The caller establishes authentication; T5 does not install HTTP routes. Current standing reports a stale binding when legacy statement text changes; historical receipts survive.
+
+T5 verifies message/chat-turn sources through agent-owned conversations, actual content hashes and literal quotes. Unsupported source kinds become explicitly ambiguous until their origin resolver exists. Pending work is durable and recoverable through clamped keyset reads; recovery never replays a provider. Completed assessments and links are immutable; new assessments append to the latest completed predecessor. `reject-secrets-v1` checks recognized secret patterns and configured credentials before storage; it rejects unsafe inputs instead of silently changing their bound hashes. Original source hashes and application input hashes remain separate.
 
 Canonical review states are `candidate`, `awaiting_context`, `under_review`, `adopted`, `deferred`, `declined`, and `superseded`. Review state does not derive from mass, confidence, lifecycle stage, or a relation label. Standing carries scope, challenges, warrant dimensions, lineage uncertainty, and decision provenance. Participation is a separate bounded intended use: question, comparison, experiment proposal, scoped dissent, or provisional premise. None grants a tool veto or execution authority.
 

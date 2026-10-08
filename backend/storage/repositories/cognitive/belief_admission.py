@@ -168,7 +168,7 @@ class AdmissionRepository(BaseRepository):
         rows = (
             self._conn()
             .execute(
-                "SELECT receipt FROM belief_admission WHERE proposal_id=? ORDER BY created_at DESC LIMIT 50",
+                "SELECT receipt FROM belief_admission WHERE proposal_id=? AND event_key NOT LIKE 'v2:%' ORDER BY created_at DESC LIMIT 50",
                 (proposal_id,),
             )
             .fetchall()
