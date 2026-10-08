@@ -12,6 +12,7 @@ import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
 import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
+import { BeliefNucleateTag, DreamTriggerTag } from "./ResponseArtifactTag"
 import { ResearchProposalCard } from "./ResearchProposalCard"
 import { SomaticAlertBanner } from "./SomaticAlertBanner"
 import { EpistemicPhaseBanner } from "./EpistemicPhaseBanner"
@@ -391,6 +392,10 @@ export const MessageBubble = memo(function MessageBubble({
                   'line-of-flight': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
                   'new_plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
                   'new-plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                  'dream_trigger': DreamTriggerTag,
+                  'dream-trigger': DreamTriggerTag,
+                  'belief_nucleate': BeliefNucleateTag,
+                  'belief-nucleate': BeliefNucleateTag,
                 } as Components}
               >
                 {processedContent}
@@ -418,6 +423,10 @@ export const MessageBubble = memo(function MessageBubble({
                   'line-of-flight': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="line_of_flight" {...props} />,
                   'new_plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
                   'new-plateau': (props: { children?: React.ReactNode }) => <EpistemicPhaseBanner type="new_plateau" {...props} />,
+                  'dream_trigger': DreamTriggerTag,
+                  'dream-trigger': DreamTriggerTag,
+                  'belief_nucleate': BeliefNucleateTag,
+                  'belief-nucleate': BeliefNucleateTag,
                 } as Components}
               >
                 {processedContent}

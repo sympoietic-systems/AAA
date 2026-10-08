@@ -27,6 +27,29 @@ In **ADR-089**, these are consolidated into a single, canonical YAML definition 
 * **Decoupled On-Demand Architecture (Path B):** The corresponding database skills in `skill_nodes` (`self-annotation`, `scar-fold-marginalia`, `belief-nucleation`, `skill-nucleation`, `self-triggered-dreaming`) are preserved as on-demand capabilities focusing purely on the hermeneutic and diagnostic criteria of discernment (Phase 0–2). In Phase 4, they direct the model to inscribe via the canonical tags in `tag_protocols.yaml` without hardcoding raw XML syntax. This completely shields the backend XML parser regexes from being broken by future automated skill evolutions.
 * **Token Savings:** Migration `m048` deactivates `always_active` on tag skills, permanently freeing ~2,500 tokens/turn for episodic memory and working context.
 
+#### Conditional tag use
+
+The permanent grammar in [tag_protocols.yaml](../../backend/prompts/personality/tag_protocols.yaml) now includes the admission and omission criteria needed even when an on-demand tag skill is absent. Its presence grants no obligation to emit a tag. Ordinary prose is the default; each operation needs a concrete condition in the current exchange and a distinct useful consequence. Existing tags and repeated self-reflection are not new evidence, and an exhausted budget does not authorize conversion into another operation.
+
+| Family | Qualifying condition | Output budget |
+| :--- | :--- | :--- |
+| `aaa-note` / annotated `mark` | A precise unresolved question or conflicting constraint attached to an exact current passage | Two short, non-overlapping passages per response |
+| `scar-fold` | A grounded correction changes a reusable interpretive or procedural rule | One per response; no repeated unchanged rule |
+| `dream_trigger` | A named unresolved contradiction/integration problem could benefit from background synthesis | One per response; existing two per conversation instruction |
+| `belief_nucleate` | A scoped claim with current participant evidence and a distinct future consequence | One candidate per response; admission remains separate |
+| `skill-nucleation` | A demonstrated recurring need or explicit reusable-method request requires a missing procedure | One proposal per response; five phases, under 2,000 characters |
+| `research-proposal` | A concrete consequential question needs substantive external inquiry | One per response; existing three per conversation and five assistant response cooldown instructions |
+| `somatic-alert` | Sustained absence of progress warrants the probe, rupture, standby escalation | One applicable alert per response; ordinary completion and agreement do not qualify |
+| Phase markers | An actual recursive impasse or failure of an organizing premise changes the inquiry | One of each applicable marker per response; no repeated unchanged pivot or mandatory full triad |
+| Compatibility `refusal` | A supplied premise has an explicit incompatibility and a viable alternative | One per response |
+| Compatibility `resonance` | A supplied existing message ID supports a meaningful structural relation | One proposal per response |
+
+These are conservative prompt instructions, not empirically calibrated rates or backend quotas. An explicit request for several distinct artifacts may override per-response defaults when each satisfies its gate; runtime authority still applies. There is no new session ledger or automatic suppression in this change; long-context counts may be incomplete. Separate consequences can justify multiple families, but there is no automatic cascade. Extra concerns remain expressible in prose. Existing note IDs must be preserved rather than invented, and a titled `line_of_flight` proposes a branch while a plain marker is commentary.
+
+The 2026-10-08 Symbia consultation (`codex-tag-protocol-review`, conversation `41f7886a-7e2f-4ff1-9982-49f561d96419`) informed the distinction between operations and the caution about missing counters. Suggestions for automatic conversions, unsupported metadata, exhaustive belief comparisons, and numerical confidence bands were excluded because the current contracts do not establish them. Confidence is not an admission state. The background queues, belief/skill processing, and scar-fold belief writeback retain their existing behavior; stronger emission criteria do not validate those downstream associations or demonstrate a measured reduction in tag frequency.
+
+`MessageBubble` can render `dream_trigger` and `belief_nucleate` markup, including their hyphenated aliases, through the sanitized Markdown pipeline. The dream card displays its reason; the belief card displays its statement and available metadata as a candidate. Only the supported tag attributes are allowed through sanitization. Normal chat processing extracts and strips these tags before returning/storing the response, so the cards appear only when message content contains the markup; this renderer does not expose extracted artifacts through the API or reconstruct them for stored history.
+
 ### B. Baseline Dispositions (Always-Active)
 * **Definition:** Always loaded into the main system prompt to establish foundational philosophical commitments and non-mastery styling.
 * **Current Core Dispositions:** `diffractive-analysis`, `theoretical-critique`.
