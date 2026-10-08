@@ -28,7 +28,7 @@ from backend.services.research.action_journal import ResearchActionJournal, inpu
 from backend.services.research.cache_manager import CacheManager
 from backend.services.research.envelope_mapper import ResearchEnvelopeMapper
 from backend.services.research.evidence_store import ResearchEvidenceStore
-from backend.services.research.provider_policy import ProviderPolicy
+from backend.services.research.provider_policy import ProviderPolicy, query_limit
 from backend.services.research.sedimentation_queue import SedimentationPacketQueue
 from backend.services.research.step_executor import ResearchStepExecutor
 from backend.services.research.steps.base import ResearchStepRegistry
@@ -475,6 +475,7 @@ class SomaticResearchOrchestrator:
                 "branch_provider_cost_ceilings_usd": dict(self.config.get("branch_provider_cost_ceilings_usd", {})),
                 "subresearch_policy": task_policy if enabled else "off",
                 "scheduler_version": 1,
+                "max_queries_per_cycle": query_limit(self.config, {}),
                 "acquisition_policy": AcquisitionPolicy.model_validate(
                     self.config.get("acquisition_limits", {})
                 ).model_dump(),
@@ -692,9 +693,15 @@ class SomaticResearchOrchestrator:
         phase_group for backward compatibility with existing queries.
         """
         rerun_id = s.pop("_rerun_step_id", None)
+        recovered_ids = s.get("_rerun_group_ids") or {}
+        rerun_id = recovered_ids.pop(str(query_group), None) or rerun_id
         if rerun_id:
             existing_after_cleanup = self.step_repo.get(rerun_id) if self.step_repo else None
-            if existing_after_cleanup:
+            if (
+                existing_after_cleanup
+                and existing_after_cleanup.get("step_type") == step_type
+                and existing_after_cleanup.get("phase_group") == s.get("phase_group", 0)
+            ):
                 step_data = json.dumps({"depth": s.get("current_depth", 0)})
                 self.step_repo.update(
                     rerun_id, status="running", started_at=now_utc_str(), query_text=query_text, step_data=step_data
@@ -850,13 +857,13 @@ class SomaticResearchOrchestrator:
         """Clear all packets from the queue after successful rake. Returns count cleared."""
         return self._sedimentation_sink.clear(self._state_mgr, self._persist_state, task_id)
 
-    async def execute(self, task_id: str) -> dict[str, Any]:
+    async def execute(self, task_id: str, *, resume: bool = False) -> dict[str, Any]:
         """Execute a complete research task via the orchestrator pipeline (auto mode)."""
-        task = self.task_repo.get(task_id)
+        task = await asyncio.to_thread(self.task_repo.get, task_id)
         if not task:
             raise ValueError(f"Task not found: {task_id}")
 
-        await asyncio.to_thread(self.init_task, task_id)
+        await asyncio.to_thread(self.ensure_state if resume else self.init_task, task_id)
         s = self._state_mgr.states[task_id]
 
         logger.info(

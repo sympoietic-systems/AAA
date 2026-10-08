@@ -24,7 +24,7 @@ A second check at 07:07 UTC still returned the same Alibaba upstream shared-pool
 - Ordinary backend tests clear ambient provider credentials; tests can explicitly supply their own fixture keys. The skills API authorization/CRUD test mocks vector scoring, preventing its dependency on ambient model evaluation from stalling backend verification.
 - Removed an unused browser-session initializer that called a nonexistent repository method and failed the existing strict typing gate. Schema initialization remains owned by database migrations.
 
-## Operator action
+## Operator action at the original release (superseded by T79 below)
 
 Deploy the tested commit, then start a new research task. The old task's expired frozen deadline is preserved; this patch does not silently replay it. A paid model can still experience upstream capacity throttling. Other configured paid models can now be attempted with the same usable key. No model preference or production configuration was changed by this fix.
 
@@ -59,3 +59,18 @@ Regression coverage includes bounded cooldown recovery, deadline exhaustion, int
 - The subsequently committed review-corpus changes from `main` were also integrated: **12 corpus tests passed**, and configured strict typing remained clean at **89 modules**.
 - The first broad backend run was interrupted after its final group stopped progressing. It had reported one upload-test failure; the complete upload-security file subsequently passed independently (15 tests). A fresh full run uses per-test logging and a 45-second stack-dump threshold, with receipts in `benchmarks/runs/research/digestion_full_verification.log`.
 - The diagnostic rerun passed the upload and research checks, then stalled at `test_skills_api_flux_control` while awaiting the skill-update request (stack dump retained). After isolating vector scoring, the late backend group passed all 31 tests. The final combined backend/benchmark run uses isolated credentials and is recorded in `benchmarks/runs/research/digestion_final_suite.log`.
+
+
+### Follow-up: second-cycle timeout and explicit same-task recovery
+
+Production task `3bcb61d4-989d-46dc-aa91-221490a1f0ad` began on 2026-10-08 at 15:41:47 UTC with a frozen 600-second watchdog. The first cycle produced nine successful analyses. Reflection then consumed almost four minutes. The second cycle ran ten search queries plus a direct URL group, and Digest began at 15:51:04 with only 43 seconds left. The deadline expired at 15:51:47 after some analyses had succeeded. Private receipts are retained under `benchmarks/runs/research/digest_deadline_20261008/`. This failure demonstrates insufficient remaining execution time; source texts and completed per-source analyses remain recoverable.
+
+The correction caps every cycle at six search queries, raises the default configurable watchdog to 1800 seconds, and implements explicit same-task step recovery with a new bounded execution revision. Digest recovery retains source identities, source text and completed analysis, and reanalyzes missing or failed results. Old receipts remain immutable; stale action writes are rejected. Automatic mode continues afterward. Recovery requires no running phase, unfinished action or running child, and does not extend existing branch consent. This supersedes earlier advice to create a new task solely because its watchdog expired.
+
+Architectural boundary review used the [mcp-architectural-decision workflow](../../../.agents/skills/mcp-architectural-decision/SKILL.md), consultation `28d9f14d-696a-41ee-b472-d1392ce25770`. Recovery keeps the failed execution receipt intact while recording a distinct authorized revision on the same task.
+
+
+The initial full verification run found two fixture failures: the child reserve test relied on an implicit 64-attempt default, and the resonance API mock guessed an ID after the human message had already been persisted. The branching fixture now freezes 64 explicitly; the resonance integration uses an isolated temporary database, deterministic provider doubles and the actual human message ID. Existing reserve and link assertions remain. A subsequent architecture check required automatic continuation scheduling to pass through the async research service boundary. Focused regressions also reject cross-phase step-ID reuse and source-version reuse when retained text differs.
+
+
+T79 verification: the final complete backend/benchmark run passed **881 tests**, with the existing third-party MOBI `imghdr` deprecation warning, in 582.25 seconds. Receipt: `benchmarks/runs/research/digest_deadline_recovery_20261009/backend_suite.log`. Recovery and architecture regressions also passed 21 focused checks, including the representation-identity guard; counts overlap the full suite. Backend Ruff lint and formatting pass, and configured strict typing passes for 93 modules. All 146 frontend tests, standard/strict TypeScript checks and production build pass. The frontend lint ratchet reports 161 existing errors, 10 warnings and zero regressions. The new-research form defaults to depth 4 instead of 2; existing research depths remain unchanged. The local query setting was raised from 4 to 6. VPS deployment and a live recovery of the reported task have not been performed; the user will deploy and run that recovery.

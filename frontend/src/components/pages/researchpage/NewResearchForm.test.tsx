@@ -19,6 +19,7 @@ describe("dispatch branching consent", () => {
     fireEvent.submit(checkbox.closest("form")!)
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
       subresearch_policy: enabled ? "bounded_auto" : "off",
+      max_depth: 4,
     })))
   })
 })

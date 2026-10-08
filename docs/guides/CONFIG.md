@@ -525,3 +525,14 @@ To disable LLM scoring for a single request, send `"include_structural_scoring":
 ### Research V2 rollout settings
 
 `research_orchestrator.action_receipts_enabled: true` enables durable V2 policy for new tasks. Existing tasks retain frozen policy. Jev research triage remains off; PDF parsing remains standard-first with optional `AAA_DOCLING_ENABLED=false` by default. Allow branching is a per-task creation checkbox, unchecked by default; it requests `bounded_auto` with a frozen user covenant and qualified source witnesses. NVIDIA branch cost reservations use the user's free-price assumption; actual billing remains unknown. See [rollout instructions](RESEARCH_V2_ROLLOUT.md) and [ADR 113](../decisions/ADR-113-research-v2-authorized-rollout.md).
+
+
+## Research cycle and recovery limits
+
+`AAA_RESEARCH_MAX_QUERIES=6` limits search queries in **every cycle**, including reflection. Values above six are clamped; smaller values allow shorter cycles. Up to five direct URL pointers remain a separate acquisition group. Research depth controls the maximum cycle count; evaluation can stop earlier when sufficient evidence is available.
+
+`AAA_RESEARCH_TIMEOUT_SECONDS=1800` is the default 30-minute execution watchdog (maximum 3600 seconds). It bounds runaway work and stalled provider calls. `AAA_RESEARCH_MAX_ATTEMPTS=128` bounds provider attempts per execution revision (maximum 256). Per-request limits remain four attempts and a 60-second attempt timeout. Money, acquisition and branching limits remain enforced. Configuration is frozen when an execution starts.
+
+After deploying this change, use **Rerun step** on the failed Digest in the existing research. Explicit recovery creates a new bounded execution revision with the current configured limits. It retains source text, successful analyses and previous findings, and only calls the model for missing or failed analyses. The original failed action and provider receipts remain unchanged. Recovery gets a new deadline and provider-attempt allowance; operator recovery is limited to 16 revisions. Running phases, unfinished actions and running subresearch must resolve before recovery. Family-wide branching attempt limits remain cumulative.
+
+Automatic mode resumes the remaining pipeline after the recovered phase. Manual mode waits for the next step. Recovery does not silently replay an expired task at server startup, and does not renew existing branch consent or child allocations.

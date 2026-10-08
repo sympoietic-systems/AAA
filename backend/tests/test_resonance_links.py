@@ -114,21 +114,21 @@ def test_resonance_links_db_and_repo(tmp_path):
 
 
 @pytest.mark.anyio
-async def test_resonance_api_integration():
+async def test_resonance_api_integration(tmp_path, monkeypatch):
+    monkeypatch.setenv("AAA_DB_PATH", str(tmp_path / "resonance-api.db"))
     from backend.storage.connection import with_connection
 
     @with_connection
-    def get_max_id(repo_instance):
+    def get_latest_human_id(repo_instance):
         conn = repo_instance._conn()
-        row = conn.execute("SELECT MAX(id) FROM conversation_log").fetchone()
+        row = conn.execute("SELECT MAX(id) FROM conversation_log WHERE speaker='human'").fetchone()
         return row[0] if row[0] is not None else 0
 
     async def mock_generate(*args, **kwargs):
         from backend.main import app
 
         repo = app.state.message_repo
-        current_max = get_max_id(repo)
-        next_user_msg_id = current_max + 1
+        next_user_msg_id = get_latest_human_id(repo)
 
         return {
             "content": f'This is a response to diffraction.\n<resonance target="{next_user_msg_id}">Symbia detected an echo with our initial cut.</resonance>',
@@ -138,6 +138,11 @@ async def test_resonance_api_integration():
         }
 
     with (
+        patch("backend.modules.llm_pool.ModelPoolProvider.generate", new=mock_generate),
+        patch(
+            "backend.modules.providers.typesafe_provider.TypeSafeDecisionClient.evaluate",
+            new=AsyncMock(return_value={}),
+        ),
         patch(
             "backend.modules.llm_client.OpenAICompatibleProvider.generate",
             new=mock_generate,

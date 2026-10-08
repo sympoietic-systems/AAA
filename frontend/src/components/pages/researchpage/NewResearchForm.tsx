@@ -47,9 +47,9 @@ export const NewResearchForm = memo(function NewResearchForm({ onDispatch, onClo
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       const d = parseInt(params.get("depth") || "")
-      return isNaN(d) ? 2 : d
+      return isNaN(d) ? 4 : d
     }
-    return 2
+    return 4
   })
   const [breadth, setBreadth] = useState(() => {
     if (typeof window !== "undefined") {

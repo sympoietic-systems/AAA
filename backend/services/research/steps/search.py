@@ -8,6 +8,7 @@ from urllib.parse import quote
 from backend.modules.provider_attempts import AttemptBudgetExceeded, bounded_call
 from backend.modules.sensory.evidence_triage import EvidenceTriage
 from backend.services.research.provider_observation import generate_unified
+from backend.services.research.provider_policy import query_limit
 from backend.services.research.search_tool import web_search
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import SearchPayload, StepEnvelope, StepOutput
@@ -136,12 +137,7 @@ class SearchStep(BaseResearchStep):
                 search_queries.append(q)
 
         direct_urls = direct_urls[:5]
-        if (
-            hasattr(orch, "acquisition_enabled")
-            and orch.acquisition_enabled(envelope.task_id) is True
-            and len(search_queries) > 10
-        ):
-            raise ValueError("Acquisition phase exceeds ten search queries")
+        search_queries = search_queries[: query_limit(orch._state.config.get("research_orchestrator", {}), state)]
         pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
 
         return {
@@ -189,15 +185,11 @@ class SearchStep(BaseResearchStep):
                 search_queries.append(q)
 
         direct_urls = direct_urls[:5]
+        search_queries = search_queries[
+            : query_limit(orch._state.config.get("research_orchestrator", {}), orch._get_state(task_id))
+        ]
         pending_queries = search_queries + (["Direct URL Parse Pointers"] if direct_urls else [])
-
         # Cache search inputs for re-use on rerun
-        if (
-            hasattr(orch, "acquisition_enabled")
-            and orch.acquisition_enabled(task_id) is True
-            and len(search_queries) > 10
-        ):
-            raise ValueError("Acquisition phase exceeds ten search queries")
         cache = await asyncio.to_thread(orch._load_cache, task_id)
         cache["searching"] = {
             "phase": "searching",

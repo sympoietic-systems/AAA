@@ -3,6 +3,7 @@ import logging
 import uuid
 
 from backend.services.research.provider_observation import generate_unified
+from backend.services.research.provider_policy import query_limit
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import PlanPayload, StepEnvelope, StepOutput
 from backend.utils.anti_mastery import apply_anti_mastery_filter
@@ -297,7 +298,7 @@ async def run_plan_generation(
                 result = json.loads(result)
             if isinstance(result, dict) and result.get("search_queries"):
                 config_orchestrator = orch._state.config.get("research_orchestrator") or {}
-                max_queries = config_orchestrator.get("max_queries", 4)
+                max_queries = query_limit(config_orchestrator, orch._get_state(task_id))
                 if len(result["search_queries"]) > max_queries:
                     logger.info(
                         "Enforcing a maximum of %d planned search queries. Truncating from %d.",

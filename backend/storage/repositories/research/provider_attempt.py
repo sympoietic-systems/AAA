@@ -61,12 +61,19 @@ class ResearchProviderAttemptRepository(BaseRepository):
                 if existing != receipt:
                     raise ReceiptConflictError("Attempt identity already reserved")
                 return
-            count = conn.execute(
-                "SELECT COUNT(*) FROM research_provider_attempts WHERE task_id=?", (receipt.task_id,)
-            ).fetchone()[0]
+            state = json.loads(task[0])
+            policy = state.get("action_journal_policy", {})
+            if policy.get("execution_revision", 1) > 1:
+                count = conn.execute(
+                    "SELECT COUNT(*) FROM research_provider_attempts p JOIN research_action_receipts a ON a.action_id=p.action_id WHERE p.task_id=? AND json_extract(a.request_json,'$.policy_hash')=?",
+                    (receipt.task_id, policy["policy_hash"]),
+                ).fetchone()[0]
+            else:
+                count = conn.execute(
+                    "SELECT COUNT(*) FROM research_provider_attempts WHERE task_id=?", (receipt.task_id,)
+                ).fetchone()[0]
             if count >= max_task_attempts:
                 raise ReceiptConflictError("Task provider attempt budget exhausted")
-            state = json.loads(task[0])
             deadline = state.get("action_journal_policy", {}).get("provider_policy", {}).get("deadline")
             if deadline and datetime.now(UTC) >= datetime.fromisoformat(deadline):
                 raise ReceiptConflictError("Task provider deadline exhausted")

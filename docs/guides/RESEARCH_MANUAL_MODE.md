@@ -144,7 +144,7 @@ and the next preview or step execution recomputes everything fresh.
 
 ### 7. Rerun
 
-- **Per-step:** Click `⟳ rerun step` on any completed step to re-execute ONLY that phase
+- **Per-step:** Click `⟳ rerun step` on a completed, partial or failed step to recover that phase
   using cached inputs from the database.  Uses `?rerun_step_type=<type>` to fast-forward
   the orchestrator phase without re-running prior steps.
 - **Full task:** When complete, click `⟳ rerun all` to start the entire pipeline over
@@ -209,3 +209,8 @@ research_orchestrator:
   early_stop_threshold: 0.8
   max_concurrent_parses: 3
 ```
+
+
+### Expired Digest recovery
+
+A failed Digest can be recovered in the same research after deploying the recovery implementation. **Rerun step** creates a fresh bounded execution revision and retains parsed text and successful analyses. Only missing or failed analyses need another model call. The old failed receipts remain available. In manual mode, continue with the next step after recovery; automatic mode resumes the remaining phases. An active worker, unfinished action or running child must resolve first. Configure cycle and watchdog limits as described in [CONFIG.md](CONFIG.md#research-cycle-and-recovery-limits).

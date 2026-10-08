@@ -15,6 +15,50 @@ class ReceiptConflictError(ValueError):
 
 class ResearchActionReceiptRepository(BaseRepository):
     @with_connection
+    def recover_task_state(self, task_id: str, expected_state: str, state_json: str, after_group: int) -> None:
+        """Open an operator-authorized execution revision without changing old receipts."""
+        with self.atomic():
+            row = (
+                self._conn()
+                .execute("SELECT orchestrator_state,status FROM research_tasks WHERE id=?", (task_id,))
+                .fetchone()
+            )
+            if row is None or row[0] != expected_state or row[1] not in {"active", "partial", "failed", "completed"}:
+                raise ReceiptConflictError("Task changed before recovery")
+            if json.loads(row[0] or "{}").get("active_action_id"):
+                raise ReceiptConflictError("An unfinished action must be resolved before recovery")
+            children = (
+                self._conn()
+                .execute(
+                    "SELECT 1 FROM research_child_runs WHERE parent_task_id=? AND status IN ('queued','running')",
+                    (task_id,),
+                )
+                .fetchone()
+            )
+            if children:
+                raise ReceiptConflictError("Subresearch is still running")
+            self._conn().execute(
+                "UPDATE research_tasks SET orchestrator_state=?,status='active',result_summary=NULL,completed_at=NULL WHERE id=?",
+                (state_json, task_id),
+            )
+            self._conn().execute(
+                "UPDATE research_steps SET status='stale' WHERE task_id=? AND phase_group>? AND status IN ('completed','partial','failed')",
+                (task_id, after_group),
+            )
+
+    @with_connection
+    def successful_predecessor(self, task_id: str, kind: str | None = None) -> str | None:
+        rows = (
+            self._conn()
+            .execute(
+                "SELECT action_id,request_json FROM research_action_receipts WHERE task_id=? AND status IN ('complete','partial') ORDER BY json_extract(receipt_json,'$.completed_at') DESC",
+                (task_id,),
+            )
+            .fetchall()
+        )
+        return next((str(row[0]) for row in rows if kind is None or json.loads(row[1]).get("kind") == kind), None)
+
+    @with_connection
     def initialize_task_state(self, task_id: str, state_json: str, contract: ResearchContract | None = None) -> str:
         """Freeze policy before the first action; a competing initializer wins once."""
         with self.atomic():

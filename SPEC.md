@@ -199,6 +199,7 @@ V128: provider reasoning remains separate from final content; missing visible co
 V129: browser sessions survive process restart via persisted token hashes; absolute expiry, logout, password rotation, capacity eviction → reject; raw cookie token ⊥ database
 V130: ∀ session repository mutation → commit/rollback before connection scope exits; login revocation leaves no transaction for issuance
 V131: optional search ranking ≤ 15s/query; timeout → retrieved-order fallback; completed query URLs persist before next selection; busy phase manual execution → 409 before state mutation; worker preserves existing terminal status
+V132: every cycle search queries <= 6, including reflection; explicit same-task recovery -> new bounded execution revision + dependency on successful parse; retained analyses reused; old action/attempt receipts immutable; stale action cannot replace current analysis/checkpoint
 
 ## §T
 
@@ -284,6 +285,7 @@ T71|x|global verification repaired; 661 combined tests + 131 frontend tests; off
 T72|x|user-requested unchecked Allow branching checkbox; trusted dispatch `bounded_auto`; frozen covenant + afferent witnesses + shared fanout/budget/deadline; ADR-113; independent branch calibration unknown|V113,V115,V116,I.api,I.internal
 T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent parser accuracy deferred to T75|V69,V105,V114,V119,V120,I.env,I.domain
 T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; independent release review remains T71|V108,V114,V117,I.benchmark
+T79|x|smaller bounded research cycles + same-task step recovery; retained sources/analyses + immutable old receipts; fresh watchdog/attempt revision; automatic continuation; gates/docs/commit|V132,V131,V30,I.api
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -435,3 +437,7 @@ B120|2026-10-08|unused SessionStore initializer called nonexistent repository me
 B121|2026-10-08|research DDG Lite POST hit deliberate redirect rejection; empty step tab badges interpolated undefined|encoded GET through bounded acquisition for all callers; per-hop public destination checks retained; absent badge omitted; redirected search + private destination + empty failed-step UI regressions; V30,V65,V104; no new invariant
 B122|2026-10-08|serial optional search selectors consumed frozen deadline before any URL persistence; manual rerun waited behind active lock; worker finalized terminal task twice|15s selector bound + retrieved-order fallback; incremental query persistence; busy request 409 + visible UI error; terminal preservation; V131; fixture uses unbound worker method because manager repository property has no setter; bind loop lambda inputs; reduce resolved lint debt
 B123|2026-10-08|operator rejects NVIDIA DeepSeek routes; legacy env retained route in main/background/structural pools; selector reasoning consumed 500-token output ceiling|replace NVIDIA DeepSeek routes with Nemotron Super across configured pools/fallback/override; retain other providers; update local env + template + runbook; selector thinking disabled; routing regression; V30,V131
+
+B124|2026-10-09|second-cycle Digest inherited 43s of 600s watchdog; reflection supplied 10 queries; expired policy blocked rerun|cap each cycle at 6; configurable 1800s watchdog + 128 attempts; explicit CAS recovery revision; source/analysis reuse; old receipts preserved; late write rejection; V132; fixture returns real step ID
+
+B125|2026-10-09|full gate exposed child-reserve fixture relying on implicit64 default + resonance mock guessing next user ID after user already persisted|freeze64 explicitly in branch fixture; target actual latest human message in isolated temp DB; preserve reserve/link assertions; V115,V30

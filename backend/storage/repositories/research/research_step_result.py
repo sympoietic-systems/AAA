@@ -52,10 +52,10 @@ class ResearchStepResultRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
-    def update_analysis(self, result_id: str, analyzed_json: str) -> None:
+    def update_analysis(self, result_id: str, analyzed_json: str, *, expected_action_id: str | None = None) -> None:
         conn = self._conn()
         conn.execute(
-            "UPDATE research_step_results SET analyzed_json = ? WHERE id = ?",
-            (analyzed_json, result_id),
+            "UPDATE research_step_results SET analyzed_json = ? WHERE id = ? AND (? IS NULL OR EXISTS (SELECT 1 FROM research_tasks t WHERE t.id=research_step_results.task_id AND t.status='active' AND json_extract(t.orchestrator_state,'$.active_action_id')=?))",
+            (analyzed_json, result_id, expected_action_id, expected_action_id),
         )
         conn.commit()

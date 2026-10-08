@@ -363,14 +363,14 @@ research_orchestrator:
     model_pool_nvidia: 0                           # User declares current NVIDIA models free
     nvidia: 0                                     # Reservation assumption; observed billing stays nullable
   provider_limits:
-    task_timeout_seconds: 600
+    task_timeout_seconds: 1800
     attempt_timeout_seconds: 60
     max_request_attempts: 4
-    max_task_attempts: 64
+    max_task_attempts: 128
   enabled: true                                    # Use orchestrator instead of legacy engine
   max_reflect_rounds: 3                            # Reflection rounds per iteration
   default_top_n: 3                                 # Sources to fetch per search query
-  max_queries: 4                                   # Maximum search queries planned per step
+  max_queries: 6                                   # Maximum search queries in EVERY cycle, including reflection followups
   search_candidates: 10                            # Candidate search results fetched before LLM selection
   satisfaction_threshold: 0.7                      # Completeness score to stop
   early_stop_threshold: 0.8                        # Break reflection early if reached

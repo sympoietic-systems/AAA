@@ -99,3 +99,10 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 - ⊥ arbitrary model-authored phases, recursive child trees, or branch-for-speed policy.
 - ⊥ replace every parser before a frozen comparative corpus demonstrates need.
 - ⊥ call reflective prose independent evidence or resolve productive contradiction merely to complete a report.
+
+
+## Explicit recovery and smaller cycles (T79)
+
+Every cycle is capped at six search queries, including reflection followups. Configured smaller limits remain valid; direct URL pointers use a separate group capped at five. Depth continues to bound cycle count.
+
+A user-requested step rerun opens a new execution revision on the same task: current configured watchdog and attempt ceilings, new policy hash and new action ID. Digest requires a successful parse predecessor and retains parsed source versions/text and completed analyses. Missing or failed analyses are retried. Original action/provider receipts remain unchanged, and late writes cannot replace the recovered execution. Compare-and-swap protects the state revision; a running worker, unfinished action or running child blocks recovery. Automatic mode resumes the remaining pipeline; manual mode waits. Branch covenants and child allocations are not renewed.

@@ -198,6 +198,8 @@ async def parallel_digest_grouped(
     Migrated from legacy tools._tool_parallel_digest_grouped.
     """
     sem = orch._get_semaphore()
+    execution_state = dict(orch._get_state(task_id))
+    action_id = execution_state.get("active_action_id")
     store = orch.evidence_store_for(task_id) if hasattr(orch, "evidence_store_for") else None
 
     async def digest_one(source: dict) -> dict | None:
@@ -207,18 +209,29 @@ async def parallel_digest_grouped(
                 step_id = group_steps.get(q_group) or list(group_steps.values())[0]
                 query_text = queries[q_group - 1] if (q_group - 1) < len(queries) else objective
 
-                result = await analyze_source_content(
-                    orch,
-                    task_id,
-                    source["url"],
-                    source.get("title", ""),
-                    source.get("content", ""),
-                    query_text,
-                    objective,
-                    depth,
-                    max_depth,
-                    step_id=step_id,
+                existing = source.get("existing_analysis")
+                reuse = (
+                    orch._get_state(task_id).get("_reuse_completed_digests") is True
+                    and isinstance(existing, dict)
+                    and existing.get("analysis_status") == "complete"
                 )
+                if reuse:
+                    result = dict(existing)
+                else:
+                    result = await analyze_source_content(
+                        orch,
+                        task_id,
+                        source["url"],
+                        source.get("title", ""),
+                        source.get("content", ""),
+                        query_text,
+                        objective,
+                        depth,
+                        max_depth,
+                        step_id=step_id,
+                    )
+                if action_id and orch._get_state(task_id).get("active_action_id") != action_id:
+                    raise asyncio.CancelledError
                 packet = None
                 if store is not None:
                     stored = await asyncio.to_thread(
@@ -231,7 +244,7 @@ async def parallel_digest_grouped(
                     else:
                         artifact = stored[0]
                     claims = await asyncio.to_thread(
-                        store.record_interpretation, task_id, dict(orch._get_state(task_id)), artifact, result
+                        store.record_interpretation, task_id, execution_state, artifact, result
                     )
                     packet = store.packet(artifact, claims)
 
@@ -239,7 +252,7 @@ async def parallel_digest_grouped(
                 try:
                     parse_step_id = None
                     if orch.step_repo:
-                        steps = orch.step_repo.get_by_task(task_id)
+                        steps = await asyncio.to_thread(orch.step_repo.get_by_task, task_id)
                         parse_step = next(
                             (
                                 s
@@ -247,6 +260,7 @@ async def parallel_digest_grouped(
                                 if s.get("step_type") == "parallel_parse"
                                 and s.get("query_group") == q_group
                                 and orch._get_step_depth(s) == depth
+                                and s.get("phase_group") == execution_state.get("phase_group")
                             ),
                             None,
                         )
@@ -255,15 +269,17 @@ async def parallel_digest_grouped(
 
                     target_step_id = parse_step_id or step_id
                     if target_step_id:
-                        step_srcs = orch.step_result_repo.get_by_step(target_step_id)
+                        step_srcs = await asyncio.to_thread(orch.step_result_repo.get_by_step, target_step_id)
                     else:
-                        step_srcs = orch.step_result_repo.get_by_task(task_id)
+                        step_srcs = await asyncio.to_thread(orch.step_result_repo.get_by_task, task_id)
 
                     for sr in step_srcs:
                         if sr["source_url"] == source["url"]:
-                            orch.step_result_repo.update_analysis(
+                            await asyncio.to_thread(
+                                orch.step_result_repo.update_analysis,
                                 sr["id"],
                                 json.dumps(result, ensure_ascii=False),
+                                expected_action_id=action_id,
                             )
                             break
                 except Exception as db_err:
@@ -303,7 +319,7 @@ class DigestStep(BaseResearchStep):
 
         # Re-hydrate parsed_sources_cache from database if empty
         if not parsed_sources and orch.step_repo and orch.step_result_repo:
-            steps = orch.step_repo.get_by_task(task_id)
+            steps = await asyncio.to_thread(orch.step_repo.get_by_task, task_id)
             parse_steps = [
                 st
                 for st in steps
@@ -404,7 +420,7 @@ class DigestStep(BaseResearchStep):
 
         # Reconstruct parsed sources from completed parallel_parse steps if empty
         if not parsed_sources and orch.step_repo and orch.step_result_repo:
-            steps = orch.step_repo.get_by_task(task_id)
+            steps = await asyncio.to_thread(orch.step_repo.get_by_task, task_id)
             parse_steps = [
                 st
                 for st in steps
@@ -460,6 +476,7 @@ class DigestStep(BaseResearchStep):
             current_depth,
             max_depth,
         )
+        state["_reuse_completed_digests"] = False
 
         failed_count = sum(dr.get("result", {}).get("analysis_status") == "failed" for dr in digest_results)
         analyzed_count = sum(

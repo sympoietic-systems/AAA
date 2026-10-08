@@ -70,6 +70,7 @@ def setup(tmp_path, request, monkeypatch):
         config={
             "research_orchestrator": {
                 "action_receipts_enabled": True,
+                "provider_limits": {"max_task_attempts": 64},
                 "branch_provider_cost_ceilings_usd": {"nvidia_fixture": 0, "priced_fixture": 0.06},
             },
             "research_tasks": {"manual_mode": True},

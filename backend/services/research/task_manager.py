@@ -382,12 +382,12 @@ class ResearchTaskManager:
         self._active_tasks[task_id] = asyncio_task
         logger.info("Research task %s activated (%d/%d slots)", task_id, len(self._active_tasks), self.max_concurrent)
 
-    async def _execute_task(self, task_id: str) -> None:
+    async def _execute_task(self, task_id: str, *, resume: bool = False) -> None:
         """Execute a research task — orchestrator or legacy engine based on config."""
         semaphore = self._get_semaphore()
         async with semaphore:
             try:
-                task = self.task_repo.get(task_id)
+                task = await asyncio.to_thread(self.task_repo.get, task_id)
                 logger.info(
                     "EXECUTING research task %s: %s",
                     task_id,
@@ -395,7 +395,11 @@ class ResearchTaskManager:
                 )
 
                 logger.info("EXECUTING task %s via orchestrator", task_id[:8])
-                result = await self.orchestrator.execute(task_id)
+                result = (
+                    await self.orchestrator.execute(task_id, resume=True)
+                    if resume
+                    else await self.orchestrator.execute(task_id)
+                )
                 if result.get("status") == "waiting_for_branch_approval":
                     return
                 persisted = await asyncio.to_thread(self.task_repo.get, task_id)

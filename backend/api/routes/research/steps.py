@@ -1,5 +1,6 @@
 """Research orchestrator steps, meta-log, and phase execution endpoints."""
 
+import asyncio
 import json
 import logging
 
@@ -14,7 +15,7 @@ from backend.api.routes.research.schemas import (
 from backend.api.schemas import UnifiedNoteResponse
 from backend.services.note import NoteService
 from backend.services.research.api import rerun_task as rerun_research_task
-from backend.services.research.api import run_research_sync
+from backend.services.research.api import resume_step_recovery, run_research_sync
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,7 +34,8 @@ async def execute_step(
     digesting → consolidating → reflection → evaluating → synthesizing → complete).
 
     If rerun_step_type is provided (e.g., 'digest'), the existing DB state
-    is preserved and only that single phase is re-executed (per-step rerun).
+    is preserved and that phase is recovered. Automatic mode then resumes
+    the remaining pipeline; manual mode waits for the next step.
     """
     state = request.app.state
     manager = state.research_task_manager
@@ -41,13 +43,16 @@ async def execute_step(
     task = await run_research_sync(manager.get_task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+    background = manager._active_tasks.get(task_id)
+    if isinstance(background, asyncio.Task) and not background.done():
+        raise HTTPException(status_code=409, detail="Research execution is already running; wait for it to finish")
     phase_lock = manager.orchestrator._state_mgr.locks.get(task_id)
     if phase_lock is not None and phase_lock.locked():
         raise HTTPException(status_code=409, detail="A research phase is already running; wait for it to finish")
-    if task["status"] not in ("active", "queued", "completed", "failed"):
+    if task["status"] not in ("active", "queued", "completed", "partial", "failed"):
         raise HTTPException(
             status_code=400,
-            detail=f"Task must be active, queued, completed, or failed, got: {task['status']}",
+            detail=f"Task must be active, queued, completed, partial, or failed, got: {task['status']}",
         )
 
     # Map step_type to orchestrator phase for rerun-to-target
@@ -64,59 +69,20 @@ async def execute_step(
     }
     target_phase = STEP_TYPE_TO_PHASE.get(rerun_step_type or "")
 
+    if rerun_step_type and target_phase is None:
+        raise HTTPException(status_code=400, detail="Unknown research step type")
     if target_phase:
-        # Per-step rerun — resume state, set phase, mark step for in-place update.
-        # Downstream steps are deleted by execute_step before re-execution.
-        if task["status"] in ("completed", "failed"):
-            await run_research_sync(manager.task_repo.update, task_id, status="active")
-        orch = manager.orchestrator
-        orch.ensure_state(task_id)
-        orch.set_phase(task_id, target_phase)
+        from backend.services.research.api import prepare_step_recovery
+        from backend.storage.repositories.research.action_receipt import ReceiptConflictError
 
-        # Find the exact step to update in-place
-        step_repo = getattr(state, "research_step_repo", None)
-        if step_repo and rerun_step_type:
-            if rerun_step_id:
-                existing = await run_research_sync(step_repo.get, rerun_step_id)
-            else:
-                s2 = orch._state_mgr._states.get(task_id)
-                current_depth = s2.get("current_depth", 0) if s2 else 0
-                all_steps = await run_research_sync(step_repo.get_by_task, task_id)
-                matching = sorted(
-                    (
-                        s
-                        for s in all_steps
-                        if s["step_type"] == rerun_step_type
-                        and s["status"] in ("completed", "failed", "running")
-                        and orch._get_step_depth(s) == current_depth
-                    ),
-                    key=lambda s: (
-                        s.get("phase_group", s.get("step_number", 0)),
-                        s.get("query_group", 0),
-                        s.get("sub_sequence", 0),
-                    ),
+        phase_lock = manager.orchestrator._state_mgr.locks.setdefault(task_id, asyncio.Lock())
+        async with phase_lock:
+            try:
+                await run_research_sync(
+                    prepare_step_recovery, manager, task_id, target_phase, rerun_step_type, rerun_step_id
                 )
-                existing = matching[0] if matching else None
-            if existing:
-                s2 = orch._state_mgr._states.get(task_id)
-                if s2 is not None:
-                    s2["_rerun_step_id"] = existing["id"]
-                    # Reset digest-related flags so document_digestion re-runs fresh
-                    if rerun_step_type == "document_digestion":
-                        s2["document_digested"] = False
-                        s2["document_learnings"] = []
-                    # Set query_index from the step's query_group
-                    qg = existing.get("query_group")
-                    if qg and rerun_step_type in ("search", "parallel_parse", "digest"):
-                        s2["query_index"] = qg - 1  # query_group is 1-based, query_index is 0-based
-                    elif rerun_step_type in ("search", "parallel_parse", "digest"):
-                        # Fallback: count searches before this step
-                        all_steps = await run_research_sync(step_repo.get_by_task, task_id)
-                        s2["query_index"] = sum(
-                            1
-                            for s in all_steps
-                            if s["step_type"] == "search" and s["step_number"] < existing["step_number"]
-                        )
+            except ReceiptConflictError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
     else:
         # Normal sequential step execution
         if task["status"] in ("completed", "failed"):
@@ -146,6 +112,9 @@ async def execute_step(
         result = await manager.orchestrator_step(task_id)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+
+    if target_phase and result.get("status") != "error":
+        await resume_step_recovery(manager, task_id)
 
     return result
 

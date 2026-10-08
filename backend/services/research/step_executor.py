@@ -236,6 +236,9 @@ class ResearchStepExecutor:
                 if receipt is not None and action_status == "partial":
                     s["delivery_degraded"] = True
                 if output.new_findings:
+                    output.new_findings = list(
+                        dict.fromkeys(finding for finding in output.new_findings if finding not in s["all_findings"])
+                    )
                     s["all_findings"].extend(output.new_findings)
 
                 # Apply output payloads back to legacy task state dict

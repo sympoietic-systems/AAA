@@ -23,3 +23,12 @@ Keep `AAA_DOCLING_ENABLED=false` initially on the described 4-core/8-GB VPS. pdf
 ## Production review
 
 Compare representative tasks with branching off and on. Check whether cited sources support each claim, whether useful coverage and contrary evidence survive synthesis, and whether child gathering adds evidence. Inspect partial/degraded status and provider receipts rather than interpreting a returned report as success. The final live replay was partial for V2 after a timeout; research quality superiority has not been demonstrated. Record examples and failures before changing limits or enabling optional parser routes.
+
+
+## Smaller cycles and same-task recovery
+
+New executions default to six search queries per cycle, including reflection followups. Set `AAA_RESEARCH_MAX_QUERIES` lower for shorter cycles and choose a higher research depth when more cycles are needed. Direct URLs remain a separate bounded group. Allow branching remains optional, with at most two qualified children and no grandchildren.
+
+The safety watchdog defaults to 30 minutes, configurable with `AAA_RESEARCH_TIMEOUT_SECONDS`; provider attempts default to 128 per execution revision through `AAA_RESEARCH_MAX_ATTEMPTS`. Explicit **Rerun step** renews these limits while retaining the task ID, sources and completed analyses. For a timed-out Digest, select its rerun control after updating and restarting the backend. Automatic mode continues afterward; manual mode waits for the next click. Original failed receipts remain inspectable. See [configuration and recovery limits](CONFIG.md#research-cycle-and-recovery-limits).
+
+The new-research form now defaults to depth 4, allowing more cycles than its previous depth 2. You can adjust depth before dispatch; evaluation and resource limits may stop the run earlier. Existing tasks retain their selected depth.

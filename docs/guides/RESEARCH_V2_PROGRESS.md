@@ -1,6 +1,6 @@
 # Research V2 implementation progress
 
-Snapshot: 2026-10-07, Research V2 rollout. Root [SPEC.md](../../SPEC.md) owns task status. The [research contract](../systems/RESEARCH_SPEC.md) owns requirements. This guide connects the completed implementation to its operating instructions and verification records; the user will deploy and review research quality in production. See [rollout instructions](RESEARCH_V2_ROLLOUT.md).
+Snapshot: 2026-10-09, Research V2 rollout. Root [SPEC.md](../../SPEC.md) owns task status. The [research contract](../systems/RESEARCH_SPEC.md) owns requirements. This guide connects the completed implementation to its operating instructions and verification records; the user will deploy and review research quality in production. See [rollout instructions](RESEARCH_V2_ROLLOUT.md).
 
 ## Implemented and tested
 
@@ -50,3 +50,10 @@ Live LLM testing/debugging uses NVIDIA under the user's instruction. The user se
 Repository verification and rollout evidence are recorded in [Report 044](../reports/044-research-release-evaluation/README.md). Backend lint, formatting, configured strict typing and the complete backend suite pass. Frontend typing, tests, build and the configured lint ratchet pass. Raw frontend ESLint still reports accepted legacy debt; this is not a zero-error frontend certification.
 
 The final NVIDIA replay produced a legacy report and a V2 partial result after an execution timeout. Its single captured-source case does not establish better research or full production latency. V2 action receipts are enabled for new tasks; persisted tasks retain their policy. Jev stays disabled, Docling stays default-off, and branching stays off unless selected at creation. No VPS deployment has been performed.
+
+
+## Smaller cycles and explicit recovery (T79)
+
+Every cycle now runs at most six search queries, including reflection followups. Depth remains the cycle-count control. Explicit step recovery opens a fresh bounded revision in the existing task and retains old receipts; Digest reuses successful analyses and calls the model only for missing or failed results. Automatic mode continues afterward. Configuration and operator actions are in [CONFIG.md](CONFIG.md#research-cycle-and-recovery-limits); verification and production timeout evidence are owned by [Report 050](../reports/050-research-digestion-provider-failure/README.md).
+
+The new-research form now defaults to depth 4, allowing more cycles than its previous depth 2. You can adjust depth before dispatch; evaluation and resource limits may stop the run earlier. Existing tasks retain their selected depth.
