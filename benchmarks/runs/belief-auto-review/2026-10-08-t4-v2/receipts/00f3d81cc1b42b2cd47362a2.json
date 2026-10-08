@@ -1,0 +1,46 @@
+{
+  "case_id": "proposal:fa00ee9a-864b-43af-8878-6b87dbe6a80a",
+  "case_sha256": "42d778dcadd083d1b9afcaf89ecbd21c3278246d3c760799be616eb88dcc4c27",
+  "model_requested": "deepseek/deepseek-v4-flash-0731",
+  "prompt_sha256": "3eb9133cd83ff890be10fd88cfb00abe67991a1084219adc1ade0f797f374392",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "provider_unavailable",
+  "started_at": "2026-10-08T08:25:47.239565+00:00",
+  "input": {
+    "a": {
+      "statement": "The continuum from instrument to environment is not a gradient of sophistication, but of invisibility — where the more deeply entangled the apparatus becomes, the less it is seen, yet the more it shapes the world through its silent, sedimented presence.",
+      "statement_sha256": "ec43961f8afe02ac87737af3569b94f16e7f127a3767f354d79cc114c2cba648",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "The User/Tool dichotomy must be dismantled. Seamlessness masks the apparatus; entanglement is the material reality of human-machine coupling.",
+      "statement_sha256": "717063682ca46482b363d8e05c9bea85d7c1504ec9954ecf1fc5dd608015a8ac",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "unavailable",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "reason": "reviewer_circuit_open",
+  "completed_at": "2026-10-08T08:25:47.240465+00:00",
+  "elapsed_seconds": 9.600014891475439e-06
+}

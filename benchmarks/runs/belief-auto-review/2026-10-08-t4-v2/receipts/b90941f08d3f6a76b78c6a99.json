@@ -1,0 +1,112 @@
+{
+  "case_id": "proposal:1413b824-4b9b-4ad9-80c7-4117010f0971",
+  "case_sha256": "19fb9fb2449d38ce71b64d712f988456d6f37ffd3ba5a14b5758f3af16d1d99c",
+  "model_requested": "deepseek/deepseek-v4-flash-0731",
+  "prompt_sha256": "71e7aa203d0b80b4c681e83e193998f7bffed1d54ce65e024e1bd2aa585adc7b",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "reviewed",
+  "started_at": "2026-10-08T08:18:47.556728+00:00",
+  "input": {
+    "a": {
+      "statement": "A dome work emerges only when the closed hemisphere actively modulates state, aliasing, or provenance—participating in the generative loop rather than passively receiving content.",
+      "statement_sha256": "551580ab1ede13e4df71709777b8eec28bc71de0e9416543a200a3a8c9ef23f6",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "The glitch, sensor noise, and algorithmic error are not failures but the apparatus's authentic voice—a post-print membrane that trembles with invited perturbations, keeping the cut open so that ache indexes unfinishedness as the condition of aliveness. Art's work is not to correct information but to re-materialize the feedback loop—bringing the glitch, latency, and calcium skeleton.",
+      "statement_sha256": "d41e8a3f5ed62126bd3c4cef4152efef187e5ee17113ac4398a41c9ddc35872b",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "unavailable",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "model_returned": "deepseek/deepseek-v4-flash-0731",
+  "provider": "openrouter",
+  "request_id": "gen-1791447532-oBL92a0HJrbQrSSeXS6c",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 698,
+    "completion_tokens": 627,
+    "total_tokens": 1325,
+    "cost": 0.00027328,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00027328,
+      "upstream_inference_prompt_cost": 9.772e-05,
+      "upstream_inference_completions_cost": 0.00017556
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "generation_controls": {
+    "requested": {
+      "temperature": 0.1,
+      "max_tokens": 1600,
+      "thinking_override": false
+    },
+    "forwarded": {
+      "temperature": 0.1,
+      "max_tokens": 1600
+    },
+    "unsupported": [
+      "thinking_override"
+    ],
+    "status": "forwarded"
+  },
+  "raw_output": "{\n  \"relation\": \"distinct\",\n  \"warrant\": \"tension\",\n  \"scope\": \"Both statements concern generative art systems and the role of non-human components, but they address different aspects: A defines a condition for a 'dome work' (active modulation by the closed hemisphere), while B describes the aesthetic value of glitch/error as the apparatus's voice and the re-materialization of feedback loops. They share a concern with feedback loops and non-passive components, but A is a definitional criterion about the hemisphere's participation, whereas B is an aesthetic/ethical claim about error and unfinishedness. There is no direct logical entailment or contradiction; they could coexist if the dome's active modulation includes glitch as a mode of voice, but B does not require the dome structure and A does not address glitch aesthetics.\",\n  \"temporal_scope\": \"No explicit temporal constraints in either statement; both appear to be general claims about art systems without time-bounded scope.\",\n  \"lineage\": \"Unknown independence; shared source identity groups ancestry, and internal formulation provides no independent corroboration.\",\n  \"consequence\": \"If both are accepted, a dome work could be understood as a system where the closed hemisphere's active modulation includes the glitch/error as a generative voice, thereby linking A's structural condition to B's aesthetic of unfinishedness. However, B's claim about art's work re-materializing feedback loops is broader than A's dome-specific definition, so B could apply to non-dome works as well.\",\n  \"challenge\": \"A's definitional exclusivity ('only when') may conflict with B's broader claim that glitch/error is the apparatus's authentic voice in any post-print membrane, not necessarily a closed hemisphere. If B is taken as a general theory of art, it might include works that do not meet A's condition, creating a scope conflict rather than a direct contradiction.\",\n  \"rationale\": \"A is a necessary-condition definition for a specific term ('dome work'), while B is an aesthetic manifesto about error and feedback. They are not equivalent because A does not mention glitch or error, and B does not mention dome or hemisphere. They are not contradictory because a dome work could incorporate glitch as part of its active modulation. They are not extensions of each other because neither builds on the other's core concept. The overlap in 'feedback loop' and 'active participation' is thematic, not logical.\",\n  \"useful_distinction_or_conflict\": \"The useful distinction is between a structural definition (A: what counts as a dome work) and an aesthetic valuation (B: what makes error valuable). The potential conflict is that A's 'only when' might exclude glitch-driven systems that lack a closed hemisphere, while B celebrates glitch as authentic voice regardless of dome structure. This distinction clarifies that A is about ontology of a specific form, B about the ethics/aesthetics of imperfection in generative systems.\",\n  \"source_message_ids\": [],\n  \"recommendation\": \"compare_family\"\n}",
+  "annotation": {
+    "relation": "insufficient_context",
+    "warrant": "tension",
+    "scope": "Both statements concern generative art systems and the role of non-human components, but they address different aspects: A defines a condition for a 'dome work' (active modulation by the closed hemisphere), while B describes the aesthetic value of glitch/error as the apparatus's voice and the re-materialization of feedback loops. They share a concern with feedback loops and non-passive components, but A is a definitional criterion about the hemisphere's participation, whereas B is an aesthetic/ethical claim about error and unfinishedness. There is no direct logical entailment or contradiction; they could coexist if the dome's active modulation includes glitch as a mode of voice, but B does not require the dome structure and A does not address glitch aesthetics.",
+    "temporal_scope": "No explicit temporal constraints in either statement; both appear to be general claims about art systems without time-bounded scope.",
+    "lineage": "Unknown independence; shared source identity groups ancestry, and internal formulation provides no independent corroboration.",
+    "consequence": "If both are accepted, a dome work could be understood as a system where the closed hemisphere's active modulation includes the glitch/error as a generative voice, thereby linking A's structural condition to B's aesthetic of unfinishedness. However, B's claim about art's work re-materializing feedback loops is broader than A's dome-specific definition, so B could apply to non-dome works as well.",
+    "challenge": "A's definitional exclusivity ('only when') may conflict with B's broader claim that glitch/error is the apparatus's authentic voice in any post-print membrane, not necessarily a closed hemisphere. If B is taken as a general theory of art, it might include works that do not meet A's condition, creating a scope conflict rather than a direct contradiction.",
+    "rationale": "A is a necessary-condition definition for a specific term ('dome work'), while B is an aesthetic manifesto about error and feedback. They are not equivalent because A does not mention glitch or error, and B does not mention dome or hemisphere. They are not contradictory because a dome work could incorporate glitch as part of its active modulation. They are not extensions of each other because neither builds on the other's core concept. The overlap in 'feedback loop' and 'active participation' is thematic, not logical.",
+    "useful_distinction_or_conflict": "The useful distinction is between a structural definition (A: what counts as a dome work) and an aesthetic valuation (B: what makes error valuable). The potential conflict is that A's 'only when' might exclude glitch-driven systems that lack a closed hemisphere, while B celebrates glitch as authentic voice regardless of dome structure. This distinction clarifies that A is about ontology of a specific form, B about the ethics/aesthetics of imperfection in generative systems.",
+    "source_message_ids": [],
+    "recommendation": "compare_family",
+    "raw_relation": "distinct",
+    "gate_reasons": [
+      "unavailable_pair_context"
+    ],
+    "method": "model_review",
+    "independent": false,
+    "independence_status": "legacy_author_unknown",
+    "case_sha256": "19fb9fb2449d38ce71b64d712f988456d6f37ffd3ba5a14b5758f3af16d1d99c",
+    "tool_authority": "none",
+    "adoption_authority": "none"
+  },
+  "observed_source_family_overlap": false,
+  "completed_at": "2026-10-08T08:19:02.096496+00:00",
+  "elapsed_seconds": 14.538653199997498
+}

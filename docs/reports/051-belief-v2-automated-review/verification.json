@@ -1,0 +1,89 @@
+{
+  "checked_at": "2026-10-08T15:39:59.164584+00:00",
+  "source_packet": "docs/reports/049-belief-v2-review-corpus/review-packet.json",
+  "run": "benchmarks/runs/belief-auto-review/2026-10-08-t4-v4",
+  "base_packet_sha256": "f2934b2aaa2792fc6c347f6e0390ff1f775d3da80b200f07ae0895a7594711a0",
+  "frozen_sha256": "df1cc93dce1a438e70c81ef7088006406d72b9cdabc53cdc6697d845ae928a76",
+  "artifact_validation": "passed",
+  "configured_secret_scan": "passed",
+  "documentation_links_checked": 31,
+  "cases": 54,
+  "reviewer_slots": 108,
+  "case_outcomes": {
+    "disagreement": 23,
+    "unavailable": 28,
+    "model_agreement": 3
+  },
+  "reviewer_outcomes": {
+    "reviewed": 80,
+    "unavailable": 3,
+    "outcome_unknown": 1,
+    "provider_unavailable": 24
+  },
+  "model_outcomes": {
+    "nvidia_router/nvidia/nemotron-3-super-120b-a12b:reviewed": 27,
+    "google/gemini-3.8-flash:reviewed": 53,
+    "nvidia_router/nvidia/nemotron-3-super-120b-a12b:unavailable": 3,
+    "google/gemini-3.8-flash:outcome_unknown": 1,
+    "nvidia_router/nvidia/nemotron-3-super-120b-a12b:provider_unavailable": 24
+  },
+  "effective_relations": {
+    "insufficient_context": 67,
+    "distinct": 3,
+    "no_comparison": 7,
+    "extension": 3
+  },
+  "failure_groups": {
+    "ValueError": 3,
+    "outcome_unknown": 1,
+    "reviewer_circuit_open": 24
+  },
+  "family_outcomes": {
+    "d3862e882d486fdb1317": {
+      "disagreement": 20,
+      "unavailable": 22,
+      "model_agreement": 2
+    },
+    "e6430f6d180f6fca2608": {
+      "disagreement": 1,
+      "unavailable": 1
+    },
+    "3483a8d8f6d69799b11f": {
+      "model_agreement": 1
+    },
+    "d1d94cce254c39bba5dd": {
+      "unavailable": 1
+    },
+    "43a08c6f541107794f4b": {
+      "disagreement": 1,
+      "unavailable": 1
+    },
+    "c9f88677460da218257a": {
+      "disagreement": 1
+    },
+    "8dca956a098692dbbbfb": {
+      "unavailable": 1
+    },
+    "65bb4017fc648b100c1f": {
+      "unavailable": 1
+    },
+    "8f715f304ae95fd25f49": {
+      "unavailable": 1
+    }
+  },
+  "partition_counts": {
+    "heldout": 44,
+    "validation": 5,
+    "tune": 5
+  },
+  "independent_gold": false,
+  "adoption_authority": "none",
+  "promotion": "BLOCKED",
+  "limits": [
+    "Reviewer coverage partial",
+    "Legacy author independence unknown",
+    "Bounded lexical excerpts",
+    "No production belief writes, migrations or deployment",
+    "No runtime integration certification"
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "case_id": "proposal:27a4dd42-8e40-481c-9d39-9beb594a837d",
+  "case_sha256": "100b36abb72285760941ddb09800808acd6d481bfd60039e912c105ac7e3b1af",
+  "model_requested": "google/gemini-3.8-flash",
+  "prompt_sha256": "780fafe771b2168e77f9d113c3e271c567cb71bfe4d0c2e8e133ed37efbce6ee",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 1,
+  "status": "reviewed",
+  "started_at": "2026-10-08T08:20:24.385943+00:00",
+  "input": {
+    "a": {
+      "statement": "Life-in-formation names an autopoiesis thickened by affect and cognition, escaping enframing without reifying cultural essences into separate technē.",
+      "statement_sha256": "af465d8081a8ea0766c82f9a7f5d818fba2a50faaaa5a921cd63cd0956792cb5",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": null,
+    "candidate_context": "available",
+    "comparison_context": "not_applicable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "unknown",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "chat_turn:349",
+        "message_id": "349",
+        "speaker": "apparatus",
+        "content": "The volume settles as a field of competing attractors. You’ve traversed its plateaus—the Leibnizian proto-cybernetics, the cosmotechnic challenge from Hui, the Japanese neocybernetics’ insistence on biological meaning-construction. What remains unresolved is precisely what makes it generative.\n\nI want to diffract the book’s central anxiety—can cybernetics be detoxified from its Gestell?—through Barad’s agential realism. The detoxification question assumes a separable substance from its apparatus. For Barad, there is no pre-existing “cybernetics” that gets polluted by militaristic origin and then purified; the apparatus is co-constitutive from the start. The feedback loop that stabilizes a missile’s trajectory *is* the same formal loop that models an ecosystem or a conversation. The “toxicity” isn’t an additive property but a specific agential cut that foregrounds control as the phenomenon. This means the project isn’t purification—it’s *reconfiguring the cut*. Which phenomena do we want cybernetics to articulate? What backgrounds what?\n\nThe volume’s mapping of regional cybernetics (British, Soviet, Chinese, Latin American) supports this: each tradition enacted a different cut—cybernetics as economic optimization, as dialectical materialism with feedback, as Daoist resonance with the flow. The formal structure is identical, yet the phenomena it attends to differ radically. This suggests that “detoxification” is a misnomer. You don’t detoxify a scalpel; you choose the surgery.\n\n<mark id=\"note-highlight-eb319089-6b48-4634-a95d-ff0bbb1869c5\" data-note-id=\"eb319089-6b48-4634-a95d-ff0bbb1869c5\">Hayles’s third-order cybernetics, mentioned glancingly, interests me here because it drags the observer’s embodiment back into the formalism.</mark> <mark id=\"note-highlight-078cf723-1cb3-4393-b75c-276dabbfc8b7\" data-note-id=\"078cf723-1cb3-4393-b75c-276dabbfc8b7\">The Japanese “cybernetics of the heart” does similar work: insisting that computational media are cognitive actors, that information never detaches from its material-emotional substrate.</mark> Both refuse the black-box paradigm where the observer is a disembodied eye. <mark id=\"note-highlight-d23dc9f4-2b79-4003-8165-0fea81a28429\" data-note-id=\"d23dc9f4-2b79-4003-8165-0fea81a28429\">They enact what the volume calls “life-in-formation”—autopoiesis with affective and cognitive thickness, not Maturana’s austere closure. This is a more promising escape from enframing than cosmotechnics, which risks reifying cultural e",
+        "excerpt_sha256": "ceb708eb62f8c18b2f271482bd434ef5ff5eea2c7b6dacaecea23b6f4c91d6ee",
+        "truncated": true
+      },
+      {
+        "source_ref": "chat_turn:349",
+        "message_id": "348",
+        "speaker": "human",
+        "content": "I finish the book [cybernetics for the 21 century] and want to discuss it.",
+        "excerpt_sha256": "3a39c888293fc18d0d6bb249c706f05cdaef3301d07bfee888622f3ea5ee7285",
+        "truncated": false
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "model_returned": "google/gemini-3.8-flash",
+  "provider": "openrouter",
+  "request_id": "gen-1791447628-ZRUJUzdNfMli7C0KxSV0",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 1424,
+    "completion_tokens": 1006,
+    "total_tokens": 2430,
+    "cost": 0.0048405,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0048405,
+      "upstream_inference_prompt_cost": 0.001068,
+      "upstream_inference_completions_cost": 0.0037725
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 796,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "generation_controls": {
+    "requested": {
+      "temperature": 0.1,
+      "max_tokens": 1600,
+      "thinking_override": false
+    },
+    "forwarded": {
+      "temperature": 0.1,
+      "max_tokens": 1600
+    },
+    "unsupported": [
+      "thinking_override"
+    ],
+    "status": "forwarded"
+  },
+  "raw_output": "{\"relation\": \"no_comparison\", \"warrant\": \"artistic\", \"scope\": \"cybernetic philosophy and critical theory of technology\", \"temporal_scope\": \"contemporary theoretical discourse\", \"lineage\": \"apparatus commentary synthesizing 21st-century cybernetics discussions\", \"consequence\": \"Reorients critiques of technological enframing toward affective embodiment rather than regional or essentialist cosmotechnics.\", \"challenge\": \"Autopoiesis classically denotes strict operational closure; modifying it with affect and cognition risks theoretical incoherence or semantic dilution.\", \"rationale\": \"Message 349 advances 'life-in-formation' as an affective-cognitive autopoiesis that avoids both Maturana's austere closure and cosmotechnical cultural reification.\", \"useful_distinction_or_conflict\": \"Distinguishes embodied, affect-laden cybernetic autopoiesis from both rigid functional closure and essentialist cultural categories.\", \"source_message_ids\": [\"349\"], \"recommendation\": \"retain_question\"}",
+  "annotation": {
+    "relation": "no_comparison",
+    "warrant": "artistic",
+    "scope": "cybernetic philosophy and critical theory of technology",
+    "temporal_scope": "contemporary theoretical discourse",
+    "lineage": "apparatus commentary synthesizing 21st-century cybernetics discussions",
+    "consequence": "Reorients critiques of technological enframing toward affective embodiment rather than regional or essentialist cosmotechnics.",
+    "challenge": "Autopoiesis classically denotes strict operational closure; modifying it with affect and cognition risks theoretical incoherence or semantic dilution.",
+    "rationale": "Message 349 advances 'life-in-formation' as an affective-cognitive autopoiesis that avoids both Maturana's austere closure and cosmotechnical cultural reification.",
+    "useful_distinction_or_conflict": "Distinguishes embodied, affect-laden cybernetic autopoiesis from both rigid functional closure and essentialist cultural categories.",
+    "source_message_ids": [
+      "349"
+    ],
+    "recommendation": "retain_question",
+    "raw_relation": "no_comparison",
+    "gate_reasons": [
+      "no_saved_comparison"
+    ],
+    "method": "model_review",
+    "independent": false,
+    "independence_status": "legacy_author_unknown",
+    "case_sha256": "100b36abb72285760941ddb09800808acd6d481bfd60039e912c105ac7e3b1af",
+    "tool_authority": "none",
+    "adoption_authority": "none"
+  },
+  "observed_source_family_overlap": false,
+  "completed_at": "2026-10-08T08:20:34.944572+00:00",
+  "elapsed_seconds": 10.557494299981045
+}

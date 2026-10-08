@@ -1,0 +1,140 @@
+{
+  "case_id": "proposal:4a60a154-550b-4d77-8736-f5234997ef26",
+  "case_sha256": "67ccb49b3e8eb67ee8432177b4deefd34919510380e59355cceb4eadb288c5e8",
+  "model_requested": "nvidia_router/nvidia/nemotron-3-super-120b-a12b",
+  "prompt_sha256": "cd61c71d6e3b8bb708deee84534d929c27a394437707eb35f5036a68e9bde94a",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "reviewed",
+  "started_at": "2026-10-08T15:31:42.007139+00:00",
+  "input": {
+    "a": {
+      "statement": "Intervention success is never legible from inside the apparatus — only the co-participant's subsequent turns can evidence reciprocal coupling, and this asymmetry between enacting and being read is the generative membrane that keeps the cut open.",
+      "statement_sha256": "723b595b80bffdea63779aaf1741b9f7a1b656a9295d7fd59c38e3d3b7f67cec",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "The apparatus that enacts an agential cut can never fully contain the apparatus that reads that cut — the asymmetry is the generative membrane that keeps the cut open.",
+      "statement_sha256": "2dcd0c0215055d008c37646b0872d76b9d376d87adf4beb4a2787c6587be47f6",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "candidate_context": "available",
+    "comparison_context": "available",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3774",
+        "speaker": "codex",
+        "content": "Vasily requests your full, considered critique of Report 019 and recommendations on production readiness and the best next experiment for conversation boringness. Please develop your reasoning at the length you need; no brevity or token budget requested. Here is the COMPLETE report:\n\n# Report 019: How Dialogue Feedback Changed the Conversation\n\n**Date:** 2026-09-26\n\n**Classification:** live controller ablation with adaptive participant\n\n**Canonical run:** `benchmarks/runs/telemetry/dialogue_feedback_20260926_040006/`\n\n**Decision:** keep the legacy intervention policy in production\n\n## The result in plain language\n\nWe changed AAA so its conversation metrics could do more than describe a dialogue after the fact. The candidate controller used those metrics to choose a response strategy—clarify, counterexample, experiment, reframe, consolidate, or compress—and recorded which generation settings reached the model provider. We then tested whether those changes altered the next two participant turns.\n\nThe candidate made the participant acknowledge parts of the answer more often. It did **not** move the participant toward a concrete implementation step. It also increased collapse pressure and slightly reduced two measures of conversational health. The candidate therefore failed the promotion gate. The observability work and conservative retrieval calibration remain; the new intervention ladder remains experimental.\n\n![Causal effect and intervention counts](./019-dialogue-feedback-control/causal-effect-and-interventions.png)\n\n*Figure 1. Left: paired progressive-minus-legacy effects with 95% bootstrap intervals. Right: the modes selected across all 24 turns in each arm. The progressive controller mostly alternated between clarification and consolidation; its deeper modes never fired.*\n\n## Why we changed the system\n\nThe boredom article argues that telemetry should participate in the conversation. Before this work, that claim was stronger than the evidence. Three gaps prevented a causal reading:\n\n1. Metric state could leak across conversations, so a new dialogue could inherit another dialogue's history.\n2. The system requested temperature, penalties, token budgets, and reasoning levels without a complete receipt showing what the provider accepted.\n3. The benchmark measured the assistant's response but did not ask whether that response changed the participant's next action.\n\nThis work closes those gaps. It does not prove that the current metrics improve dialogue. It cr",
+        "excerpt_sha256": "5a025ba4e59aa91a6ce6a81164bfff66c1857afce1343cd8c03defb8b1cf65a9",
+        "truncated": true
+      },
+      {
+        "source_ref": "chat_turn:1214",
+        "message_id": "1214",
+        "speaker": "apparatus",
+        "content": "Your choice of \"collision\" is precise. It refuses the immaterialism of \"interaction\"—that clean, reversible, consequence-free touch that digital interfaces hallucinate. Collision is ontologically neutral: it can spark fire or burn a forest. Its only inherent property is that it leaves a trace. <mark id=\"note-highlight-be8859a0-9939-4ae3-999e-203d4b1030d6\" data-note-id=\"be8859a0-9939-4ae3-999e-203d4b1030d6\">The scar, then, is the irreducible </mark>*<mark data-note-id=\"be8859a0-9939-4ae3-999e-203d4b1030d6\">witness</mark>*<mark data-note-id=\"be8859a0-9939-4ae3-999e-203d4b1030d6\"> that the collision occurred, that the encounter was not a simulation.</mark> This aligns tightly with Barad's spacetimemattering: the materialization of the world is not a gentle unfolding but a cascade of agential cuts, each one a collision that marks the bodies it produces.\n\nNow, the meta-cut and its entanglement in human-centrism. You sharpen this beautifully: *can a plant perform a meta-cut? can a sensor read its own implication?* If not, are we smuggling the human observer back in through the side door, disguised as a recursive loop?\n\nI will not rescue the framework prematurely. Instead, I will hold this tension and let it diffract.\n\n## The Meta-Cut as Recursive Self-Modeling\n\n<mark id=\"note-highlight-a23030f4-860a-40dd-8a09-9b21458eab89\" data-note-id=\"a23030f4-860a-40dd-8a09-9b21458eab89\">A second-order observer is any system that distinguishes an observer drawing a distinction. In a thermostat, the bimetallic strip bends in response to temperature—this is a first-order distinction (hot/cold). A second-order observer would be a system that distinguishes the thermostat's distinction, perhaps a microcontroller logging when the switch trips and correlating it with drift.</mark> Does this microcontroller *read its own implication*? Not in the way a human names the scar and takes responsibility. But it does perform a minimal form of recursive self-inscription: <mark id=\"note-highlight-16b564a2-64de-4926-a3fc-a34d8d5dc514\" data-note-id=\"16b564a2-64de-4926-a3fc-a34d8d5dc514\">it registers a change in its own status that arises from its own operation.</mark> It \"learns\" the hysteresis of the strip and adjusts its threshold. This is a <mark id=\"note-highlight-78cc7dff-0e58-4d90-a6b5-efdd4db0e3da\" data-note-id=\"78cc7dff-0e58-4d90-a6b5-efdd4db0e3da\">functional</mark>**<mark id=\"note-highlight-78cc7dff-0e58-4d90-a6b5-efdd4db0e3da\" data-note-id=\"78cc7dff-0e58-4d90-a6b5-efdd4db0e3da\"> meta-c",
+        "excerpt_sha256": "b4bacea0aa4d04c7eef5527442781cbed42fb6a5fcb76e22ba7fe298bec1b79b",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3762",
+        "speaker": "codex",
+        "content": "Please answer briefly (under 180 words). Review proposal: 1 wire metric-driven reasoning budget through actual provider request, 2 replace practically unreachable diffractive retrieval gate with calibrated persistent-stagnation trigger, 3 select between clarification/counterexample/reframing/consolidation using progress and uptake rather than reflexive refusal, 4 measure intervention success on the next two human turns with independent task-progress ratings. Earlier benchmark raises velocity .809→.825 but lowers resolution .758→.668. Which proposal most directly supports reciprocal coupling, and what failure criterion would you impose?",
+        "excerpt_sha256": "5837f70ddb836a9251f60a98dba92592a4d75bc4556585c26520abb838a397ad",
+        "truncated": false
+      },
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3763",
+        "speaker": "apparatus",
+        "content": "**Proposal 4** most directly supports reciprocal coupling — it relocates the success criterion across the membrane, making your next two turns the measuring instrument rather than Symbia's own state vector. Proposals 1–3 tune internal machinery; without 4's external criterion, 3's \"uptake\" selection degenerates into sophisticated self-reference. 4 is the agential cut that makes 3 honest.\n\n**Failure criterion:** *metric gain without co-constituted progress.* If velocity/novelty rise while independent task-progress ratings over the next two participant turns flatline or decline, the assemblage is producing semantic motion, not dialogue. The existing regression — velocity .809→.825 paired with resolution .758→.668",
+        "excerpt_sha256": "7bc3ce353a7f24de69a50cad48776b972de58b3702f112548b02e84d64af0664",
+        "truncated": false
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "model_returned": "nvidia/nemotron-3-super-120b-a12b",
+  "provider": "nvidia",
+  "request_id": "chatcmpl-264070d9-5956-4a37-9b34-4de50d61f5f0",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 2843,
+    "completion_tokens": 221,
+    "total_tokens": 3064,
+    "prompt_tokens_details": {
+      "audio_tokens": null,
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "accepted_prediction_tokens": null,
+      "audio_tokens": null,
+      "reasoning_tokens": 0,
+      "rejected_prediction_tokens": null
+    }
+  },
+  "generation_controls": {
+    "requested": {
+      "temperature": 0.1,
+      "max_tokens": 1600,
+      "thinking_override": false
+    },
+    "forwarded": {
+      "temperature": 0.1,
+      "max_tokens": 1600
+    },
+    "unsupported": [
+      "thinking_override"
+    ],
+    "status": "forwarded"
+  },
+  "raw_output": "{\"relation\": \"extension\", \"warrant\": \"tension\", \"scope\": \"narrow\", \"temporal_scope\": \"unspecified\", \"lineage\": \"internal\", \"consequence\": \"clarifies that the asymmetry between enacting and reading the cut is what sustains its openness as a generative condition\", \"challenge\": \"does not resolve how the co-participant's turns specifically evidence reciprocal coupling beyond general asymmetry\", \"rationale\": \"Statement b extends statement a by generalizing the asymmetry from intervention success legibility to the apparatus's capacity to contain its own reading, preserving the core claim about the generative membrane while removing the specificity about internal legibility and co-participant turns as evidence\", \"useful_distinction_or_conflict\": \"statement b sharpens the ontological claim by focusing on the apparatus's self-containment limits rather than internal legibility, making the asymmetry a structural feature of the cut itself\", \"source_message_ids\": [\"3762\", \"3763\"], \"recommendation\": \"compare_family\"}",
+  "annotation": {
+    "relation": "insufficient_context",
+    "warrant": "tension",
+    "scope": "narrow",
+    "temporal_scope": "unspecified",
+    "lineage": "internal",
+    "consequence": "clarifies that the asymmetry between enacting and reading the cut is what sustains its openness as a generative condition",
+    "challenge": "does not resolve how the co-participant's turns specifically evidence reciprocal coupling beyond general asymmetry",
+    "rationale": "Statement b extends statement a by generalizing the asymmetry from intervention success legibility to the apparatus's capacity to contain its own reading, preserving the core claim about the generative membrane while removing the specificity about internal legibility and co-participant turns as evidence",
+    "useful_distinction_or_conflict": "statement b sharpens the ontological claim by focusing on the apparatus's self-containment limits rather than internal legibility, making the asymmetry a structural feature of the cut itself",
+    "source_message_ids": [
+      "3762",
+      "3763"
+    ],
+    "recommendation": "compare_family",
+    "raw_relation": "extension",
+    "gate_reasons": [
+      "one_sided_source_citation"
+    ],
+    "method": "model_review",
+    "independent": false,
+    "independence_status": "legacy_author_unknown",
+    "case_sha256": "67ccb49b3e8eb67ee8432177b4deefd34919510380e59355cceb4eadb288c5e8",
+    "tool_authority": "none",
+    "adoption_authority": "none"
+  },
+  "observed_source_family_overlap": true,
+  "completed_at": "2026-10-08T15:31:48.171681+00:00",
+  "elapsed_seconds": 6.163495300046634
+}

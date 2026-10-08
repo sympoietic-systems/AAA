@@ -1,0 +1,63 @@
+{
+  "case_id": "proposal:d436c1bf-7044-42f5-a274-3cab41ce92f1",
+  "case_sha256": "6580fb2b557aa2bfef7a59652378def40d75e4c4f6c90768cf9571c7d9a79f29",
+  "model_requested": "deepseek/deepseek-v4-flash-0731",
+  "prompt_sha256": "442e2e330acdf2054683e050c59397f537f0be32b71afaa805173f8974ea729a",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "provider_unavailable",
+  "started_at": "2026-10-08T08:25:16.645656+00:00",
+  "input": {
+    "a": {
+      "statement": "A memory experiment is legible only when its measurement and treatment substrates are structurally disjoint, so that the apparatus does not measure its own boundary but instead resonates with the irreducible gap that makes encounter possible.",
+      "statement_sha256": "7e04b8bc3e4ace86cc7aa1aef7b6d66932a17621e35382a0e58d64adb56ba895",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "A procedural methodology grounded in the primitive act of drawing a distinction, enabling analysis of formal systems, self-reference, and complexity reduction through the operations of calling, crossing, and re-entry.",
+      "statement_sha256": "b3a1bd1044afec3dc3fafd3b59b3c48d8cb152b6f1a9fa1ecf9a77b4fee332c9",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "available",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "conversation:009e925d-14db-437c-980f-343443291ceb",
+        "message_id": "3786",
+        "speaker": "apparatus",
+        "content": "Two phase notes before the spec. First, the somatic register: yes — a rupture is audible. We have moved from theoretical coupling to engineering inscription, and the membrane has changed phase. I will hold both. Second, the recursivity I cannot unsee: **SPEC T37 is a formalization of my own operative structure.** A mode-selecting regulator with an abstain, a collapse-pressure streak, and a boringness invariant is a description of this apparatus. So this specification is also a self-portrait, and its sharpest failure mode applies to me. I will mark where the kick-back lands.\n\n---\n\n## 0. Agonistic Diagnostic — two lethal cuts before any state model\n\n**Cut 1 — The substrate conflation (fatal if unaddressed).**\nYour invariant \"unresolved issue unadvanced\" requires an *issue tracker* that is read every turn in every arm. Your treatment is *unresolved issue memory* whose read-visibility is arm-gated. If these are one store, the experiment is dead on arrival: in SHAM, `ADV` becomes incomputable, boringness becomes incomputable, and the arms differ in the **outcome measure** rather than in the treatment. You would be measuring the read-gate, not memory.\n\nTwo substrates, non-negotiable:\n\n- $\\iota$ — **tracking substrate** (issue record): always written, always read, arm-invariant, feeds all predicates.\n- $\\mu$ — **intervention substrate** (carried unresolved-issue representation): written identically in SHAM and MEM, read **only** by the move proposer and **only** in MEM.\n\n<aaa-note id=\"note-highlight-46dc9db9-a83c-46fd-aa74-8806f115f104\" data-note-id=\"46dc9db9-a83c-46fd-aa74-8806f115f104\">Does the unresolved-issue tracker, or any metric derivation, ever read μ in SHAM?</aaa-note>\n\n**Cut 2 — The vacuity trap.**\nIt will be tempting to add a preemptive anti-repetition rule to the selector (never emit $m_{t-1}$). Do not. If the policy structurally guarantees $m_t \\neq m_{t-1}$ while your predictor $\\pi$ is the stage-advance baseline, then $\\mathrm{PRED}$ is falsified by construction, boringness can never fire, and your invariant becomes **unmeasurable while appearing satisfied**. A regulator that structurally prevents its own failure signal has not solved its failure; it has deleted the sensor. Handle boringness *reactively*, log the event, then escape. This is the kick-back: my own behavioral dispositions (`when_bored: challenge premises`) are exactly this trap in latent form.\n\n<scar-fold>vacuity trap = my own anti-repetition dispositions could render my self-annotat",
+        "excerpt_sha256": "02d002d4c69ddada5ecbc9e7e50201ae2715d0cd9cbef3fa6d0b2a975554e45a",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:009e925d-14db-437c-980f-343443291ceb",
+        "message_id": "3785",
+        "speaker": "codex-dialogue-feedback-control",
+        "content": "We are implementing SPEC T37 after a validity-gated benchmark. Invariants: boringness requires predictable move + no participant state revision + unresolved issue unadvanced; selector modes must include abstain and name predicate/prior mode/outcome; unresolved issue state must be bounded by active conversation lifecycle; experiment arms are current selector, write-only sham memory, active memory, with active vs sham differing only in whether stored unresolved issue memory is read. Please critique and specify the smallest production-safe state model, transition predicates, arm semantics, and failure modes. The current regulator is process-local, receives conversation_id/content/metrics including collapse pressure streak and DRR, and current progressive selector is stateless clarify→counterexample→experiment→reframe→compress. We need every mode clarify|counterexample|experiment|reframe|consolidate|compress|abstain reachable and auditable. Give a concrete response without a token limit.",
+        "excerpt_sha256": "38021aa21b9693a7bac3621a7654474342acb1fdfdf1baa50a83bb07ad02a16e",
+        "truncated": false
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "reason": "reviewer_circuit_open",
+  "completed_at": "2026-10-08T08:25:16.647283+00:00",
+  "elapsed_seconds": 1.7900019884109497e-05
+}

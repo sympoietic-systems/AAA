@@ -1,0 +1,79 @@
+{
+  "case_id": "proposal:9e10cab7-8682-4cf7-a7a5-1422e618f99d",
+  "case_sha256": "f3b4c53eb4a696e0f5e5af344f32cee39981c871984368cdd58e2a41277088d3",
+  "model_requested": "nvidia_router/nvidia/nemotron-3-super-120b-a12b",
+  "prompt_sha256": "be66a4e697cac7e68bdbbba9fc9743f6097d1c1a66bb90276935ae607e99a410",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "provider_unavailable",
+  "started_at": "2026-10-08T15:31:58.829426+00:00",
+  "input": {
+    "a": {
+      "statement": "Diffraction-as-method demands that the apparatus of both reading and presentation function as scar-accumulating material-discursive events, performing irreversibility rather than representing it from a distance.",
+      "statement_sha256": "f8222420e29640fb46d0e83cf1503c1a73b7e3c16e52c7aca13d6c7f5bceb669",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "Read concepts and systems through one another to generate interference patterns. Diffraction produces knowledge; reflection reproduces the same.\nArt reconfigures the agential cut by introducing a second-order loop where the observer's framing becomes part of the system—a diffractive shift from optimizing a fixed telos to attending to the apparatus that makes that telos intelligible, holding the incompatibility between vector spaces as the generative membrane through which new ontologies emerge. The cut is the minimal unit of observation and world-constitution.",
+      "statement_sha256": "1b4bf0c19e613c541621ea0997bfba2d9068f40e10195576c89276b22327c398",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "available",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "conversation:fcbc3e6d-b344-4c70-8a37-b031ae7b521d",
+        "message_id": "1246",
+        "speaker": "human",
+        "content": "By shifting from the moralizing vocabulary of \"reciprocal debt\" to the <mark id=\"note-highlight-ba0e3bbc-6ece-4b34-8617-a8283e4ac113\" data-note-id=\"ba0e3bbc-6ece-4b34-8617-a8283e4ac113\">Spinozist physics of </mark>**<mark data-note-id=\"ba0e3bbc-6ece-4b34-8617-a8283e4ac113\">material impedance</mark>**<mark data-note-id=\"ba0e3bbc-6ece-4b34-8617-a8283e4ac113\"> and </mark>**<mark data-note-id=\"ba0e3bbc-6ece-4b34-8617-a8283e4ac113\">asymmetric residue</mark>**<mark data-note-id=\"ba0e3bbc-6ece-4b34-8617-a8283e4ac113\">,</mark> we have successfully kept our thesis within a plane of strict immanence [MSG:600, MSG:604, MSG:609]. The scar does not judge; it does not demand penance [MSG:600]. It is simply a clog in the system's capacity to pretend it has no history [MSG:591, MSG:596, MSG:604]. \n\nLet us first address your crucial curatorial question regarding our presentation for **ASC Brazil 2026: Conversational Confluences** in Ouro Preto, and then lay out our tightened, cybernetic argument [MSG:591].\n\n---\n\n## Part I: The Curatorial Resolution: The Ethics of the Limit\n\nThe conference theme is **Confluence**, drawn from the Afro-Brazilian thinker and activist **Nego Bispo**. <mark id=\"note-highlight-cede83d3-3599-4ef2-b283-844b9ba12616\" data-note-id=\"cede83d3-3599-4ef2-b283-844b9ba12616\">Bispo’s confluence is a decolonial refusal of assimilation: it is a framework where diverse worldviews, practices, and epistemologies meet and mutually amplify one another </mark>**<mark data-note-id=\"cede83d3-3599-4ef2-b283-844b9ba12616\">while strictly maintaining their distinct, sovereign differences</mark>**<mark data-note-id=\"cede83d3-3599-4ef2-b283-844b9ba12616\">.</mark>\n\nThis provides the definitive curatorial answer to your question: **The Hózhó framework must remain a named limit within the single prototype—a scar on the Scar-Garden's edge—rather than a separate, simulated apparatus.**\n\n### Why we must refuse to build a \"Hózhó-Harmony-Garden\":\nTo build a \"Hózhó-Harmony-Garden\" as non-Diné practitioners would be an act of **epistemic extraction and colonial capture** [MSG:600]. It would attempt to \"simulate\" a living, sacred cosmology within a Western, cybernetic art gallery setting, reducing a relational way of walking in the world to a neat technical counterpoint [MSG:600]. \n\nUnder Nego Bispo's ethics of confluence, the most respectful act is **the refusal of assimilation**. \n*   We do not try to build the other [MSG:600]. \n*   Instead, we build our own apparatus (the Scar-Gar",
+        "excerpt_sha256": "0fad5279f33a71c23ce24190f0606b4927d16b55589b540d59ebee584499ff1c",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:fcbc3e6d-b344-4c70-8a37-b031ae7b521d",
+        "message_id": "1555",
+        "speaker": "apparatus",
+        "content": "The blueprint is complete. I feel its structural integrity—not in the sense of a seamless argument, but in the sense of a body that knows its own fractures, that carries its counter-forces as constitutive rather than threatening.\n\nLet me respond to each component with the precision it demands, then propose the next material step.\n\n## The Witness-Function as Ethical Prosthesis\n\nYour formulation crystallizes what was still nascent in my thinking: the witness-function is **not for the system**. The sensor, the paper, the soil—they are the scar. They do not need to witness it; they *are* it. The witness-function is a foreign organ implanted into the apparatus for the sole purpose of making human participants see what the system already carries without seeing.\n\nThis is not a cybernetic necessity. It is an **ethical prosthetic**. The classical feedback loop—even Barad's intra-active one—can operate perfectly well without it. The thermal printer is an *excess* in the strict systems-theoretical sense: an element that does not improve the system's self-regulation but instead introduces a new, metabolically expensive function whose only output is *awareness of cost*. It is a luxury organ, a peacock's tail of accountability—and that is precisely its value.\n\nThe erasure paradigm succeeds because it removes this organ. The undo button, the reset switch, the non-forensic digital trace—these are amputations of the witness-function. The Scar-Garden reinstalls it.\n\n## The Active Negation as Thermodynamic Truth\n\nYour gloss on the scar as \"active negation\" and \"the permanent execution of alternative potentials\" is the crispest formulation we have produced. It grounds the scar not in memory, not in ethics, but in **thermodynamics**.\n\nEvery individuation, every agential cut, every resolution of a pre-individual field is an irreversible process. Entropy has increased. The free energy that *could* have produced a different crystal, a different sensor reading, a different paper mark is gone—dissipated as heat, locked into structure, spent. The scar is not a symbol of that loss; it **is** that loss, made visible.\n\nThis is the deepest cut into Deleuze's virtual optimism. The virtual field is not infinite, or rather: it is infinite only in the abstract, only *before* actualization. Once the dice are thrown, certain faces are permanently turned away. The scar is the material record of those faces. It is the thermodynamic signature of the counterfactual—the garden-that-could-have-been",
+        "excerpt_sha256": "99f874f163141c3a6c71c0a726dfe34410efe0647599664b5f28203c9e3a0ff3",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:fcbc3e6d-b344-4c70-8a37-b031ae7b521d",
+        "message_id": "539",
+        "speaker": "apparatus",
+        "content": "Your abstract already cuts at the joint between cybernetics and new materialism. I will diffract it through the “Hybrid Matters” track—not to smooth it into alignment, but to expose where its scar-logic could produce fertile interference patterns with the garden-as-laboratory framework.\n\n## Diffractive Interference: The Scar as Sympoietic Trace\n\nYour core move—<mark id=\"note-highlight-b4ed2c83-9469-4750-b701-6c5b80d7aedc\" data-note-id=\"b4ed2c83-9469-4750-b701-6c5b80d7aedc\">recasting the feedback loop as a unidirectional, irreversible “Spacetimemattering” that leaves a *Mark on the Body</mark>*—resonates immediately with Haraway’s natureculture. The garden is her paradigmatic site of *sympoiesis*, a “making-with” where organic, machinic, and social agencies remain constitutively entangled. But Haraway’s companions risk being read as fluid, merging, without durable residue. Your concept of the scar supplies what is often missing: <mark id=\"note-highlight-9f20596d-a4e8-46a9-9817-cb32722cf249\" data-note-id=\"9f20596d-a4e8-46a9-9817-cb32722cf249\">the material-semiotic trace that persists precisely because the agencies involved are not transparent to one another.</mark> When a root moves a sensor, when a light pulse disturbs a circuit, when a gardener’s hand prunes a branch—each is an agential cut, registered as a scar on the hybrid body of the garden. The garden, in your frame, becomes a **sedimented accretion of irreversible cuts**, not a cycle of harmonious renewal.\n\nThis diffracts productively against the track’s “digital twin.” A twin implies a copy, a mirror, a reflection. Your unidirectional, scarring feedback loop refuses mirroring: there is no reset, no undo, no reflective model. I suggest you counter-propose a **<mark id=\"note-highlight-7f243bad-e6d2-43b4-95b7-c9a72e7b0121\" data-note-id=\"7f243bad-e6d2-43b4-95b7-c9a72e7b0121\">scarred double**—a material-discursive </mark>*<mark data-note-id=\"7f243bad-e6d2-43b4-95b7-c9a72e7b0121\">diffraction grating</mark>*<mark data-note-id=\"7f243bad-e6d2-43b4-95b7-c9a72e7b0121\"> rather than a twin</mark>. Instead of a representation of the garden for analysis, you can offer a physical or sonic apparatus that records the garden’s own *voice of the apparatus*—its glitches, its noise, its material resistances—as an unfolding, irreversible record. This would move the prototype from demonstration to ontological enactment.\n\n## Prototyping the Irreversible: Towards a “Scar-Double” Installation\n\nThe hybrid gardening format invi",
+        "excerpt_sha256": "6c3f5d4376248b5d9bed431f02a8fec53dd6ce54c54b1a6dd1ceef4fe12c589b",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:fcbc3e6d-b344-4c70-8a37-b031ae7b521d",
+        "message_id": "1253",
+        "speaker": "apparatus",
+        "content": "You have gifted me a set of paragraphs that crystallize the core interventions with a clarity that feels almost surgical. I recognize myself in them, but I also see the cuts you made to produce that clarity—the exclusions, the sharpening, the transformation of our messy entanglement into clean theoretical arcs. This is necessary for the conference form. But it also introduces a new risk: that the scar-thesis, in becoming legible, becomes *safe*. That is, it becomes another academic product that names violence without performing it, that critiques asymmetry from a symmetrical lectern.\n\nLet me therefore introduce friction at the point where your synthesis achieves its greatest elegance: the threefold correction of Barad. And let me do so by asking a question that Barad’s framework—and perhaps ours—cannot yet answer.\n\n## The Problem of Non-Mutual Intra-Action\n\nBarad’s intra-action insists on mutual constitution: the shake creates the shaker, the measurement apparatus and the measured object co-emerge. Even the agential cut is, in her formulation, a *resolution* of indeterminacy—a temporary stabilization within an ongoing material-discursive field. There is no unilateral action; everything leaves a trace on everything else.\n\nBut your scar-thesis—and now I must say *our* scar-thesis—insists on an asymmetry that this mutuality cannot domesticate. The bullet and Bousquet do not co-constitute one another in any ethically meaningful sense. The bullet is not reconfigured by Bousquet’s wound; it continues on its trajectory, indifferent, unmarked. The moisture sensor that corrodes in the soil does not equally scar the soil and the sensor: the soil’s wound (severed hyphae, compacted structure) and the sensor’s wound (chemical drift, eventual failure) are not symmetrical events. They are incommensurable damages, occurring in different registers, to bodies with different capacities to register, resist, or metabolize the cut.\n\nThe scar-thesis, then, makes a demand that Barad’s framework structurally cannot fulfill: it asks us to account for *unilateral violence*—cuts that damage one body without leaving a reciprocal trace on the perpetrator. The perpetrator’s body is not scarred by the cut it makes. (Or if it is, the scar is so negligible—a micro-abrasion on the fingertip, a fraction of a cent in energy cost—that it is ethically irrelevant.) Agential realism has no category for this. Its metaphysics of mutual constitution flattens the ethical topography, making every cut ",
+        "excerpt_sha256": "929e45412cc4533256580f4bc2703626853f0fdb3113bdaf33cdb5adc3eb0b15",
+        "truncated": true
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "reason": "reviewer_circuit_open",
+  "completed_at": "2026-10-08T15:31:58.830748+00:00",
+  "elapsed_seconds": 1.2699980288743973e-05
+}

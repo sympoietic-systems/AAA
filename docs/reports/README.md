@@ -65,3 +65,5 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 048: Beliefs v2 executable review contracts](048-belief-v2-contracts/README.md)
 
 - [Report 049: Beliefs v2 source recovery and independent review packet](049-belief-v2-review-corpus/README.md)
+
+- [Report 051: Beliefs v2 automated provisional review](051-belief-v2-automated-review/README.md)

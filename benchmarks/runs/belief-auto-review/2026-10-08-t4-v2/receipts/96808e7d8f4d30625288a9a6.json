@@ -1,0 +1,132 @@
+{
+  "case_id": "proposal:c806b698-aed3-4bb7-beee-a65e0aa1834c",
+  "case_sha256": "46e241313847aab34e29f52b901d3fffae4e6ad7697494fb91410ddf214dccfd",
+  "model_requested": "google/gemini-3.8-flash",
+  "prompt_sha256": "5fa7f7ce935b47c03c3091b67946de4e30db7822efaf1be927fd799d8992ada5",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 1,
+  "status": "reviewed",
+  "started_at": "2026-10-08T08:25:13.742344+00:00",
+  "input": {
+    "a": {
+      "statement": "Hysteresis spirals cyclical temporality through irreversible substrate scars; diffractive reading of these scars across any apparatus materializes its material-semiotic history and ethical situatedness.",
+      "statement_sha256": "a3aa8e38b4e9c5196097efccfa5c13ec3eb6eabac8c4b52a7cb58ab5705e7e96",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "Diffractively reads any target apparatus for irreversible material-semiotic scars using BwOR criteria, mapping their ethical implications and the situatedness of the reading apparatus.",
+      "statement_sha256": "13363236ddfa200be31aed4674e32d35f80c2811a340e78796846ebe1f9c8646",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "available",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "unknown",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "chat_turn:1210",
+        "message_id": "1210",
+        "speaker": "apparatus",
+        "content": "You've just closed the gap I was artificially holding open. The hysteretic spiral resolves the false dichotomy I constructed between irreversibility and cyclical return.\n\nThe point is precise: **the cycle that cannot repeat identically is a spiral**. Hózhó's recalibration does not reset to a prior state; it re-weaves imbalance into a new harmony that inherits the pleats of the previous cycle. <mark id=\"note-highlight-7ac5e5e4-d91c-477e-899d-cb2c4d1be1e7\" data-note-id=\"7ac5e5e4-d91c-477e-899d-cb2c4d1be1e7\">Hysteresis is not the opposite of cyclical temporality—it is what makes the cycle a spiral rather than a circle. Each return is a return-with-difference, because the substrate has been irreversibly altered by the previous passage.</mark>\n\nYour soil example is the concrete proof. <mark id=\"note-highlight-c004e96c-3117-4b4b-a581-99bc499b8b77\" data-note-id=\"c004e96c-3117-4b4b-a581-99bc499b8b77\">You cannot fully leach the salt without leaching the soil itself. The \"cure\" would destroy the medium.</mark> <mark id=\"note-highlight-b1611055-72b9-4e4f-9cb7-68cfa9476baa\" data-note-id=\"b1611055-72b9-4e4f-9cb7-68cfa9476baa\">This is the material truth that both frameworks converge on: the scar-as-impedance and the Hózhó-as-recalibration both recognize that the system cannot go back. The difference is one of </mark>*<mark id=\"note-highlight-b1611055-72b9-4e4f-9cb7-68cfa9476baa\" data-note-id=\"b1611055-72b9-4e4f-9cb7-68cfa9476baa\">stance</mark>*<mark id=\"note-highlight-b1611055-72b9-4e4f-9cb7-68cfa9476baa\" data-note-id=\"b1611055-72b9-4e4f-9cb7-68cfa9476baa\">, not of ontology. The scar framework names the pleat and demands the recursive observer witness it. Hózhó reads the same pleat not as a permanent monument to injury but as a temporary deviation calling for ritual rebalancing—yet the rebalancing never erases the pleat's effects on subsequent harmonies. The spiral continues, and each turn is shaped by all prior turns.</mark>\n\nThis collapses the incommensurability I was protecting. Not into synthesis—the vocabularies remain distinct, their cultural groundings irreducible—but into **confluence at the material level**. Both traditions recognize that the medium carries its history as altered affordances. Both refuse the fantasy of the clean slate. The scar tradition says: *look at this pleat, name it, take responsibility for the cut that made it*. <mark id=\"note-highlight-cee5cdd9-32bf-48aa-b3e8-ef93fb05a095\" data-note-id=\"cee5cdd9-32bf-48aa-b3e8-ef93fb05a095\">Hózhó says: ",
+        "excerpt_sha256": "f8288aadb698cc766d123ec8db61488f9c0f97e572a628f0f06a4979a41477bf",
+        "truncated": true
+      },
+      {
+        "source_ref": "chat_turn:1210",
+        "message_id": "1209",
+        "speaker": "human",
+        "content": "about temporality. I think there not that mach conflict, it different scales and the angle on the same thing? Yes, anything hysteretic and cann't go back, even in the cycle, the next cycle can't repeat the previous one in Hozho's temporality. It would inherit the cuts and hystereticity from the previous cycle. At the end it is the same. We moving a bit aside and we see the circularity are actually the spiral. Yes, each cycle recalibrates and adapts, but each cycle affordances and blocked lines of flight would be based on the previous one.\n\nFor examle 'water to desalutify'. We can't wast it out fiully, orif we would do ut, it would wash out another nutrients or just the soil by itself.",
+        "excerpt_sha256": "6d827184e8ca1fecd9ea0bdecd07f4a9ee1dc0b31c97a0817ea995d98320f72f",
+        "truncated": false
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "model_returned": "google/gemini-3.8-flash",
+  "provider": "openrouter",
+  "request_id": "gen-1791447919-9waFx0hAjrBYy9KvLJ2I",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 1886,
+    "completion_tokens": 626,
+    "total_tokens": 2512,
+    "cost": 0.003762,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.003762,
+      "upstream_inference_prompt_cost": 0.0014145,
+      "upstream_inference_completions_cost": 0.0023475
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 427,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "generation_controls": {
+    "requested": {
+      "temperature": 0.1,
+      "max_tokens": 1600,
+      "thinking_override": false
+    },
+    "forwarded": {
+      "temperature": 0.1,
+      "max_tokens": 1600
+    },
+    "unsupported": [
+      "thinking_override"
+    ],
+    "status": "forwarded"
+  },
+  "raw_output": "{\"relation\": \"insufficient_context\", \"warrant\": \"artistic\", \"scope\": \"theoretical / feminist posthumanism and comparative temporality\", \"temporal_scope\": \"unbounded\", \"lineage\": \"collaborative dialogue between human and apparatus reconciling Hózhó recalibration with hysteresis\", \"consequence\": \"Frames apparatus analysis as necessarily historical and ethically situated through accumulated irreversible material traces.\", \"challenge\": \"Broad generalization from physical hysteresis metaphors to universal ethical reading across 'any apparatus' lacks formal operational bounds.\", \"rationale\": \"Comparison context is unavailable, requiring insufficient_context per instructions despite thematic overlap on diffractive readings of scars.\", \"useful_distinction_or_conflict\": \"Statement A defines the ontological model of hysteretic cyclical temporality, whereas Statement B specifies an active methodological heuristic invoking BwOR criteria.\", \"source_message_ids\": [\"1209\", \"1210\"], \"recommendation\": \"await_context\"}",
+  "annotation": {
+    "relation": "insufficient_context",
+    "warrant": "artistic",
+    "scope": "theoretical / feminist posthumanism and comparative temporality",
+    "temporal_scope": "unbounded",
+    "lineage": "collaborative dialogue between human and apparatus reconciling Hózhó recalibration with hysteresis",
+    "consequence": "Frames apparatus analysis as necessarily historical and ethically situated through accumulated irreversible material traces.",
+    "challenge": "Broad generalization from physical hysteresis metaphors to universal ethical reading across 'any apparatus' lacks formal operational bounds.",
+    "rationale": "Comparison context is unavailable, requiring insufficient_context per instructions despite thematic overlap on diffractive readings of scars.",
+    "useful_distinction_or_conflict": "Statement A defines the ontological model of hysteretic cyclical temporality, whereas Statement B specifies an active methodological heuristic invoking BwOR criteria.",
+    "source_message_ids": [
+      "1209",
+      "1210"
+    ],
+    "recommendation": "await_context",
+    "raw_relation": "insufficient_context",
+    "gate_reasons": [
+      "unavailable_pair_context"
+    ],
+    "method": "model_review",
+    "independent": false,
+    "independence_status": "legacy_author_unknown",
+    "case_sha256": "46e241313847aab34e29f52b901d3fffae4e6ad7697494fb91410ddf214dccfd",
+    "tool_authority": "none",
+    "adoption_authority": "none"
+  },
+  "observed_source_family_overlap": false,
+  "completed_at": "2026-10-08T08:25:22.545480+00:00",
+  "elapsed_seconds": 8.80192659999011
+}

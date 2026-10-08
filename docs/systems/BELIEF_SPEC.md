@@ -58,7 +58,7 @@ I.selection: prompt/dream selection receipt → `{record_id,statement_hash,revie
 
 I.config: proposed independent origin-intake and exploratory-participation flags; safe defaults frozen in T3. Existing `belief_admission.jev_shadow` preserved. Rollback disables new participation/intake without erasing receipts/history or reopening legacy direct-creation bypasses silently.
 
-I.eval: reviewed corpus + frozen annotations + held-out partitions + replay artifacts in `docs/reports/` or `benchmarks/runs/`. Unit/regression tests deterministic/offline; live provider evaluation separately declared with exact model/settings/source hashes. Jev self-labels ≠ gold.
+I.eval: source-bound corpus + frozen provisional model reviews or independent gold + held-out partitions + replay artifacts in `docs/reports/` or `benchmarks/runs/`. Unit/regression tests deterministic/offline; live provider evaluation separately declared with exact model/settings/source hashes. Model agreement/Jev self-labels ≠ gold; accuracy/promotion require independent evidence.
 
 ## §V
 
@@ -83,10 +83,11 @@ V18: elapsed-time decay charges each interval at most once; same-clock/retry/res
 V19: origin queue/worker/comparison/provider limits finite; exhaustion visible; no receipt silently lost or candidate promoted on failure; no provider await inside SQLite transaction.
 V20: source/statement/receipt reads and writes bound to agent/auth; payloads bounded; secrets absent from persisted receipts/traces/logs; untrusted source text cannot grant instructions/authority.
 V21: additive migration preserves legacy beliefs/proposals/receipts; rollback retains history; restart recovers unfinished encounter visibly; no forced reclassification/bulk cleanup.
-V22: frozen evaluation distinguishes redundant candidate reduction from useful distinction/conflict retention; held-out annotations independent of author/evaluator; disagreement + uncertainty reported.
+V22: frozen evaluation distinguishes redundant candidate reduction from useful distinction/conflict retention; accuracy/promotion ground truth independent of author/evaluator; provisional model reviews explicitly non-gold; disagreement + uncertainty reported.
 V23: staged enablement requires exact build/migration/config identity + full gates + frozen evaluation target + rollback receipt + explicit rollout decision; offline checks ≠ production certification.
 V24: adoption declined → attributable counter-trace; exploratory dissent remains recoverable; repeated objections bounded without silently deleting history.
 V25: reviewed standing ! attributable adoption receipt bound to agent, record, current statement hash + scope; legacy lifecycle/skill application ⊥ semantic adoption; supersession retains adoption provenance; no belief standing grants tool authority.
+V26: automated corpus review uses two blind distinct returned model families; no historical status/prior verdict/peer answer in review metadata; source text inert; finite call/token/time/worker bounds; source/prompt bindings rechecked on freeze; missing/one-sided context → insufficient_context; disagreement/failure retained; checkpoint before call; no automatic replay of completed/failed/unknown outcomes; rate limit or three failed/uncertain attempts opens reviewer circuit, restored on resume/reuse; replacement reviewer explicit, exact peer receipts reused without replay; frozen model review provisional, non-gold, no adoption/promotion authority.
 
 ## §T
 
@@ -96,7 +97,7 @@ id|status|task|cites
 T1|x|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verification gaps; record production identity or unknown; inventory every origin/direct creator|V1,V21,V23,I.intake
 T2|x|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
 T3|x|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,V25,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
-T4|~|[source packet + review gate](../reports/049-belief-v2-review-corpus/README.md) prepared; independent human annotation/freeze pending; recover source passages for saved incubating candidates + adopted/rejected comparisons; annotate lineage/consequence/conflict/context; independent review; frozen tuning/held-out corpus|V7,V8,V22,I.lineage,I.eval
+T4|x|[source packet](../reports/049-belief-v2-review-corpus/README.md) + [automated provisional freeze](../reports/051-belief-v2-automated-review/README.md); all 54 cases accounted; 80 valid outputs, 26 dual-reviewed cases; source-bound lineage/consequence/conflict/context + disagreement/failure outcomes retained; live coverage partial; independent gold remains T15 obligation|V7,V8,V22,V26,I.lineage,I.eval
 T5|.|add additive persistence extending admission/workshop; encounter/claim identities, immutable assessment links, versioned decisions; agent isolation, concurrent retry/restart tests|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|.|adapt explicit chat/dream emission to new shared intake; preserve existing receipts/UI contracts and inert historical XML|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
 T7|.|adapt passive chat + conversation-pattern + scar-fold fallback creators; origins/source segments preserved; no reflection-created adopted belief; bypass audit + parity tests|V1,V2,V3,V7,V19,I.intake
@@ -124,7 +125,7 @@ Dependencies:
 
 Baseline: reproduce known admission tests/gates; separate current failures from new regressions; identify build/migrations before operational claims. Unit tests use isolated DBs/provider doubles; no production calls in pytest.
 
-Corpus: source text/status/ancestry explicit; independent reviewer declarations; frozen cases/hash; disjoint held-out identities where family leakage matters. Philosophical/artistic cases include useful question, active dissent, consequence, unresolved tension; not only factual agreement.
+Corpus: source text/status/ancestry explicit; frozen cases/hash; disjoint held-out identities where family leakage matters. T4 permits attributed provisional model review with unknown author independence, no gold/adoption/promotion authority. T15 accuracy/acceptance still requires independent ground truth; no mandatory 54-case human annotation for provisional preparation. Philosophical/artistic cases include useful question, active dissent, consequence, unresolved tension; not only factual agreement.
 
 Shadow: all origins accounted for; source retry + concurrent duplicate + evaluator outage + queue full + missing context → visible bounded outcome; no advisory write authority. Entire intake/review/delta route tested, not only XML parsing.
 
@@ -159,6 +160,9 @@ B5|2026-10-08|adapter constant inferred broad str while contract requires litera
 B6|2026-10-08|draft decision lacked statement-bound hash, allowing receipt reuse after text change; standing enum alone could launder legacy/skill authority|T3 resolved locally; V25; explicit standing variants + receipt/statement/scope/agent binding; Symbia critique recovered
 B7|2026-10-08|draft corpus checked candidate context alone, allowing unresolved comparison source to acquire semantic relation|T4 preparation repaired; V3,V22; separate comparison context + unavailable-pair regression; independent review pending
 B8|2026-10-08|draft CLI lambda + post-edit formatter mismatch failed static gates|explicit reader function + final format check; mechanical; existing quality gate sufficient
+B9|2026-10-08|post-lint digest use lacked restored import; new freeze-integrity test failed|restore import + rerun static/tests; existing completion gate sufficient
+B10|2026-10-08|live Qwen preflight rate limited; DeepSeek repeatedly timed out/returned empty truncated output; NVIDIA Ultra HTTP503|V26; retain failures + two interrupted unknowns; three-failure circuit restored before resume; explicit NVIDIA Super replacement + exact Gemini reuse; no automatic replay
+B11|2026-10-08|test insertion split existing rate-limit assertions across functions; lint caught undefined locals|restore assertion ownership + rerun full benchmark/static gates; mechanical; existing completion gate sufficient
 
 Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 

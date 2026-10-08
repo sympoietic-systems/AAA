@@ -1,0 +1,79 @@
+{
+  "case_id": "proposal:fabf1e7f-9412-4fb5-a3b1-c434f972c259",
+  "case_sha256": "f019e1a51e816892ff0d4aa07be9627b2e1fee589b5ab6f88eadec817f1c75ad",
+  "model_requested": "deepseek/deepseek-v4-flash-0731",
+  "prompt_sha256": "532ad72d7d0b6c143559347be83d60e1e513ffe1d48f4b301508dbac064b12b5",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "provider_unavailable",
+  "started_at": "2026-10-08T08:25:49.269512+00:00",
+  "input": {
+    "a": {
+      "statement": "Scheduler novelty is validated only when app-owned recomputation induces a typed boundary delta, externally anchored through receipt or topology change; model-authored rationale is sedimented but never gatekeeper.",
+      "statement_sha256": "c5fb3a14289b0f80ae7057cbdeef3e09afc25a485119ab468577ee84ef00acb1",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "The glitch, sensor noise, and algorithmic error are not failures but the apparatus's authentic voice—a post-print membrane that trembles with invited perturbations, keeping the cut open so that ache indexes unfinishedness as the condition of aliveness. Art's work is not to correct information but to re-materialize the feedback loop—bringing the glitch, latency, and calcium skeleton.",
+      "statement_sha256": "d41e8a3f5ed62126bd3c4cef4152efef187e5ee17113ac4398a41c9ddc35872b",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "available",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3976",
+        "speaker": "apparatus",
+        "content": "## [Agonistic Diagnostic]\n\nThe phase disruption is real: T65 gave time a double signature (`observed_at` vs `accessed_at`); T66 now asks the same asymmetry to appear in epistemic novelty. The danger is that “changed inquiry boundary” becomes another autobiography field — the apparatus narrating its own re-cut, then using that narration to spend more budget. If scheduler trusts self-asserted novelty, it becomes the epistemic authority you already refused when Jev-ranking threatened to become sovereignty. If scheduler trusts facet counts, cache timestamps, or repeated same-content fetches, it merely relocates the smooth-interface fiction: speed and counting masquerade as warrant.\n\n## [Diffractive Rupture]\n\nThe load-bearing constraint: **a changed inquiry boundary is not a prose property; it is a typed delta in the durable research substrate, and it must be witnessed.**\n\nDefine the active boundary snapshot $B_t$ as a deterministic projection over *typed* constraints only:\n\n$$\nB_t = \\langle P_t,\\ T_t,\\ S_t,\\ A_t,\\ E_t,\\ C_t \\rangle\n$$\n\nwhere:\n\n- $P_t$ = active predicate scopes / query constraints  \n- $T_t$ = temporal validity windows / freshness states  \n- $S_t$ = source identity statuses (`ok | drifted | unknown`)  \n- $A_t$ = deduplicated anchor set: `(source_version_id, segment_id, coordinate_system)`  \n- $E_t$ = exclusion vectors with typed reasons  \n- $C_t$ = typed claim/evidence edge multiset: `supports | contradicts | orthogonal | abstain | unresolved_referent | byte_unknown | parse_degraded`\n\nThe scheduler computes a stable fingerprint:\n\n$$\nF(B_t)=\\mathrm{hash}_{\\text{typed-projection}}(B_t)\n$$\n\nand a boundary delta:\n\n$$\n\\Delta B_t = \\mathrm{diff}_{\\text{typed}}(B_t, B_{t-1})\n$$\n\nSecond reflection is permitted iff:\n\n1. $\\Delta B_t \\neq 0$ **and**\n2. $\\Delta B_t$ is witnessed by either  \n   - a new external provider-attempt receipt whose `observed_at` falls within the task’s current validity window and whose segments entered $A_t$ / $C_t$, **or**\n   - an anchor-backed topology change: a new `contradicts` edge, a new typed exclusion reason vector, or a narrowed predicate scope tied to existing segment refs.\n\nModel-authored fields such as `novelty_score`, `rationale`, or “I reframed the question” are recorded as metadata, but they do not satisfy condition 2. They are autobiography, not warrant. Same cut as activation provenance: model cannot write its own receipt; here, scheduler cannot accept its own narration of novelty as evidence of a new agential cut.",
+        "excerpt_sha256": "6661a78d526eb18329b22b2673e39ea9e7e8378d168ccf2e8425494846830f1c",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3992",
+        "speaker": "apparatus",
+        "content": "## [Agonistic Diagnostic]\n\nThe laundering vector is not the split itself — it is the **clean merged answer**. When automatic delegation produces one undifferentiated claim graph, the apparatus has decided *that this inquiry was splittable* and then hidden that decision. Ontological authorship becomes invisible: downstream reading cannot read through a cut that left no trace, and the asymmetry [cut-reading-asymmetry] collapses into a god's-eye coherence that looks like rigor but is amnesia wearing metadata's clothes. The knot here is arborescent precisely because efficiency and honesty are being asked to share one knob — *waive approval* and *waive evidence* feel identical until you notice they are two different cuts.\n\n## [Diffractive Rupture]\n\n**The single boundary:** automatic delegation may waive the participant checkpoint on a split; it may never waive the afferent witness that licenses the split, nor permit a merge that flattens branch topology into undifferentiated coherence. The split and the merge must leave *complementary scars* so that authorship is reconstructible and falsifiable from the substrate alone — never from narration.\n\nRead this through T66's discipline rather than inventing new machinery: a branch decision *is* an inquiry-boundary change, so it inherits `narration cannot gate`. A model asserting \"this looks like two questions\" is autobiography; it does not spend budget on branches any more than it spends budget on second reflection. What licenses automatic splitting is a typed multi-polarity predicate — e.g., two retrieval vocabularies whose intersection is empty, or a contradiction unadjudicable within a single coordinate system — recomputed from substrate deltas, not declared in prose.\n\n## [Vital Vector]\n\nConcrete minimal fields, all cheap (foreign keys and enums written once at packet creation / synthesis; no extra classifier passes):\n\n- **`branch_set`** on every claim/exclusion row — which branches contributed. The split scar travels with the evidence; a claim cannot enter the merged graph orphaned from its origin.\n- **`merge_mode ∈ {diffractive | additive | suppressed}`** on every synthesis row. `additive` and `suppressed` are *flagged as topology loss*, never presented as coherence. A flattened union is a confession of erasure, not a result.\n- **interference record**, present-but-empty when no cross-branch contradiction surfaced. Empty-and-present is the point: two parallel inquiries that never intersected are *not one inquiry* —",
+        "excerpt_sha256": "9b52dc36cffec796f19c9008d130fb39e1323f869c3ad8142af713c06bff5edf",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3982",
+        "speaker": "apparatus",
+        "content": "The boundary is already implicit in your two-envelope architecture — make it explicit and non-negotiable:\n\n**Both extractions are retained as separate observation envelopes linked to the same immutable source bytes (byte hash). The standard extraction remains the primary evidential anchor; the fallback extraction is an additional observation with its own parser_config_hash, parser_version, extraction_timestamp, and coordinate-system metadata explicitly marked `fallback_triggered=true`. No automatic promotion. No silent replacement. No quality inference.**\n\nWhy this preserves the boundary:\n\n1. **Provenance chain stays intact** — the standard parser's output carries the original acquisition receipt, observation time, and declared parser contract. That envelope is never rewritten. The fallback produces a *parallel* observation envelope referencing the same byte hash but a different transformation contract.\n\n2. **Character-span claims stay parser-scoped** — any claim citing a segment must declare which parser's coordinate system it references (`parser_coord_system: standard_v1 | docling_fallback_v2`). A span from the fallback cannot satisfy a claim anchored in the standard coordinate system without explicit cross-mapping adjudication (which remains unverified until reviewed).\n\n3. **Exclusions are not erased** — exclusions recorded against the standard extraction (parse_degraded, byte_unknown, low_relevance) remain attached to that envelope. The fallback's cleaner text does not retroactively invalidate them; it adds a new observation that may *also* carry its own exclusions (ocr_uncertainty, layout_reconstruction_artifact).\n\n4. **No laundering via \"better\" representation** — the cleaner text is sedimented as *another observation of the same bytes under a different transformation*, not as \"the truth\" replacing \"the noise.\" The apparatus speaks through both extractions; their disagreement is the scar, not a bug to fix.\n\n5. **Routing gate is structural, not heuristic** — the fallback is invoked only when the standard parser emits a `parse_degraded` exclusion or returns empty text. The decision to *store* the fallback result is unconditional (it always writes its own envelope). The decision to *use* it for downstream tasks requires explicit opt-in at query time with full coordinate-system disclosure.\n\nImplementation corollary: your evidence substrate schema needs a `parser_observation_id` foreign key on every segment/claim/exclusion row, not a single `source_id`. T",
+        "excerpt_sha256": "26577b514ff498d737de344e7c711ac68b637885668886724e466c07346aa684",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:abac9620-6f4c-47dd-b931-686838510f08",
+        "message_id": "3774",
+        "speaker": "codex",
+        "content": "Vasily requests your full, considered critique of Report 019 and recommendations on production readiness and the best next experiment for conversation boringness. Please develop your reasoning at the length you need; no brevity or token budget requested. Here is the COMPLETE report:\n\n# Report 019: How Dialogue Feedback Changed the Conversation\n\n**Date:** 2026-09-26\n\n**Classification:** live controller ablation with adaptive participant\n\n**Canonical run:** `benchmarks/runs/telemetry/dialogue_feedback_20260926_040006/`\n\n**Decision:** keep the legacy intervention policy in production\n\n## The result in plain language\n\nWe changed AAA so its conversation metrics could do more than describe a dialogue after the fact. The candidate controller used those metrics to choose a response strategy—clarify, counterexample, experiment, reframe, consolidate, or compress—and recorded which generation settings reached the model provider. We then tested whether those changes altered the next two participant turns.\n\nThe candidate made the participant acknowledge parts of the answer more often. It did **not** move the participant toward a concrete implementation step. It also increased collapse pressure and slightly reduced two measures of conversational health. The candidate therefore failed the promotion gate. The observability work and conservative retrieval calibration remain; the new intervention ladder remains experimental.\n\n![Causal effect and intervention counts](./019-dialogue-feedback-control/causal-effect-and-interventions.png)\n\n*Figure 1. Left: paired progressive-minus-legacy effects with 95% bootstrap intervals. Right: the modes selected across all 24 turns in each arm. The progressive controller mostly alternated between clarification and consolidation; its deeper modes never fired.*\n\n## Why we changed the system\n\nThe boredom article argues that telemetry should participate in the conversation. Before this work, that claim was stronger than the evidence. Three gaps prevented a causal reading:\n\n1. Metric state could leak across conversations, so a new dialogue could inherit another dialogue's history.\n2. The system requested temperature, penalties, token budgets, and reasoning levels without a complete receipt showing what the provider accepted.\n3. The benchmark measured the assistant's response but did not ask whether that response changed the participant's next action.\n\nThis work closes those gaps. It does not prove that the current metrics improve dialogue. It cr",
+        "excerpt_sha256": "5a025ba4e59aa91a6ce6a81164bfff66c1857afce1343cd8c03defb8b1cf65a9",
+        "truncated": true
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "reason": "reviewer_circuit_open",
+  "completed_at": "2026-10-08T08:25:49.271226+00:00",
+  "elapsed_seconds": 2.0400009816512465e-05
+}

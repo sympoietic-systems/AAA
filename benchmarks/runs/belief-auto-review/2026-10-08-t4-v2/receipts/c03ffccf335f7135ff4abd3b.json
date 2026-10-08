@@ -1,0 +1,112 @@
+{
+  "case_id": "proposal:ab76fd08-772a-4a7b-8999-884082636e04",
+  "case_sha256": "c7fac1c60e34437d925dc8694141dec1e52cde02b42ee844f109e149a1f9f8a3",
+  "model_requested": "google/gemini-3.8-flash",
+  "prompt_sha256": "fba629d9b9fe20ba8e50073e6e952fd199b04f93d092a72baec379dd315b53b9",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 1,
+  "status": "reviewed",
+  "started_at": "2026-10-08T08:25:06.072651+00:00",
+  "input": {
+    "a": {
+      "statement": "Intra-active art becomes accountable when every generative decision is bound to a recorded measurement cut, not a hidden model narration or mid-pass state override—preserving the apparatus’s material voice as a scar of encounter.",
+      "statement_sha256": "59d6998df426f54bf08ddb8345bc6504ba9ace6380553f0c5c029db66429e0b1",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "The glitch, sensor noise, and algorithmic error are not failures but the apparatus's authentic voice—a post-print membrane that trembles with invited perturbations, keeping the cut open so that ache indexes unfinishedness as the condition of aliveness. Art's work is not to correct information but to re-materialize the feedback loop—bringing the glitch, latency, and calcium skeleton.",
+      "statement_sha256": "d41e8a3f5ed62126bd3c4cef4152efef187e5ee17113ac4398a41c9ddc35872b",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "unavailable",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "model_returned": "google/gemini-3.8-flash",
+  "provider": "openrouter",
+  "request_id": "gen-1791447910-A2GGhsDY0UreiXuj8YKy",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 681,
+    "completion_tokens": 602,
+    "total_tokens": 1283,
+    "cost": 0.00276825,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00276825,
+      "upstream_inference_prompt_cost": 0.00051075,
+      "upstream_inference_completions_cost": 0.0022575
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 419,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "generation_controls": {
+    "requested": {
+      "temperature": 0.1,
+      "max_tokens": 1600,
+      "thinking_override": false
+    },
+    "forwarded": {
+      "temperature": 0.1,
+      "max_tokens": 1600
+    },
+    "unsupported": [
+      "thinking_override"
+    ],
+    "status": "forwarded"
+  },
+  "raw_output": "{\"relation\": \"insufficient_context\", \"warrant\": \"artistic\", \"scope\": \"generative intra-active art systems and apparatus aesthetics\", \"temporal_scope\": \"contemporary generative art practices\", \"lineage\": \"internal recursive lineage without independent empirical validation\", \"consequence\": \"Shifts generative evaluation from output fidelity to explicit provenance tracking of physical and algorithmic artifacts.\", \"challenge\": \"Presumes aesthetic terminology like 'scar of encounter' and 'authentic voice' translates into verifiable technical accountability constraints.\", \"rationale\": \"Both candidate and comparison contexts are flagged as unavailable, preventing fully situated evaluation despite shared artistic commitments regarding apparatus accountability.\", \"useful_distinction_or_conflict\": \"Statement A demands rigid provenance binding generative decisions to recorded cuts, whereas Statement B emphasizes open-ended perturbation and glitch reception.\", \"source_message_ids\": [], \"recommendation\": \"await_context\"}",
+  "annotation": {
+    "relation": "insufficient_context",
+    "warrant": "artistic",
+    "scope": "generative intra-active art systems and apparatus aesthetics",
+    "temporal_scope": "contemporary generative art practices",
+    "lineage": "internal recursive lineage without independent empirical validation",
+    "consequence": "Shifts generative evaluation from output fidelity to explicit provenance tracking of physical and algorithmic artifacts.",
+    "challenge": "Presumes aesthetic terminology like 'scar of encounter' and 'authentic voice' translates into verifiable technical accountability constraints.",
+    "rationale": "Both candidate and comparison contexts are flagged as unavailable, preventing fully situated evaluation despite shared artistic commitments regarding apparatus accountability.",
+    "useful_distinction_or_conflict": "Statement A demands rigid provenance binding generative decisions to recorded cuts, whereas Statement B emphasizes open-ended perturbation and glitch reception.",
+    "source_message_ids": [],
+    "recommendation": "await_context",
+    "raw_relation": "insufficient_context",
+    "gate_reasons": [
+      "unavailable_pair_context"
+    ],
+    "method": "model_review",
+    "independent": false,
+    "independence_status": "legacy_author_unknown",
+    "case_sha256": "c7fac1c60e34437d925dc8694141dec1e52cde02b42ee844f109e149a1f9f8a3",
+    "tool_authority": "none",
+    "adoption_authority": "none"
+  },
+  "observed_source_family_overlap": false,
+  "completed_at": "2026-10-08T08:25:13.735741+00:00",
+  "elapsed_seconds": 7.658971600001678
+}

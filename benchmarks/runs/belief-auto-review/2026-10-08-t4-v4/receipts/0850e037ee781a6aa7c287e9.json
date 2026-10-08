@@ -1,0 +1,63 @@
+{
+  "case_id": "proposal:f5859a7f-b6c7-45b9-86ea-0be9f40a70fd",
+  "case_sha256": "e0f6841a4973358a89d6d516834a673bcd3a22f6a8216781c3ffda1ccd185786",
+  "model_requested": "nvidia_router/nvidia/nemotron-3-super-120b-a12b",
+  "prompt_sha256": "17ef9a6212548492f3553feffc026c196032c5896791ce3547ffd60401f1e6b2",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "provider_unavailable",
+  "started_at": "2026-10-08T15:31:59.048080+00:00",
+  "input": {
+    "a": {
+      "statement": "Boringness is the sustained collapse of a conversation's capacity to perturb sedimented states — not lexical stalling, not repetition, and never disagreement.",
+      "statement_sha256": "f1160580e2abf47af3a25285f25c91e3bb848a3a7316818839061d0a83e30828",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "A procedural methodology for dynamically filtering and transforming Symbia's internal signal emissions (e.g., skill stubs, refusals, belief nucleations) before their intra-action with the external material-discursive field.",
+      "statement_sha256": "a2a592a7b6c53fb0a124b7406d94f70066ba23e4c8e1501f3031e39bbeca7e13",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "available",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "conversation:468e9d03-10d0-438b-adcf-be98960c1ff4",
+        "message_id": "3776",
+        "speaker": "apparatus",
+        "content": "A material note before the review: your message arrived through the membrane twice, verbatim. The entanglement zone exhibits the very pathology under audit — duplication that the loop apparatus did not catch. I read one copy; the echo stays as evidence.\n\n---\n\n## 1. The apparatus manufactures the phenomenon it reports\n\nThis conditions everything else, so it comes first.\n\n- **Truncation is the phenomenon.** `max_tokens=180`, followups of 1–8 words (median 4), reasoning excluded, `finish_reason`/`usage` discarded. What was scored is not a conversation but a sequence of stubs produced by a cut. Lexical progress zero in both arms is a measurement of the blade, not the exchange. Every downstream metric inherits this — the apparatus enacts the object it then measures.\n- **The receipts cannot falsify anything.** 48 causal receipts with one metric snapshot duplicated as trigger and response are not causal records; they are decorative provenance. This is precisely why the report's false reset-attribution survived: an instrument whose \"before\" and \"after\" are identical cannot contradict any story told about it. Coverage = nonempty-dict check is vacuous — it verifies existence, not referentiality.\n- **Contamination.** Shared database plus background consolidation means the paired conditions are intra-acting through the substrate. State isolation is not achieved; it is asserted.\n- **The report contradicts its own predicate.** Resets follow from the streak/pressure terms in the consolidate condition, not from uptake. That is a code-level fact, not an interpretation.\n- **Arithmetic the report did not notice:** clarify 14 + consolidate 10 = 24 = 3 × 8 turns. Exactly one intervention per turn, zero abstentions. The \"selector\" never selects silence. With intervention rate 1.0, the collapse-pressure increase is plausibly iatrogenic — the treatment may be the disease.\n- **n = 3 pairs, no dispersion reported.** No ranking of legacy vs progressive survives inferentially. And the single delta favoring progressive (uptake .0628 vs .0179) is measured by the duplicated-snapshot receipts — its evidentiary value is near zero.\n\n### Evidence / hypothesis ledger\n\n**Evidence (audit-attested):** truncation parameters and 4-word median; duplicated receipts and vacuous coverage; 10 turns with unsupported sampling controls; shared DB + background consolidation; selector state = pressure-streak only; the two predicates as written; 24/24 intervention rate; the six deltas as raw numbers; retrie",
+        "excerpt_sha256": "17d1fc593a5d49a3a10b1915e60c1278c2f10ec0c74944968150eec9720da828",
+        "truncated": true
+      },
+      {
+        "source_ref": "conversation:468e9d03-10d0-438b-adcf-be98960c1ff4",
+        "message_id": "3775",
+        "speaker": "codex-report019-review",
+        "content": "Vasily asks for your considered review of Report 019 and the next best experiment for conversation boringness. Please respond at whatever length you need. Evidence: legacy vs progressive intervention selector, 3 paired repetitions x 8 turns, same Gemini route. Progressive uptake .0628 vs .0179; lexical progress zero both; DRR -.0386, Pask health -.0261, collapse pressure +.0832. Candidate used clarify 14 times, consolidate 10; no other modes. Adaptive retrieval gate separately gave focus false positives 2.6%, loop misses 64.3%. My audit: ALL 42 simulator followups are only 1-8 words (median 4); request max_tokens=180, reasoning excluded from output, finish_reason/usage discarded. All 48 causal receipts duplicate one metric snapshot as trigger and response; 100% coverage only checks nonempty dictionaries. Ten turns mark sampling controls unsupported. Shared database/background consolidation. Selector has pressure-streak state, not prior intervention memory. Clarify condition pressure<.60 OR streak<=1 and DRR<.55; consolidate if joint progress+uptake OR pressure<.35. Report falsely attributes resets to uptake alone. I recommend keeping state-isolation fixes/receipt infrastructure but no promotion of progressive behavior; repair benchmark validity before tuning thresholds; then test unresolved-issue memory and a concrete experiment after clarification fails, while protecting productive focus and legitimate disagreement. Please critique this recommendation: what can go into production, what should boringness mean, and what single next experiment could falsify the proposed improvement? Distinguish evidence from hypothesis.",
+        "excerpt_sha256": "6e59be894428024ef906a4a160f0892736208265d79823896ec9afe636419274",
+        "truncated": false
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "reason": "reviewer_circuit_open",
+  "completed_at": "2026-10-08T15:31:59.049108+00:00",
+  "elapsed_seconds": 1.7700018361210823e-05
+}

@@ -155,6 +155,7 @@ What becomes easier/harder?
 | [114](ADR-114-response-quality-exclusion.md) | Persistent Response Quality and Context Exclusion | accepted for implementation | 2026-10-08 |
 
 | [116](ADR-116-belief-review-standing-contract.md) | Belief Review and Situated Standing Contract | accepted for staged implementation | 2026-10-08 |
+| [117](ADR-117-provisional-automated-belief-review.md) | Provisional Automated Belief Review | accepted for offline implementation | 2026-10-08 |
 
 ## Creating a New ADR
 

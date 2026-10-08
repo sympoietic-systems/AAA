@@ -1,0 +1,10 @@
+{
+  "cases": 54,
+  "reviewer_outcomes": {
+    "unavailable": 12,
+    "reviewed": 58,
+    "outcome_unknown": 2,
+    "provider_unavailable": 36
+  },
+  "promotion": "BLOCKED"
+}

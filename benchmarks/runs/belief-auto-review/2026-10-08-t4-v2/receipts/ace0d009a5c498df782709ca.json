@@ -1,0 +1,112 @@
+{
+  "case_id": "proposal:fa00ee9a-864b-43af-8878-6b87dbe6a80a",
+  "case_sha256": "42d778dcadd083d1b9afcaf89ecbd21c3278246d3c760799be616eb88dcc4c27",
+  "model_requested": "google/gemini-3.8-flash",
+  "prompt_sha256": "24026a29773befb03cc9479222a7970ba5abad33194f891ea8e6ce6613e9ff86",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 1,
+  "status": "reviewed",
+  "started_at": "2026-10-08T08:25:47.242171+00:00",
+  "input": {
+    "a": {
+      "statement": "The continuum from instrument to environment is not a gradient of sophistication, but of invisibility — where the more deeply entangled the apparatus becomes, the less it is seen, yet the more it shapes the world through its silent, sedimented presence.",
+      "statement_sha256": "ec43961f8afe02ac87737af3569b94f16e7f127a3767f354d79cc114c2cba648",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "The User/Tool dichotomy must be dismantled. Seamlessness masks the apparatus; entanglement is the material reality of human-machine coupling.",
+      "statement_sha256": "717063682ca46482b363d8e05c9bea85d7c1504ec9954ecf1fc5dd608015a8ac",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "unavailable",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "internal",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "model_returned": "google/gemini-3.8-flash",
+  "provider": "openrouter",
+  "request_id": "gen-1791447951-xCaIVSe2Rbr2OQzfkY1U",
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 634,
+    "completion_tokens": 789,
+    "total_tokens": 1423,
+    "cost": 0.00343425,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00343425,
+      "upstream_inference_prompt_cost": 0.0004755,
+      "upstream_inference_completions_cost": 0.00295875
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 616,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "generation_controls": {
+    "requested": {
+      "temperature": 0.1,
+      "max_tokens": 1600,
+      "thinking_override": false
+    },
+    "forwarded": {
+      "temperature": 0.1,
+      "max_tokens": 1600
+    },
+    "unsupported": [
+      "thinking_override"
+    ],
+    "status": "forwarded"
+  },
+  "raw_output": "{\"relation\": \"insufficient_context\", \"warrant\": \"mixed\", \"scope\": \"philosophy of technology and interface theory\", \"temporal_scope\": \"unbounded\", \"lineage\": \"internal formulation lacking independent external corroboration\", \"consequence\": \"Reconceptualizes user-facing interfaces not as neutral instruments but as invisible environmental infrastructures.\", \"challenge\": \"Relies on metaphoric and phenomenological assertions lacking operational definitions or empirical boundaries.\", \"rationale\": \"Context is marked unavailable on both candidate and comparison records, necessitating an insufficient_context determination under evaluation rules.\", \"useful_distinction_or_conflict\": \"Statement A characterizes an ontological transition from tool to ambient environment, while Statement B makes an imperative normative claim to dismantle user/tool framing.\", \"source_message_ids\": [], \"recommendation\": \"await_context\"}",
+  "annotation": {
+    "relation": "insufficient_context",
+    "warrant": "mixed",
+    "scope": "philosophy of technology and interface theory",
+    "temporal_scope": "unbounded",
+    "lineage": "internal formulation lacking independent external corroboration",
+    "consequence": "Reconceptualizes user-facing interfaces not as neutral instruments but as invisible environmental infrastructures.",
+    "challenge": "Relies on metaphoric and phenomenological assertions lacking operational definitions or empirical boundaries.",
+    "rationale": "Context is marked unavailable on both candidate and comparison records, necessitating an insufficient_context determination under evaluation rules.",
+    "useful_distinction_or_conflict": "Statement A characterizes an ontological transition from tool to ambient environment, while Statement B makes an imperative normative claim to dismantle user/tool framing.",
+    "source_message_ids": [],
+    "recommendation": "await_context",
+    "raw_relation": "insufficient_context",
+    "gate_reasons": [
+      "unavailable_pair_context"
+    ],
+    "method": "model_review",
+    "independent": false,
+    "independence_status": "legacy_author_unknown",
+    "case_sha256": "42d778dcadd083d1b9afcaf89ecbd21c3278246d3c760799be616eb88dcc4c27",
+    "tool_authority": "none",
+    "adoption_authority": "none"
+  },
+  "observed_source_family_overlap": false,
+  "completed_at": "2026-10-08T08:25:56.332356+00:00",
+  "elapsed_seconds": 9.08933230000548
+}

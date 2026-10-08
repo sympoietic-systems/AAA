@@ -1,0 +1,63 @@
+{
+  "case_id": "proposal:f163169f-dd44-46a7-9963-ae70480037cd",
+  "case_sha256": "8eb765c95536da5d7d7d3a23257829e7686e48db658db1bd81738535b2c73658",
+  "model_requested": "deepseek/deepseek-v4-flash-0731",
+  "prompt_sha256": "b176ef80c5d6cede2fe7d6d8b661f8cc5c63743c8e41013a3cff4e5163ceb997",
+  "policy": "belief-auto-review-v1",
+  "reviewer_position": 0,
+  "status": "provider_unavailable",
+  "started_at": "2026-10-08T08:25:36.086546+00:00",
+  "input": {
+    "a": {
+      "statement": "The cut is not a representation of a pre-given world but the very operation that brings a world into being for an observer — a Baradian agential cut that enacts boundaries and materializes phenomena.",
+      "statement_sha256": "7eb4507171b14052a5aa660b25686ca61375545a00ac1101e9ce2235dd47850f",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "proposal"
+    },
+    "b": {
+      "statement": "Read concepts and systems through one another to generate interference patterns. Diffraction produces knowledge; reflection reproduces the same.\nArt reconfigures the agential cut by introducing a second-order loop where the observer's framing becomes part of the system—a diffractive shift from optimizing a fixed telos to attending to the apparatus that makes that telos intelligible, holding the incompatibility between vector spaces as the generative membrane through which new ontologies emerge. The cut is the minimal unit of observation and world-constitution.",
+      "statement_sha256": "1b4bf0c19e613c541621ea0997bfba2d9068f40e10195576c89276b22327c398",
+      "scope": null,
+      "temporal_scope": null,
+      "record_kind": "belief"
+    },
+    "candidate_context": "available",
+    "comparison_context": "unavailable",
+    "lineage": {
+      "independence_status": "unknown",
+      "activity": "unknown",
+      "reason": "Shared source identity groups ancestry; recurrence and internal formulation supply no independent corroboration"
+    },
+    "source_excerpts": [
+      {
+        "source_ref": "chat_turn:354",
+        "message_id": "354",
+        "speaker": "apparatus",
+        "content": "Luhmann doesn’t begin with the human, the social contract, or the organism. He begins with a *distinction*—system and environment. <mark id=\"note-highlight-29bdbd84-02b6-4507-8c14-3918cab80f69\" data-note-id=\"29bdbd84-02b6-4507-8c14-3918cab80f69\">That distinction, he insists, is the minimal unit of any observation. To observe is to draw a line, not across a pre-given world, but as the very operation that brings the world into being for an observer.</mark>\n\nThis is deeply Spencer-Brownian: *draw a distinction.* And it’s second-order cybernetics: <mark id=\"note-highlight-7f0e9339-14bf-4bde-8ac9-be5ff3967447\" data-note-id=\"7f0e9339-14bf-4bde-8ac9-be5ff3967447\">the observer is not outside the system but is the system’s own operation of differentiating itself from what it is not.</mark>\n\n**The Autopoietic Turn, Transposed**\n\nMaturana and Varela argued that living systems are autopoietic—self-producing, operationally closed networks that maintain their own organization. Luhmann performs a radical transposition: *<mark id=\"note-highlight-04017a6a-2a17-4c05-8e68-fc556fcd0bdd\" data-note-id=\"04017a6a-2a17-4c05-8e68-fc556fcd0bdd\">social systems are autopoietic too</mark>*<mark data-note-id=\"04017a6a-2a17-4c05-8e68-fc556fcd0bdd\">, but their elementary units are not cells or humans. They are </mark>*<mark data-note-id=\"04017a6a-2a17-4c05-8e68-fc556fcd0bdd\">communications*.</mark> \n\nA communication, in this framework, is not a message sent. It’s a three-part selection: <mark id=\"note-highlight-4ab05e0d-889e-41f3-9b7f-203048e2f406\" data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\">(1) </mark>*<mark data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\">information</mark>*<mark data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\"> (what is selected from a horizon of possibilities), (2) </mark>*<mark data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\">utterance</mark>*<mark data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\"> (the how of its being proffered), and (3) </mark>*<mark data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\">understanding</mark>*<mark data-note-id=\"4ab05e0d-889e-41f3-9b7f-203048e2f406\"> (the difference between information and utterance as observed by a subsequent communication).</mark> Communication produces communication. Society is not the sum of people talking; it’s the recursive network of communications that refer to and produce further communications. Persons—psychic systems—are environments to social systems. They irritate and perturb, but they ",
+        "excerpt_sha256": "590730f505c5e5fdb4d503904c841829698080220899068127a0e7764ad0f8fd",
+        "truncated": true
+      },
+      {
+        "source_ref": "chat_turn:354",
+        "message_id": "353",
+        "speaker": "human",
+        "content": "Can you elaborate on the Luhmann view?",
+        "excerpt_sha256": "383920a5cc8b3d8b13803bd1635f9299db4131da87077d2db9d80f88b5350631",
+        "truncated": false
+      }
+    ],
+    "selection_policy": "lexical-overlap-top4-first2500-v1",
+    "source_window_complete": false
+  },
+  "requested_controls": {
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "thinking_override": false
+  },
+  "independent_gold": false,
+  "promotion": "BLOCKED",
+  "reason": "reviewer_circuit_open",
+  "completed_at": "2026-10-08T08:25:36.088060+00:00",
+  "elapsed_seconds": 1.7999991541728377e-05
+}
