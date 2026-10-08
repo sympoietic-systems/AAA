@@ -141,3 +141,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 038: Human branch proposals](reports/038-research-branch-proposals/README.md)
 - [Report 039: Approved research children](reports/039-approved-research-children/README.md)
 - [Report 045: Belief system month review](reports/045-belief-month-review/README.md)
+- [Report 046: Beliefs v2 baseline and creation-path inventory](reports/046-belief-v2-baseline/README.md)

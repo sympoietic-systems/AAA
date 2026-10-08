@@ -1,9 +1,10 @@
 # Beliefs V2 Specification
 
-Status: planned; implementation tasks all `.`. Date: 2026-10-08.
+Status: implementation started; T1 complete; runtime changes pending. Date: 2026-10-08.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
+Baseline + origin inventory: [Report 046](../reports/046-belief-v2-baseline/README.md). Full local gates completed; concurrent unrelated edits excluded from certification; production identity unknown.
 
 ## §G
 
@@ -29,7 +30,7 @@ Consequential new distinctions + strong conflicts → source-bound, reviewable b
 
 ## §I
 
-I.intake: extend `backend/services/belief_admission.py` → shared origin-aware intake. Origins: explicit chat/dream, passive chat, document perception, shared note, web, conversation pattern. Inventory actual call sites before migration; bypasses prohibited once origin promoted.
+I.intake: extend `backend/services/belief_admission.py` → shared origin-aware intake. Origins: explicit chat/dream, passive chat, document perception, shared note, web, conversation pattern, scar-fold fallback creation. Skill bridge creation ! separate derived-skill provenance/authority contract; no semantic adoption inferred from bridge projection. Inventory actual call sites before migration; bypasses prohibited once origin promoted.
 
 I.encounter: typed encounter → `{id,agent_id,origin,source_type,source_id,source_version_or_hash,source_timestamp,received_at,statement,statement_hash,scope,temporal_scope,source_quote_or_reference,lineage,context_status}`. Source binding/availability explicit; missing fields retain reason. Event identity includes agent + stable source identity/version + emission/segment identity; claim identity separate from encounter identity.
 
@@ -87,13 +88,13 @@ V24: adoption declined → attributable counter-trace; exploratory dissent remai
 `id` local to `BELIEF_SPEC.md`; references to root tasks qualified. Status: `.` todo; `~` partial; `x` done. Each task owns cited surfaces; dependencies below.
 
 id|status|task|cites
-T1|.|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verification gaps; record production identity or unknown; inventory every origin/direct creator|V1,V21,V23,I.intake
+T1|x|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verification gaps; record production identity or unknown; inventory every origin/direct creator|V1,V21,V23,I.intake
 T2|.|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
-T3|.|freeze typed encounter/assessment/decision/state contracts, relation adapter, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
+T3|.|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
 T4|.|recover source passages for saved incubating candidates + adopted/rejected comparisons; annotate lineage/consequence/conflict/context; independent review; frozen tuning/held-out corpus|V7,V8,V22,I.lineage,I.eval
 T5|.|add additive persistence extending admission/workshop; encounter/claim identities, immutable assessment links, versioned decisions; agent isolation, concurrent retry/restart tests|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|.|adapt explicit chat/dream emission to new shared intake; preserve existing receipts/UI contracts and inert historical XML|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
-T7|.|adapt passive chat + conversation-pattern creators; origins/source segments preserved; bypass audit + parity tests|V1,V2,V3,V19,I.intake
+T7|.|adapt passive chat + conversation-pattern + scar-fold fallback creators; origins/source segments preserved; no reflection-created adopted belief; bypass audit + parity tests|V1,V2,V3,V7,V19,I.intake
 T8|.|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
 T9|.|extend advisory Jev assessment, referent validation, pending/deferred nomination + relation adapter; preserve existing triage contracts; outage/repetitive/stale replay tests|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
 T10|.|separate source-lineage support from internal activity + recurrence; forward typed events; inspectable unknown ancestry; no historical invented deltas/support|V7,V8,V16,V17,I.lineage,I.events
@@ -145,8 +146,9 @@ Rollout: only T18 mutates production under explicit authorization. Independent o
 ## §B
 
 id|date|cause|fix
+B1|2026-10-08|scar-fold fallback creates crystallized belief without admission; origin omitted from initial intake inventory|planned T7; V1,V7; skill bridge authority reviewed in T3
 
-No implemented fixes logged yet. Admission incidents remain in root `SPEC.md::B110,B111`. T2 repair findings require regression/backprop entry on implementation; do not preclaim resolution here.
+Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. T2 repair findings require regression/backprop entry on implementation; do not preclaim resolution here.
 
 ## References
 

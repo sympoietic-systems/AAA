@@ -281,7 +281,7 @@ T72|x|user-requested unchecked Allow branching checkbox; trusted dispatch `bound
 T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent parser accuracy deferred to T75|V69,V105,V114,V119,V120,I.env,I.domain
 T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; independent release review remains T71|V108,V114,V117,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
-T78|~|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates|V126,V127,V107,V23,V30,I.api,I.domain
+T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
 T77|~|persistent reply quality; chat/dream tail checks; context exclusion; badges + reversible review in Creases/Traces; 14-day resumable audit; gates/docs/commit|V123,V124,V125,V7,V17,V30,I.api,I.internal
 

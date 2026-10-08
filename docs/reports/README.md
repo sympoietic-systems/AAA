@@ -58,3 +58,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 040: Optional Docling fallback](040-docling-fallback/README.md)
 - [Report 041: Provisional research labeling](041-research-provisional-labeling/README.md)
 - [Report 045: Belief system month review](045-belief-month-review/README.md)
+- [Report 046: Beliefs v2 baseline and creation-path inventory](046-belief-v2-baseline/README.md)
