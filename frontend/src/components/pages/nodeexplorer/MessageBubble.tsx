@@ -411,6 +411,8 @@ export const MessageBubble = memo(function MessageBubble({
                   'dream-trigger': DreamTriggerTag,
                   'belief_nucleate': BeliefNucleateTag,
                   'belief-nucleate': BeliefNucleateTag,
+                  'belief_proposal': BeliefNucleateTag,
+                  'belief-proposal': BeliefNucleateTag,
                 } as Components}
               >
                 {processedContent}
@@ -442,6 +444,8 @@ export const MessageBubble = memo(function MessageBubble({
                   'dream-trigger': DreamTriggerTag,
                   'belief_nucleate': BeliefNucleateTag,
                   'belief-nucleate': BeliefNucleateTag,
+                  'belief_proposal': BeliefNucleateTag,
+                  'belief-proposal': BeliefNucleateTag,
                 } as Components}
               >
                 {processedContent}
