@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: implementation started; T1,T2 complete locally; T3 complete locally; T4–T18 pending. Date: 2026-10-08.
+Status: implementation started; T1,T2 complete locally; T3 complete locally; T4 in progress; T5–T18 pending. Date: 2026-10-08.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -96,7 +96,7 @@ id|status|task|cites
 T1|x|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verification gaps; record production identity or unknown; inventory every origin/direct creator|V1,V21,V23,I.intake
 T2|x|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
 T3|x|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,V25,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
-T4|.|recover source passages for saved incubating candidates + adopted/rejected comparisons; annotate lineage/consequence/conflict/context; independent review; frozen tuning/held-out corpus|V7,V8,V22,I.lineage,I.eval
+T4|~|[source packet + review gate](../reports/049-belief-v2-review-corpus/README.md) prepared; independent human annotation/freeze pending; recover source passages for saved incubating candidates + adopted/rejected comparisons; annotate lineage/consequence/conflict/context; independent review; frozen tuning/held-out corpus|V7,V8,V22,I.lineage,I.eval
 T5|.|add additive persistence extending admission/workshop; encounter/claim identities, immutable assessment links, versioned decisions; agent isolation, concurrent retry/restart tests|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|.|adapt explicit chat/dream emission to new shared intake; preserve existing receipts/UI contracts and inert historical XML|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
 T7|.|adapt passive chat + conversation-pattern + scar-fold fallback creators; origins/source segments preserved; no reflection-created adopted belief; bypass audit + parity tests|V1,V2,V3,V7,V19,I.intake
@@ -157,6 +157,8 @@ B3|2026-10-08|accretion could label delta from stale caller snapshot as measured
 B4|2026-10-08|post-annotation import edit missed final formatter run|ruff format + full format check; mechanical; existing completion gate sufficient
 B5|2026-10-08|adapter constant inferred broad str while contract requires literal version|explicit literal annotation; root V30; mechanical typing repair
 B6|2026-10-08|draft decision lacked statement-bound hash, allowing receipt reuse after text change; standing enum alone could launder legacy/skill authority|T3 resolved locally; V25; explicit standing variants + receipt/statement/scope/agent binding; Symbia critique recovered
+B7|2026-10-08|draft corpus checked candidate context alone, allowing unresolved comparison source to acquire semantic relation|T4 preparation repaired; V3,V22; separate comparison context + unavailable-pair regression; independent review pending
+B8|2026-10-08|draft CLI lambda + post-edit formatter mismatch failed static gates|explicit reader function + final format check; mechanical; existing quality gate sufficient
 
 Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 
