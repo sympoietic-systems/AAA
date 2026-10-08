@@ -369,6 +369,16 @@ export const MessageBubble = memo(function MessageBubble({
 
   return (
     <div ref={bubbleRef} className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
+      {!isHuman && !isSystem && (
+        (msg.quality?.source === "manual" || msg.quality?.status === "degraded" || msg.quality?.status === "uncertain" || msg.quality_status === "degraded" || msg.quality_status === "uncertain") && (
+        <ResponseQualityBadge
+          key={`${msg.id}-${msg.quality?.assessed_at ?? msg.quality_status ?? "unassessed"}`}
+          messageId={msg.id}
+          quality={msg.quality}
+          status={msg.quality_status}
+        />
+        )
+      )}
       <div className={`text-sm leading-relaxed ${isHuman ? "text-[#777]" : "text-[#c8c8c8]"}`}>
         {isHuman ? (
           <div className="markdown-body" onMouseUp={handleMouseUp}>
@@ -435,10 +445,6 @@ export const MessageBubble = memo(function MessageBubble({
           </div>
         )}
       </div>
-
-      {msg.quality && (msg.quality.source === "manual" || msg.quality.status === "degraded" || msg.quality.status === "uncertain") && (
-        <ResponseQualityBadge key={`${msg.id}-${msg.quality.assessed_at}`} messageId={msg.id} quality={msg.quality} />
-      )}
 
       <div className="text-[9px] text-[#555] mt-1 select-none flex flex-wrap items-start justify-between gap-x-3 gap-y-1 font-mono">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1">
