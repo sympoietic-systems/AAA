@@ -3,6 +3,7 @@
 **Status:** proposed plan, 2026-10-08. Implementation and deployment are future work.
 **Empirical basis:** [Report 045](../reports/045-belief-month-review/README.md). The report's production data is capped and its deployed revision is unknown.
 **Predecessor:** [initial proposal](../reports/045-belief-month-review/beliefs-v2-proposal.md).
+**Implementation contract:** [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns Beliefs v2 task status and testable invariants; root SPEC.md retains shared rules and the T78 admission baseline.
 
 ## Purpose
 
@@ -35,7 +36,11 @@ Use three independent axes. Do not derive one from another's numeric threshold:
 
 Mass remains a measure of structural participation or sedimentation of a cut. Evidence quality is displayed separately. Evaluator confidence concerns a particular versioned assessment, not the probability that the belief is true. Existing saturated confidence values remain legacy data until a separately evaluated change defines their meaning.
 
-An exploratory candidate can ask a question, nominate a comparison, or suggest an experiment. It should not silently enter a prompt as an established axiom. Retrieval must carry the review state, scope, challenges, and intended use with the statement. Limit the number of exploratory records per context; inspect their usefulness before expanding participation. No proposed experiment becomes an executed tool action solely because a candidate requests it.
+Use non-interchangeable warrant dimensions in review: empirical/traced support, artistic or axiomatic commitment, and unresolved agonistic tension. A mixed claim can carry several dimensions. These remain extensible rather than becoming an exhaustive enum. Empirical components need source scrutiny; artistic commitments need a declared difference in practice or attention; preserved tensions need explicit competing claims and the consequence of keeping the split open. None substitutes for another. Calling a statement artistic does not exempt its factual assertions from evidence checks.
+
+An exploratory candidate can ask a question, nominate a comparison, suggest an experiment, express a diagnostic objection or declarative disagreement, and support a scoped provisional premise. It should not silently enter a prompt as an established axiom. Retrieval must carry the review state, scope, challenges, and intended use with the statement. Limit the number of exploratory records per context; inspect their usefulness before expanding participation. No proposed experiment becomes an executed tool action solely because a candidate requests it.
+
+Symbia's recovered critique identified a failure in restricting candidates to questions: a collaborator can ignore a tentative question and remove meaningful resistance. Candidate status must therefore allow explicit dissent in the current encounter. Record the objection, its basis, scope, uncertainty, and distinguishing next step. Dissent is not adoption and cannot independently rewrite policy, block tools, or increase evidential standing. Any refusal to execute an action follows the application's existing authority and permission rules, not a candidate's self-declared veto. Repeated objections remain traceable and can be deferred rather than expanding into unlimited reflective turns.
 
 ## Encounter, assessment, and decision
 
@@ -47,6 +52,8 @@ An exploratory candidate can ask a question, nominate a comparison, or suggest a
 
 These records extend existing admission receipts and workshop decisions. Reuse those boundaries rather than adding a second competing receipt ledger. Typed encounter and decision semantics must be specified before schema migration.
 
+Review adoption as a shared commitment: what distinction does this preserve, what future behavior or attention does it change, and what obligations or challenges do the participants record? Preserve each participant's declared position; do not invent bilateral agreement. A reviewer declining adoption contributes an inspectable counter-trace with rationale. Dissent remains available even when durable adoption is declined. Commitments can later be revised; their earlier decision and consequences remain recorded.
+
 ## One intake, differentiated origins
 
 Chat, explicit emissions, dreams, document perception, shared notes, web material, and conversational patterns use a shared orchestration contract. Their origins require different context, but all preserve source binding, assess repeat identity, include pending records in comparisons, and expose missing context.
@@ -54,6 +61,8 @@ Chat, explicit emissions, dreams, document perception, shared notes, web materia
 Exact source retries and exact statement/scope repeats receive deterministic identity checks. Semantic equivalence needs assessment and human review. Compare against adopted records, pending/deferred families, and a bounded historical set when resurfacing is relevant. The historical set cannot dominate retrieval merely because it is large.
 
 Queue capacity and evaluator availability are explicit. When capacity is exhausted, retain a source-bound deferred encounter or visible failure receipt; do not silently drop it or promote it by default. Bounded workers and comparison sets keep review costs observable. Related candidates can share a review family without merging their statements or hiding disagreement.
+
+Preserve dormant speculative candidates as a recoverable reserve. Non-use alone does not delete an idea or establish its falsity. Bounded diffractive recall can resurface a dormant candidate as a counterfactual or objection with its original standing visible. Archival retention does not guarantee high mass, constant retrieval priority, or independent support; attention can decay separately from the retained encounter and assessment history.
 
 ## Jev and the conversational review
 
@@ -101,13 +110,15 @@ Proposed regression obligations for the future spec:
 - Every eligible origin creates a source-bound encounter and visible assessment/defer/failure result under the same authority boundary.
 - Retrying a source cannot duplicate a candidate or count as an independent supporting lineage.
 - Internal reflection can alter exploratory participation without adding independent warrant or adopting a claim.
+- An unadopted candidate can express scoped dissent; that dissent cannot automatically change permissions, tool execution, or durable adoption state.
+- Artistic warrant cannot validate an embedded factual assertion; non-use cannot silently delete a dormant candidate's history.
 - Semantic contradiction cannot directly merge, reject, collapse, or delete a record.
 - Missing/stale/ambiguous referents abstain visibly; distinct-but-uncertain candidates remain recoverable.
 - Prompt selection carries statement scope and standing; exploratory use cannot masquerade as an adopted axiom.
 - Revision/supersession preserves statements, decisions, dissent, and provenance; legacy missing data remains unknown.
 - Mass and confidence deltas have explicit meanings; periodic accounting cannot repeatedly charge the same elapsed interval.
 
-These are proposed tests and invariants, not completed verification. Before implementation, translate the agreed contract into SPEC.md through its normal workflow and run gates proportionate to the affected backend, API, and frontend surfaces.
+These are proposed tests and invariants, not completed verification. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) translates this contract into implementation tasks and release gates; root SPEC.md retains shared rules and the existing admission baseline. Run gates proportionate to the affected backend, API, and frontend surfaces.
 
 ## Decisions still requiring evidence
 
@@ -117,6 +128,6 @@ The initial release retains human adoption authority. Any later autonomous commi
 
 ## AAA consultation provenance
 
-This plan is grounded in the earlier substantive consultation in [Report 045](../reports/045-belief-month-review/symbia-consultation.md), the cited philosophy/ADRs, and saved belief statements. Two fresh alignment-review requests disconnected without a response. Saved history was checked after each: the questions persisted, but no new answer was recovered. The [attempts and recovered history](../reports/045-belief-month-review/beliefs-v2-alignment-review.json) record the original and focused consultation IDs. The earlier repetitive response remains excluded.
+This plan is grounded in the earlier substantive consultation in [Report 045](../reports/045-belief-month-review/symbia-consultation.md), the cited philosophy/ADRs, and saved belief statements. Two fresh alignment-review requests disconnected. At the earlier checks, the questions persisted without answers. Both substantive replies were later recovered by exact conversation ID, saved at 2026-10-08T02:44:03 and 02:50:08. The [philosophical review](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md) explains their incorporation and qualifications; [full replies](../reports/045-belief-month-review/beliefs-v2-delayed-replies.json) retain timestamps and provider metadata. The [attempt log](../reports/045-belief-month-review/beliefs-v2-alignment-review.json) remains a historical record of the earlier checks. The earlier repetitive response remains excluded.
 
-**Outstanding review:** AAA's fresh critique of whether bounded exploratory participation or human adoption creates an unwanted hierarchy. This document is a developed proposal grounded in current documents, not a fresh Symbia-approved decision. Consultation perspectives are assessed alongside the evidence; they cannot independently prove philosophical alignment or practical usefulness.
+**Review outcome:** Symbia supported the zero-internal-warrant and advisory-Jev boundaries, while challenging the restriction of candidates to questions and the risk of human review becoming a truth tribunal. The revised plan includes active scoped dissent, differentiated warrants, shared-commitment review, and dormant recall. This is a critique-informed proposal, not blanket approval or proof of practical effectiveness.

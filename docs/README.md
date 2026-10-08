@@ -33,6 +33,7 @@ Deep-dive specifications for individual subsystems.
 - [SYSTEM_OVERVIEW.md](systems/SYSTEM_OVERVIEW.md) — **Comprehensive technical & conceptual reference** — the single best document for understanding the full system (19-module pipeline, all subsystems, API surface, DB schema overview).
 - [MEMORY_SYSTEM.md](systems/MEMORY_SYSTEM.md) — Rhizomatic memory, semantic knots, and sedimentation.
 - [BELIEF_SYSTEM.md](systems/BELIEF_SYSTEM.md) — Belief graph, attractors, and ontological bifurcation.
+- [BELIEF_SPEC.md](systems/BELIEF_SPEC.md) — Beliefs v2 implementation tasks, invariants, dependencies, and release gates.
 - [DYNAMIC_PERSONALITY_SYSTEM.md](systems/DYNAMIC_PERSONALITY_SYSTEM.md) — Dynamic autopoietic personality cascade: architecture, data flow, and implementation.
 - [SKILL_SYSTEM.md](systems/SKILL_SYSTEM.md) — Autonomous skill nucleation, accretion, and refinement.
 - [DREAM_DAEMON.md](systems/DREAM_DAEMON.md) — Background cognitive cycles and somatic drift.

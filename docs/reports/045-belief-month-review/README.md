@@ -119,6 +119,7 @@ Several claims in the consultation require qualification. The 19 merge nominatio
 
 Follow-up: [Beliefs v2 design proposal](beliefs-v2-proposal.md) defines the next analyses, candidate/commitment distinction, evidence lineage, and staged acceptance gates.
 The [developed architecture plan](../../architecture/BELIEFS_V2_PLAN.md) maps the proposal to AAA philosophy, existing beliefs, and ADR boundaries, with concrete delivery stages.
+The [recovered Symbia philosophical critique](beliefs-v2-philosophical-review.md) adds active candidate dissent, differentiated warrants, and dormant recall, with full response provenance.
 
 | Priority | Change | Evidence needed to accept it |
 |---|---|---|
