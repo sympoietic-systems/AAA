@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-08",
+  "milestone": "T4 preparation only; independent annotations and freeze pending",
+  "source_baseline": "T3 local contracts b4dbbdd; saved month snapshot 2026-10-08T02:05:08+00:00",
+  "checks": [
+    {
+      "command": "uv run pytest benchmarks/tests/ -q --basetemp=C:/Users/user/AppData/Local/Temp/aaa-t4-benchmarks-final -o cache_dir=C:/Users/user/AppData/Local/Temp/aaa-t4-cache",
+      "result": "74 passed in 35.04s on final benchmark code"
+    },
+    {
+      "command": "uv run ruff check benchmarks/suites/belief_review_corpus.py benchmarks/tests/test_belief_review_corpus.py backend/",
+      "result": "passed"
+    },
+    {
+      "command": "uv run ruff format --check benchmarks/suites/belief_review_corpus.py benchmarks/tests/test_belief_review_corpus.py backend/",
+      "result": "467 files already formatted"
+    },
+    {
+      "command": "uv run mypy",
+      "result": "89 source files passed; new benchmark module is outside backend strict slice"
+    },
+    {
+      "command": "node --check <extracted review script>",
+      "result": "passed; syntax only"
+    },
+    {
+      "command": "offline validate(packet), freeze(packet), credential scan",
+      "result": "binding/split validation passed; freeze correctly rejected independent review missing; no known credentials found"
+    },
+    {
+      "command": "uv run pytest benchmarks/tests/test_belief_review_corpus.py benchmarks/tests/test_calibration_contract.py -q --basetemp=C:/Users/user/AppData/Local/Temp/aaa-t4-final-guard -o cache_dir=C:/Users/user/AppData/Local/Temp/aaa-t4-cache",
+      "result": "15 passed in 9.73s"
+    },
+    {
+      "command": "changed Markdown link scan; git diff --check; backend/data test database scan",
+      "result": "passed; no test database artifacts found"
+    }
+  ],
+  "coverage": {
+    "legacy_statuses": {
+      "refined": 19,
+      "adopted": 32,
+      "pending": 1,
+      "rejected": 2
+    },
+    "context_statuses": {
+      "available": 43,
+      "unavailable": 11
+    },
+    "comparison_context_statuses": {
+      "unavailable": 39,
+      "available": 11,
+      "not_applicable": 4
+    },
+    "splits": {
+      "heldout": 44,
+      "validation": 5,
+      "tune": 5
+    },
+    "families": 9
+  },
+  "browser_verification": {
+    "result": "BLOCKED",
+    "reason": "browser URL security policy rejects file protocol; no workaround attempted"
+  },
+  "source_sha256": {
+    "benchmarks/suites/belief_review_corpus.py": "312b5c7a7c3e93471689315ad33de6f2e158d078cf3c73f7fd88ec42f0657371",
+    "benchmarks/tests/test_belief_review_corpus.py": "876584bccd8ffec53744f495c389f0b932d1a42bcf232075a2d04072dcceefe8",
+    "docs/systems/BELIEF_SPEC.md": "fbcb5b0d0aa4facdd146f36bccf94d029acf852faed9eff342da893aec6f6bc5",
+    "docs/reports/049-belief-v2-review-corpus/analyst-notes.md": "a87d24b23a71cb516ec4bab3f595abcfc3bd1288d5364be1ad7ada78d036ca23",
+    "docs/reports/049-belief-v2-review-corpus/annotation-template.json": "9d054a82282c2f441dc7f43cfb3706ec84d4bcf6fa0cc6d66d46caa3bee69dd4",
+    "docs/reports/049-belief-v2-review-corpus/README.md": "6908aa2b68ffb20f5638eaad108dbb12d140b7b3d11438e1d2168350c1736c2b",
+    "docs/reports/049-belief-v2-review-corpus/review-packet.json": "5ddf6eebd84a0e95a438bb32eb10d45a29049e23e9c9771c82873bca56b5abe1",
+    "docs/reports/049-belief-v2-review-corpus/review.html": "3b313e63eb86a195e5086377d8cd0b03fe986c8333d70c32a246ed456ec17a3b"
+  },
+  "limits": [
+    "No independent annotation submitted",
+    "No semantic accuracy claimed",
+    "No full backend suite rerun for isolated benchmark tooling",
+    "No production writes, evaluator requests, migrations or deployment"
+  ]
+}

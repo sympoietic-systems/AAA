@@ -62,3 +62,5 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 047: Beliefs v2 measured quantities and decay accounting](047-belief-v2-quantities-and-decay/README.md)
 
 - [Report 048: Beliefs v2 executable review contracts](048-belief-v2-contracts/README.md)
+
+- [Report 049: Beliefs v2 source recovery and independent review packet](049-belief-v2-review-corpus/README.md)
