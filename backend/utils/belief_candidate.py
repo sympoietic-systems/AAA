@@ -12,4 +12,9 @@ def statement_key(statement: str) -> str:
 
 def inert_belief_history(content: str) -> str:
     """Keep historical claims readable while removing their action syntax in prompts only."""
-    return re.sub(r"</?belief[-_]nucleate\b[^>]*>", "[historical belief candidate]", content, flags=re.I)
+    return re.sub(
+        r"</?belief[-_](?:nucleate|proposal)\b[^>]*>",
+        "[historical belief candidate]",
+        content,
+        flags=re.I,
+    )

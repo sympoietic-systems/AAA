@@ -51,6 +51,8 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/belief_review_contracts.py",
+    "backend/api/belief_review_schemas.py",
     "backend/storage/migrations/m063_belief_event_quantities_and_atrophy_clock.py",
     "backend/modules/belief/decay.py",
     "backend/metabolisation/mass_decay.py",

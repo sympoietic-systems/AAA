@@ -207,3 +207,15 @@ def test_v127_parser_preserves_fields_and_history_is_inert():
     assert "<belief_nucleate" not in inert_belief_history(text)
     assert "A new claim." in inert_belief_history(text)
     assert context_issues(Candidate.model_validate(candidate(statement="It changes.")), "")[-1] == "unresolved_referent"
+
+
+@pytest.mark.parametrize("tag", ["belief_proposal", "belief-proposal"])
+def test_belief_proposal_alias_uses_nucleation_parser_and_is_inert_in_history(tag):
+    text = f'<{tag} label="alias" consequence="Changes judgment" scope="art">Alias claim.</{tag}>'
+    cleaned, candidates = parse_belief_nucleate_tags(text)
+
+    assert cleaned == ""
+    assert candidates[0]["statement"] == "Alias claim."
+    assert candidates[0]["label"] == "alias"
+    assert candidates[0]["consequence"] == "Changes judgment"
+    assert inert_belief_history(text) == "[historical belief candidate]Alias claim.[historical belief candidate]"
