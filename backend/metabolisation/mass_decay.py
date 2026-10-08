@@ -1,17 +1,25 @@
 """Mass decay and skill ecology mixin for the Dream Daemon."""
 
+import asyncio
 import logging
 import time
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
-import numpy as np
+from backend.modules.belief.decay import DecayManager
+from backend.storage.repositories import BeliefRepository, SkillRepository
 
 logger = logging.getLogger(__name__)
 
 
 class MassDecayMixin:
     """Handles belief mass decay, skill ecology, and ghost skill resurrection."""
+
+    config: dict[str, Any]
+    belief_repo: BeliefRepository
+    skill_repo: SkillRepository | None
+    last_decay_time: float
 
     async def _apply_mass_decay(self, idle_duration: float) -> None:
         if idle_duration < 10:
@@ -27,75 +35,10 @@ class MassDecayMixin:
         if elapsed < 10:
             return
 
-        beliefs = self.belief_repo.list_beliefs("symbia")
-        active_beliefs = [b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded")]
-
-        if not active_beliefs:
-            return
-
-        max_mass = max(b.ontological_mass for b in active_beliefs) or 3.0
-        decay_config = self.config.get("belief_ecosystem", {})
-        wall_clock_enabled = decay_config.get("wall_clock_decay", {}).get("enabled", False)
-        if not wall_clock_enabled:
-            # Idle periods during silence do not erode active beliefs
-            await self._apply_skill_ecology(idle_duration)
-            return
-
-        mass_decay_cfg = decay_config.get("mass_decay", {})
-        lambda_base = mass_decay_cfg.get("lambda_base", 0.05)
-
-        for b in active_beliefs:
-            last_reinforced = b.last_reinforced_at
-            if last_reinforced is None:
-                continue
-
-            hours_since = (datetime.now(UTC) - last_reinforced.replace(tzinfo=UTC)).total_seconds() / 3600.0
-            if hours_since < 1.0:
-                continue
-
-            norm_mass = b.ontological_mass / max(max_mass, 0.01)
-            decay_rate = lambda_base * (1.0 - min(norm_mass, 0.9))
-            new_mass = b.ontological_mass * np.exp(-decay_rate * hours_since)
-            new_mass = max(0.0, min(3.0, new_mass))
-
-            new_stage = b.lifecycle_stage
-            if b.lifecycle_stage == "crystallized" and new_mass < 0.5:
-                new_stage = "senescence"
-            elif b.lifecycle_stage == "senescence" and new_mass < 0.02:
-                new_stage = "collapsed"
-            elif b.lifecycle_stage == "nucleation" and new_mass < 0.001:
-                new_stage = "faded"
-
-            if abs(new_mass - b.ontological_mass) < 1e-5 and new_stage == b.lifecycle_stage:
-                continue
-
-            if new_stage in ("collapsed", "faded"):
-                self.belief_repo.delete_belief(b.id)
-                self.belief_repo.create_proposal(
-                    id=b.id,
-                    agent_id=b.agent_id,
-                    provisional_statement=b.statement,
-                    source_trace=b.genesis_materials or "[]",
-                    initial_signature=b.vector_16d,
-                    nucleation_mass=new_mass,
-                    confidence=b.confidence,
-                    status="rejected",
-                )
-                self.belief_repo.update_proposal_status(
-                    b.id,
-                    "rejected",
-                    rejection_rationale=f"Belief collapsed during autopoietic mass decay. Final Mass: {new_mass:.3f}",
-                )
-                logger.info(f"Belief '{b.label}' decayed to collapsed/faded: moved to belief_proposals as rejected.")
-            else:
-                self.belief_repo.update_belief_mass(b.id, new_mass)
-                if new_stage != b.lifecycle_stage:
-                    self.belief_repo.update_belief_stage(b.id, new_stage)
-                    logger.info(
-                        f"Belief '{b.label}' mass decay: {b.lifecycle_stage} -> {new_stage} (mass={new_mass:.4f})"
-                    )
-
-        logger.debug("Applied mass decay to %d beliefs over %.0fs idle", len(active_beliefs), elapsed)
+        if self.config.get("belief_ecosystem", {}).get("wall_clock_decay", {}).get("enabled", False):
+            # Compatibility entry point: share the durable accounting clock with
+            # the daemon's active atrophy path rather than apply a second formula.
+            await asyncio.to_thread(DecayManager.atrophy_beliefs, self.belief_repo, "symbia")
         await self._apply_skill_ecology(idle_duration)
 
     async def _apply_skill_ecology(self, idle_duration: float) -> None:
@@ -172,7 +115,7 @@ class MassDecayMixin:
 
         self._check_ghost_skill_resurrection(belief_repo, skill_repo)
 
-    def _check_ghost_skill_resurrection(self, belief_repo, skill_repo) -> None:
+    def _check_ghost_skill_resurrection(self, belief_repo: BeliefRepository, skill_repo: SkillRepository) -> None:
         collapsed_skills = skill_repo.list_by_stage("collapsed")
         if not collapsed_skills:
             return

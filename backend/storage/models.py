@@ -211,6 +211,10 @@ class BeliefEvent:
     event_type: str
     impact_score: float
     rationale: str | None
+    impact_quantity: str | None = None
+    impact_unit: str | None = None
+    delta_mass: float | None = None
+    confidence_delta: float | None = None
 
 
 @dataclass

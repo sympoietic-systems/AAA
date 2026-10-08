@@ -532,8 +532,8 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                 // Use parsed values from backend if available, fall back to regex
                 const massVal = e.mass ?? (() => { const m = e.description?.match(/mass=([\d.]+)/); return m ? parseFloat(m[1]) : null; })()
                 const confVal = e.confidence ?? (() => { const c = e.description?.match(/conf=([\d.]+)/); return c ? parseFloat(c[1]) : null; })()
-                const massDeltaMatch = e.description?.match(/\(delta=([+\-\d.]+)\)/)
-                const massDelta = massDeltaMatch ? parseFloat(massDeltaMatch[1]) : e.delta_confidence || null
+                const massDelta = e.delta_mass ?? null
+                const confidenceDelta = e.confidence_delta ?? null
 
                 const evType = e.event_type || "event"
                 const evTypeColor =
@@ -561,9 +561,17 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                         </span>
                       )}
                       {confVal !== null && (
-                        <span className="text-semantic-green">c:{(confVal * 100).toFixed(0)}%</span>
+                        <span className="text-semantic-green">
+                          c:{(confVal * 100).toFixed(0)}%
+                          {confidenceDelta !== null && confidenceDelta !== 0 && (
+                            <span> ({confidenceDelta > 0 ? "+" : ""}{(confidenceDelta * 100).toFixed(1)}pp)</span>
+                          )}
+                        </span>
                       )}
                       <span className={`${evTypeColor} uppercase tracking-wider`}>[{evType}]</span>
+                      {e.impact_quantity == null && (
+                        <span className="text-[#777]">impact:{(e.impact_value ?? e.delta_confidence).toFixed(3)} (quantity unknown)</span>
+                      )}
                     </div>
                     <div className="text-[10px] text-[#777] font-mono mt-0.5 ml-2 break-words">
                       {e.description}

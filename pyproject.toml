@@ -51,6 +51,9 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/storage/migrations/m063_belief_event_quantities_and_atrophy_clock.py",
+    "backend/modules/belief/decay.py",
+    "backend/metabolisation/mass_decay.py",
     "backend/utils/message_quality.py",
     "backend/modules/response_quality.py",
     "backend/services/response_quality.py",

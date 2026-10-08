@@ -204,8 +204,16 @@ Chronological log of belief state changes.
 | event_type | TEXT | |
 | impact_score | REAL | |
 | rationale | TEXT | |
+| impact_quantity | TEXT | Nullable; quantity named by the producer, e.g. `ontological_mass` |
+| impact_unit | TEXT | Nullable; e.g. `mass` |
+| delta_mass | REAL | Nullable measured change after clamping |
+| confidence_delta | REAL | Nullable measured change after clamping |
 
 FK: `belief_id -> belief_nodes(id)`
+
+Migration `m063_belief_event_quantities_and_atrophy_clock` adds these nullable fields without interpreting historical impact scores. The existing API field `delta_confidence` remains a deprecated alias for generic `impact_score`; measured confidence is exposed as `confidence_delta`. `impact_value` exposes the generic score with `impact_quantity`/`impact_unit` when known. A score and a measured change can differ when clamping limits the mutation.
+
+The same migration adds `belief_nodes.atrophy_accounted_at` (nullable UTC text). Existing beliefs receive the migration-time checkpoint without changing mass, confidence, or reinforcement timestamps. Repository-created beliefs initialize the checkpoint at creation; a missing checkpoint starts at the next sweep without reconstructing historical charges. Wall-clock atrophy atomically rechecks agent, stage, reinforcement, checkpoint, and current mass under the writer lock, then persists mass, checkpoint, and the typed event together. `last_reinforced_at` continues to mean reinforcement, rather than decay execution.
 
 ### belief_proposals
 Pending belief nucleation proposals for review.
@@ -845,4 +853,3 @@ As enacted in [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-
 
 3. **Active Post-Baseline Migrations**:
    - **`m051_add_pole_vacancy_rupture_skill.py`** ([ADR-098](../decisions/ADR-098-paskian-teachback-and-operational-accommodation.md)): Injects the canonical `pole-vacancy-rupture` procedural skill into `skill_nodes`, records the initial version in `skill_versions`, and creates the `skill:pole-vacancy-rupture` belief bridge in `belief_nodes`.
-

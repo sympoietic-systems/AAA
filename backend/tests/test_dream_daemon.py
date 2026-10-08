@@ -495,61 +495,26 @@ async def test_somatic_vitality():
 
 
 @pytest.mark.asyncio
-async def test_mass_decay():
-    import time
+async def test_mass_decay(monkeypatch):
+    """Legacy helper delegates to the shared clock; silence default stays disabled."""
+    from unittest.mock import AsyncMock, Mock
+
+    from backend.modules.belief.decay import DecayManager
 
     app_state = MockAppState()
-    app_state.config["belief_ecosystem"] = {
-        "mass_decay": {"lambda_base": 0.05},
-        "wall_clock_decay": {"enabled": True},
-    }
-
-    updated_masses = []
-    updated_stages = []
-
-    def mock_update_belief_mass(belief_id, mass):
-        updated_masses.append((belief_id, mass))
-
-    def mock_update_belief_stage(belief_id, stage):
-        updated_stages.append((belief_id, stage))
-
-    app_state.belief_repo.update_belief_mass = mock_update_belief_mass
-    app_state.belief_repo.update_belief_stage = mock_update_belief_stage
-
-    vec_16d = [1.0] + [0.0] * 15
-    from datetime import timedelta
-
-    belief1 = BeliefNode(
-        id="b1",
-        label="Decaying Belief",
-        statement="A belief that hasn't been reinforced.",
-        confidence=0.8,
-        ontological_mass=0.8,
-        somatic_anchor="conceptual",
-        vector_16d=json.dumps(vec_16d),
-        origin="authoring",
-        agent_id="symbia",
-        lifecycle_stage="crystallized",
-        last_reinforced_at=datetime.now(UTC) - timedelta(hours=10),
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-    )
-    app_state.belief_repo.beliefs = [belief1]
-
     daemon = AutopoieticDreamDaemon(app_state)
-
-    # Short idle shouldn't trigger decay
+    sweep = Mock(return_value={"atrophied": 1, "collapsed": 0})
+    monkeypatch.setattr(DecayManager, "atrophy_beliefs", sweep)
+    daemon._apply_skill_ecology = AsyncMock()
     await daemon._apply_mass_decay(5.0)
-    assert len(updated_masses) == 0
-
-    # Long idle should trigger decay
-    daemon.last_decay_time = time.time() - 100.0
+    sweep.assert_not_called()
     await daemon._apply_mass_decay(100.0)
-
-    assert len(updated_masses) == 1
-    b_id, new_mass = updated_masses[0]
-    assert b_id == "b1"
-    assert new_mass < 0.8
+    sweep.assert_not_called()
+    daemon.last_decay_time = 0
+    daemon.config["belief_ecosystem"] = {"wall_clock_decay": {"enabled": True}}
+    await daemon._apply_mass_decay(100.0)
+    sweep.assert_called_once_with(app_state.belief_repo, "symbia")
+    assert daemon._apply_skill_ecology.await_count == 2
 
 
 class MockSemanticKnotRepository:

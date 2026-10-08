@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-08",
+  "task": "BELIEF_SPEC.md::T2",
+  "scope": "local shared working tree; no production migration or deployment",
+  "python": {
+    "passed": 755,
+    "warnings": 1,
+    "seconds": 602.1,
+    "command": "uv run pytest -x -q --basetemp=C:/Users/user/AppData/Local/Temp/aaa-t2-final -o cache_dir=C:/Users/user/AppData/Local/Temp/aaa-t2-cache -o faulthandler_timeout=60"
+  },
+  "backend_static": {
+    "ruff": "passed",
+    "format": "passed; 462 files",
+    "mypy": "passed; 87 source files"
+  },
+  "frontend": {
+    "typecheck": "passed",
+    "lint": {
+      "legacy_errors": 164,
+      "legacy_warnings": 10,
+      "regressions": 0
+    },
+    "test_files": 25,
+    "tests_passed": 142,
+    "build": "passed"
+  },
+  "sha256": {
+    "backend/metabolisation/mass_decay.py": "35c997a07db23ae5dd1deab08562873d934f6af11ffc7da2fc53e97d97eae143",
+    "backend/modules/belief/decay.py": "ddb47b5407d5a32a7bb31453e58097c20e287c274e73c1992ac30f7c304f547c",
+    "backend/modules/belief_engine.py": "3a28bed0aea375bd1eeccace80cafca11fc481e8c62b9d3b27d826ab121cb15f",
+    "backend/services/belief_serializer.py": "7a5858e4235d3da1e455f686a4b37817751bbcc0a266fb823f4125e710961d7b",
+    "backend/storage/models.py": "dc8847ac6dd67f2e3bdc80cd539896aeaec279d96409e7bc39672fac1d86cf20",
+    "backend/storage/repositories/cognitive/belief.py": "92e8ec9d4bdab5350ef8a46a2b6b2ea3c47ebd1fce7ea1417751ebd28f92da52",
+    "backend/storage/row_mappers.py": "7b86e573fe5da7b38746d3c454abe868c4c76bcefef240c0c199f19179f22dbe",
+    "backend/storage/migrations/m063_belief_event_quantities_and_atrophy_clock.py": "b4f874eb3c6147bd52b9461a5ace1938b9a1634236b825a2137a156c4525a4c6",
+    "backend/tests/test_belief_t2.py": "3f589b2b930c6161d55657285a34ddf1c562409a73018da809f9bd33cf33e6f5",
+    "backend/tests/test_dream_daemon.py": "7c964f24b17edf647a550a7faa04a9fe7da5c898a3eb2b93a25da2a2dd7d615c",
+    "frontend/src/api/types.ts": "0b0fd00e304d47604c68405d4c77713bdc71e6f2a25e1756926fe94acebedbea",
+    "frontend/src/components/pages/agentpage/beliefs/BeliefDetail.tsx": "d6f019593f8022e53dd2140c9678c7195551db9b70219aa2cf8d918630b0e88c",
+    "frontend/src/components/pages/agentpage/beliefs/BeliefDetail.test.tsx": "91fcce40715e464dfbce71d51092674f072af132bcc145cbd5aad9a6f65372da",
+    "pyproject.toml": "7ebbc65484a095dc0db482db4e3585f888699874de1024b4cc60ac08b87fb266"
+  }
+}

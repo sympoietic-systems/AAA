@@ -1,10 +1,11 @@
 # Beliefs V2 Specification
 
-Status: implementation started; T1 complete; runtime changes pending. Date: 2026-10-08.
+Status: implementation started; T1,T2 complete locally; T3–T18 pending. Date: 2026-10-08.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
 Baseline + origin inventory: [Report 046](../reports/046-belief-v2-baseline/README.md). Full local gates completed; concurrent unrelated edits excluded from certification; production identity unknown.
+T2 runtime/compatibility + gates: [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md). Production migration/deployment ⊥ performed.
 
 ## §G
 
@@ -46,7 +47,7 @@ I.lineage: support/encounter ancestry → `{source_id,source_hash,parent_sources
 
 I.api: preserve existing `/api/beliefs`, proposal reads/workshop actions. Add bounded receipt/encounter/decision/lineage reads + complete-interval event export. Exact route/payload contract frozen in T3; keyset cursor + UTC interval + snapshot bound; limit 1–50. Agent/auth boundaries enforced.
 
-I.events: forward events expose `impact_quantity,impact_value,delta_mass,delta_confidence,event_type,origin,receipt_id,timestamp`; unknown typed deltas nullable. Existing generic `delta_confidence` alias needs explicit compatibility/version plan; historical generic impact never silently reinterpreted as measured confidence. No invented historical values.
+I.events: forward events expose `impact_quantity,impact_unit,impact_value,delta_mass,confidence_delta,event_type,source_type,timestamp`; unknown typed deltas nullable. Existing generic `delta_confidence` retained deprecated alias for `impact_score`; new clients use `confidence_delta` for measured confidence. Historical generic impact never silently reinterpreted as measured confidence/mass. Receipt/origin links added by T10/T12. No invented historical values.
 
 I.ui: extend `AdmissionReasoning.tsx`, `BeliefDetail.tsx`, workshop + traces/creases → same receipt IDs/timestamps; encounter, claim/tension, comparison, consequence/challenge, decision/uncertainty. Show lineage, evaluator availability, source quote versus authored interpretation, provisional status, dissent, family review.
 
@@ -89,7 +90,7 @@ V24: adoption declined → attributable counter-trace; exploratory dissent remai
 
 id|status|task|cites
 T1|x|pin local baseline + dirty-state ownership; close root SPEC.md::T78 verification gaps; record production identity or unknown; inventory every origin/direct creator|V1,V21,V23,I.intake
-T2|.|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
+T2|x|repair typed event semantics/client compatibility + elapsed-time decay accounting; regression tests; reconcile decay docs; leave production history untouched|V16,V17,V18,I.events
 T3|.|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
 T4|.|recover source passages for saved incubating candidates + adopted/rejected comparisons; annotate lineage/consequence/conflict/context; independent review; frozen tuning/held-out corpus|V7,V8,V22,I.lineage,I.eval
 T5|.|add additive persistence extending admission/workshop; encounter/claim identities, immutable assessment links, versioned decisions; agent isolation, concurrent retry/restart tests|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
@@ -147,8 +148,11 @@ Rollout: only T18 mutates production under explicit authorization. Independent o
 
 id|date|cause|fix
 B1|2026-10-08|scar-fold fallback creates crystallized belief without admission; origin omitted from initial intake inventory|planned T7; V1,V7; skill bridge authority reviewed in T3
+B2|2026-10-08|generic impact serialized as confidence delta; wall-clock sweep repeatedly charges total inactivity; event insert failure swallowed|T2 resolved locally; V17,V18; typed nullable actual deltas + atomic checkpoint/mass/event; shared legacy helper route; report 047
+B3|2026-10-08|accretion could label delta from stale caller snapshot as measured persisted change|T2 resolved locally; V17; writer-lock reread + mutation/event transaction; rollback + stale snapshot tests; report 047
+B4|2026-10-08|post-annotation import edit missed final formatter run|ruff format + full format check; mechanical; existing completion gate sufficient
 
-Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. T2 repair findings require regression/backprop entry on implementation; do not preclaim resolution here.
+Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 
 ## References
 

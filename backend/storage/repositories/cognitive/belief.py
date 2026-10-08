@@ -98,8 +98,8 @@ class BeliefRepository(BaseRepository):
         conn = self._conn()
         conn.execute(
             """INSERT INTO belief_nodes
-               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, evolved_from_proposal, genesis_materials, version, last_reinforced_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+               (id, agent_id, label, statement, origin, confidence, ontological_mass, somatic_anchor, vector_16d, lifecycle_stage, evolved_from_proposal, genesis_materials, version, last_reinforced_at, atrophy_accounted_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
             (
                 id,
                 agent_id.lower(),
@@ -195,6 +195,71 @@ class BeliefRepository(BaseRepository):
                 (ontological_mass, belief_id),
             )
         self._commit(conn)
+
+    @with_connection
+    def apply_elapsed_atrophy(self, agent_id: str, belief_id: str, now: datetime) -> dict[str, int]:
+        """Commit the current mass, elapsed-time checkpoint, and event together.
+
+        Read again under the writer lock so retries and competing workers share one
+        clock. Reinforcement remains independent of accounting. Missing checkpoints
+        start now because historical charges cannot be reconstructed safely.
+        """
+        now = now.replace(tzinfo=UTC) if now.tzinfo is None else now.astimezone(UTC)
+        result = {"atrophied": 0, "collapsed": 0}
+        with self.atomic():
+            conn = self._conn()
+            row = conn.execute(
+                "SELECT * FROM belief_nodes WHERE LOWER(agent_id)=LOWER(?) AND id=?",
+                (agent_id, belief_id),
+            ).fetchone()
+            if row is None or row["lifecycle_stage"] in ("collapsed", "faded"):
+                return result
+            checkpoint = row["atrophy_accounted_at"]
+            if not checkpoint:
+                conn.execute("UPDATE belief_nodes SET atrophy_accounted_at=? WHERE id=?", (now.isoformat(), belief_id))
+                return result
+            reinforced = row["last_reinforced_at"]
+            if not reinforced:
+                return result
+
+            def utc(value: str) -> datetime:
+                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+
+            last = utc(reinforced)
+            if (now - last).total_seconds() <= 1800:
+                return result
+            hours = (now - max(utc(checkpoint), last)).total_seconds() / 3600
+            if hours <= 0:
+                return result
+            mass = float(row["ontological_mass"])
+            new_mass = max(0.0, mass - min(mass * 0.001 * hours, mass * 0.20))
+            if abs(new_mass - mass) < 0.0001:
+                return result
+            old_stage = row["lifecycle_stage"]
+            stage = "collapsed" if new_mass < 0.02 else old_stage
+            conn.execute(
+                "UPDATE belief_nodes SET ontological_mass=?, lifecycle_stage=?, atrophy_accounted_at=?, updated_at=? WHERE id=?",
+                (new_mass, stage, now.isoformat(), now.isoformat(), belief_id),
+            )
+            self.insert_belief_event(
+                event_id=str(uuid.uuid4()),
+                belief_id=belief_id,
+                source_type="atrophy",
+                source_id=None,
+                alignment=0.0,
+                perturbation=mass - new_mass,
+                event_type="collapse" if stage != old_stage else "atrophy",
+                impact=new_mass - mass,
+                rationale=f"Atrophied: mass={new_mass:.3f} (delta={new_mass - mass:+.3f}), conf={row['confidence']:.3f}, stage={stage}",
+                suppress_notification=True,
+                impact_quantity="ontological_mass",
+                impact_unit="mass",
+                delta_mass=new_mass - mass,
+                confidence_delta=0.0,
+                timestamp=now,
+            )
+            return {"atrophied": 1, "collapsed": int(stage != old_stage)}
 
     @with_connection
     def update_belief_stage(self, belief_id: str, lifecycle_stage: str) -> None:
@@ -321,14 +386,36 @@ class BeliefRepository(BaseRepository):
         impact: float,
         rationale: str | None,
         suppress_notification: bool = False,
+        *,
+        impact_quantity: str | None = None,
+        impact_unit: str | None = None,
+        delta_mass: float | None = None,
+        confidence_delta: float | None = None,
+        timestamp: datetime | None = None,
     ) -> None:
         try:
             conn = self._conn()
             conn.execute(
                 """INSERT INTO belief_events
-                   (id, belief_id, source_type, source_id, alignment_coefficient, perturbation_magnitude, event_type, impact_score, rationale)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (event_id, belief_id, source_type, source_id, alignment, perturbation, event_type, impact, rationale),
+                   (id, belief_id, source_type, source_id, alignment_coefficient, perturbation_magnitude, event_type, impact_score, rationale,
+                    impact_quantity, impact_unit, delta_mass, confidence_delta, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    event_id,
+                    belief_id,
+                    source_type,
+                    source_id,
+                    alignment,
+                    perturbation,
+                    event_type,
+                    impact,
+                    rationale,
+                    impact_quantity,
+                    impact_unit,
+                    delta_mass,
+                    confidence_delta,
+                    (timestamp or datetime.now(UTC)).isoformat(),
+                ),
             )
             self._commit(conn)
 
@@ -369,6 +456,7 @@ class BeliefRepository(BaseRepository):
                 belief_id,
                 exc_info=True,
             )
+            raise
 
     @with_connection
     def get_events_for_belief(self, belief_id: str, limit: int = 100) -> list[BeliefEvent]:

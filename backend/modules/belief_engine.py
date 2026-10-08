@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -201,77 +202,86 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_id: str | None = None,
         dc: float = 0.5,
     ) -> float:
-        delta_m = compute_delta_mass(source_weight, alignment, belief.ontological_mass)
-        new_mass = clamp_mass(belief.ontological_mass + delta_m)
+        with self._belief_repo.atomic():
+            current = self._belief_repo.get_belief(belief.agent_id, belief.id)
+            if current is None:
+                raise ValueError("Belief no longer exists for accretion")
+            belief = current
+            delta_m = compute_delta_mass(source_weight, alignment, belief.ontological_mass)
+            new_mass = clamp_mass(belief.ontological_mass + delta_m)
 
-        delta_c = compute_delta_confidence(alignment, perturbation, belief.ontological_mass, dc=dc)
-        new_confidence = clamp_confidence(belief.confidence + delta_c)
+            delta_c = compute_delta_confidence(alignment, perturbation, belief.ontological_mass, dc=dc)
+            new_confidence = clamp_confidence(belief.confidence + delta_c)
 
-        new_stage = compute_lifecycle_stage(belief.lifecycle_stage, new_mass, new_confidence)
+            new_stage = compute_lifecycle_stage(belief.lifecycle_stage, new_mass, new_confidence)
 
-        event_type = "support" if alignment >= 0.0 else "collision"
-        if new_stage != belief.lifecycle_stage:
-            event_type = (
-                "crystallization"
-                if new_stage == "crystallized"
-                else "collapse"
-                if new_stage == "collapsed"
-                else event_type
-            )
+            event_type = "support" if alignment >= 0.0 else "collision"
+            if new_stage != belief.lifecycle_stage:
+                event_type = (
+                    "crystallization"
+                    if new_stage == "crystallized"
+                    else "collapse"
+                    if new_stage == "collapsed"
+                    else event_type
+                )
 
-        # Suppress notification for routine accretion/support events.
-        # Only lifecycle transitions (crystallization, collapse) should generate notifications.
-        suppress_notify = event_type not in ("crystallization", "collapse")
+            # Suppress notification for routine accretion/support events.
+            # Only lifecycle transitions (crystallization, collapse) should generate notifications.
+            suppress_notify = event_type not in ("crystallization", "collapse")
 
-        self._belief_repo.insert_belief_event(
-            event_id=str(uuid.uuid4()),
-            belief_id=belief.id,
-            source_type=source_type,
-            source_id=source_id,
-            alignment=alignment,
-            perturbation=perturbation,
-            event_type=event_type,
-            impact=delta_m,
-            rationale=f"Accreted: mass={new_mass:.3f} (delta={delta_m:+.3f}), conf={new_confidence:.3f}, stage={new_stage}",
-            suppress_notification=suppress_notify,
-        )
-
-        if new_stage in ("collapsed", "faded"):
-            self._belief_repo.delete_belief(belief.id)
-            self._belief_repo.create_proposal(
-                id=belief.id,
-                agent_id=belief.agent_id,
-                provisional_statement=belief.statement,
-                source_trace=belief.genesis_materials or "[]",
-                initial_signature=belief.vector_16d,
-                nucleation_mass=new_mass,
-                confidence=new_confidence,
-                status="rejected",
-            )
-            self._belief_repo.update_proposal_status(
-                belief.id,
-                "rejected",
-                rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}",
-            )
-        else:
-            self._belief_repo.update_belief(
+            self._belief_repo.insert_belief_event(
+                event_id=str(uuid.uuid4()),
                 belief_id=belief.id,
-                confidence=new_confidence,
-                vector_16d=belief.vector_16d,
-                origin=belief.origin,
-                lifecycle_stage=new_stage,
+                source_type=source_type,
+                source_id=source_id,
+                alignment=alignment,
+                perturbation=perturbation,
+                event_type=event_type,
+                impact=delta_m,
+                rationale=f"Accreted: mass={new_mass:.3f} (delta={delta_m:+.3f}), conf={new_confidence:.3f}, stage={new_stage}",
+                suppress_notification=suppress_notify,
+                impact_quantity="ontological_mass",
+                impact_unit="mass",
+                delta_mass=new_mass - belief.ontological_mass,
+                confidence_delta=new_confidence - belief.confidence,
             )
-            self._belief_repo.update_belief_mass(belief.id, new_mass)
 
-        return new_mass
+            if new_stage in ("collapsed", "faded"):
+                self._belief_repo.delete_belief(belief.id)
+                self._belief_repo.create_proposal(
+                    id=belief.id,
+                    agent_id=belief.agent_id,
+                    provisional_statement=belief.statement,
+                    source_trace=belief.genesis_materials or "[]",
+                    initial_signature=belief.vector_16d,
+                    nucleation_mass=new_mass,
+                    confidence=new_confidence,
+                    status="rejected",
+                )
+                self._belief_repo.update_proposal_status(
+                    belief.id,
+                    "rejected",
+                    rejection_rationale=f"Belief collapsed during autopoietic metabolism. Final Mass: {new_mass:.3f}, Final Confidence: {new_confidence:.3f}",
+                )
+            else:
+                self._belief_repo.update_belief(
+                    belief_id=belief.id,
+                    confidence=new_confidence,
+                    vector_16d=belief.vector_16d,
+                    origin=belief.origin,
+                    lifecycle_stage=new_stage,
+                )
+                self._belief_repo.update_belief_mass(belief.id, new_mass)
+
+            return new_mass
 
     async def _apply_turn_decay(self, agent_id: str, engaged_belief_id: str | None = None) -> dict:
         """Apply discrete per-turn mass decay to active beliefs that were not engaged this turn."""
-        return DecayManager.apply_turn_decay(self._belief_repo, agent_id, engaged_belief_id)
+        return await asyncio.to_thread(DecayManager.apply_turn_decay, self._belief_repo, agent_id, engaged_belief_id)
 
     async def _atrophy_beliefs(self, agent_id: str) -> dict:
         """Apply time-based mass decay to active beliefs that haven't been reinforced recently."""
-        return DecayManager.atrophy_beliefs(self._belief_repo, agent_id)
+        return await asyncio.to_thread(DecayManager.atrophy_beliefs, self._belief_repo, agent_id)
 
     def _compute_lifecycle_stage(
         self,

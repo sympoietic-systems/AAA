@@ -294,6 +294,10 @@ def _row_to_belief_event(row: sqlite3.Row) -> BeliefEvent:
         event_type=row["event_type"],
         impact_score=row["impact_score"],
         rationale=row["rationale"],
+        impact_quantity=row["impact_quantity"] if "impact_quantity" in row.keys() else None,
+        impact_unit=row["impact_unit"] if "impact_unit" in row.keys() else None,
+        delta_mass=row["delta_mass"] if "delta_mass" in row.keys() else None,
+        confidence_delta=row["confidence_delta"] if "confidence_delta" in row.keys() else None,
     )
 
 

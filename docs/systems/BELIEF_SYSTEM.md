@@ -215,7 +215,7 @@ When an input vector matches an active belief node with similarity $\ge 0.3$, th
 
 ### D. Relational Turn-Based Decay & Crystallized Floor (ADR-090)
 
-Beliefs do **not** atrophy during periods of conversational inactivity or idle system downtime. Instead, decay is **relational and activity-driven**: ontological mass atrophies strictly when cognitive activity occurs (chat metabolism turns or dream consolidation passes) and a belief is **omitted or unengaged**.
+With the default configuration, beliefs do **not** atrophy during periods of conversational inactivity or idle system downtime. Decay is **relational and activity-driven**: ontological mass atrophies when cognitive activity occurs (chat metabolism turns or dream consolidation passes) and a belief is **omitted or unengaged**. The optional wall-clock policy is described separately below; enabling it changes this behavior.
 
 1.  **Zero Inactivity Erosion:**
     *   Wall-clock idle decay (`wall_clock_decay.enabled: false`) is disabled by default. If Symbia is offline or no conversations occur for days or weeks, her ontological mass remains completely frozen.
@@ -239,7 +239,7 @@ Beliefs do **not** atrophy during periods of conversational inactivity or idle s
     *   If newly formed proto-hypotheses are continually ignored across hundreds or thousands of conversational turns without positive reinforcement, they naturally decline toward the collapse threshold ($m < 0.02$) and spectral margin, preventing clutter in working memory.
 
 5.  **Event Recording:**
-    *   Significant turnover or threshold crossings generate audit events (`belief_events`) with `source_type: "turn_decay"` or `"atrophy"`.
+    *   The turn-decay path currently updates mass without a per-belief event; the optional wall-clock path writes an `atrophy` event atomically with its accounting checkpoint. Mass/confidence telemetry coverage for other producers is tracked separately in Beliefs v2 T10.
     *   Reinforced beliefs update `last_reinforced_at` and accrete mass dynamically per interaction.
 
 ---
@@ -357,7 +357,9 @@ A deep code audit of the current codebase has revealed two implementation flaws 
 ### A. Mass Decay Consolidated into Belief Engine Atrophy
 
 *   **Historical Issue:** A `mass_decay.py` mixin (dream daemon) handled mass decay via an exponential formula, but suffered from a configuration bug where `config.yaml`'s `mass_decay_lambda_base` was silently ignored due to a nested-key mismatch. This caused $2.5\times$ accelerated forgetting. Additionally, this decay path did not log `belief_events`, making mass decreases invisible in the frontend Log tab.
-*   **Resolution:** Mass decay is now unified into a single pathway: `BeliefDynamicsEngine._atrophy_beliefs()`, called exclusively from the Dream Daemon's main loop every 15 minutes. The `_apply_mass_decay()` call was removed from `check_and_trigger_dream()`, and the pipeline's `process()` no longer runs atrophy (which was redundant with the daemon). The atrophy pass uses a linear decay formula: $\Delta m = m \cdot 0.001 \cdot t_{hours}$, capped at 20% per check. Every decay event is logged as a `belief_event` with `source_type: "atrophy"` and a batch `trace` notification is created for UI visibility. Migration `m031` relaxed the original CHECK constraints on `belief_events` to allow the full set of event types used in practice (`atrophy`, `revision`, `accretion`, `ghost_ecology`).
+*   **Current optional policy:** `BeliefDynamicsEngine._atrophy_beliefs()` is scheduled every 15 minutes only when `wall_clock_decay.enabled` is true; the default remains false. `_apply_mass_decay()` is no longer called from the active trigger path; its compatibility entry point now delegates to the same accounting operation rather than applying the historical exponential formula. The pass uses $\Delta m = m \cdot 0.001 \cdot t_{unaccounted\ hours}$, capped at 20% per charge. The elapsed interval begins at the later of `atrophy_accounted_at` and `last_reinforced_at`. Same-clock repeats, restarts, and competing workers cannot charge the interval again. A capped charge accounts for the full interval; it does not leave a hidden backlog. The existing small-change threshold accumulates uncharged time until a change is large enough to persist.
+*   **Accounting and telemetry:** Migration `m063_belief_event_quantities_and_atrophy_clock` starts existing checkpoints at migration time without changing historical mass/confidence. Each charge commits current mass, lifecycle, checkpoint, and measured event together. Event failures propagate and roll back the charge; decay does not update `last_reinforced_at`. Accretion likewise commits its event and mutation together, with measured deltas reflecting clamping. Historical `impact_score` remains generic; the old API `delta_confidence` is a deprecated alias, and the belief log uses nullable `delta_mass`/`confidence_delta`. Unknown legacy impact is displayed without labeling it as mass or confidence change.
+*   **Boundary:** The crystallized floor applies to turn decay. The optional wall-clock policy retains its existing ability to erode crystallized mass and collapse a belief below mass 0.02; T2 neither enables this policy nor imposes a new floor on it. Lifecycle changes preserve confidence. Migration and local tests do not establish production rollout.
 *   **Applies to:** All non-collapsed, non-faded beliefs not reinforced within the last 30 minutes.
 
 ### B. The Ghost Merging Persistence Bug
@@ -394,13 +396,12 @@ The following files represent the physical substrate of the belief metabolism sy
 
 ### Core Logic & Metabolism
 *   [belief_engine.py](../../backend/modules/belief_engine.py): Contains the `BeliefDynamicsEngine`, nucleation, accretion calculations, ecosystem health metrics, tension fields, and coordinates warping.
-*   [mass_decay.py](../../backend/metabolisation/mass_decay.py): Defines the `MassDecayMixin` with legacy exponential decay methods (`_apply_mass_decay`, `_apply_skill_ecology`). No longer called from the active daemon loop — all decay is now handled via `_atrophy_beliefs()`.
+*   [mass_decay.py](../../backend/metabolisation/mass_decay.py): Defines skill ecology and the legacy `_apply_mass_decay` entry point, which now shares the durable atrophy clock. The active daemon schedules `_atrophy_beliefs()` only when wall-clock decay is enabled.
 *   [daemon.py](../../backend/metabolisation/daemon.py): Orchestrates the background thread checks, evaluations, and resonance execution.
 
 ### Database Repositories & Schemas
 *   [models.py](../../backend/storage/models.py): Defines ORM classes `BeliefNode`, `BeliefEvent`, `BeliefTension`, and `EcosystemSnapshot`.
-*   [belief.py](../../backend/storage/repositories/belief.py): Executes SQLite CRUD operations for belief nodes, tensions, events, and somatic variables.
+*   [belief.py](../../backend/storage/repositories/cognitive/belief.py): Executes SQLite CRUD operations for belief nodes, tensions, events, and somatic variables.
 
 ### Initial Seed State
-*   [seed_beliefs.yaml](../../backend/personality/seed_beliefs.yaml): Outlines initial authored baseline beliefs loaded during database seeding.
-*   [seed_beliefs.py](../../backend/scripts/seed_beliefs.py): Initial seeding script executing initial SQL database ingestion.
+*   [initialize_agent.py](../../backend/scripts/initialize_agent.py): Administrative agent initialization, authored baseline beliefs, and skill bridge provisioning.
