@@ -161,7 +161,7 @@ To enable rapid production incident triage without risking disk exhaustion or se
 ### Architecture & Standards
 *   **Dual-Stream Segregation**:
     *   `data/logs/error.log`: Captures `WARNING`, `ERROR`, and `CRITICAL` records for immediate incident investigation without routine traffic noise.
-    *   `data/logs/server.log`: Captures `INFO` and higher operational records for complete surrounding request and task context.
+    *   `data/logs/server.log`: Captures `INFO` and higher application and task records. Uvicorn HTTP access records are disabled, so API requests do not each add a line.
 *   **Hard Resource Caps (Zero Memory & Bounded Disk)**:
     *   Log files use Python's standard library `RotatingFileHandler` configured with `max_bytes: 10485760` (10 MB) and `backup_count: 5`.
     *   Total disk footprint per stream is strictly capped at `(5 + 1) * 10 MB = 60 MB`. The oldest archive is automatically purged upon rollover.
