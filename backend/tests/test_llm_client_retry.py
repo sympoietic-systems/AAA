@@ -105,8 +105,8 @@ class TestRateLimitHeaders:
     def test_defaults_missing_headers(self):
         p = _make_provider()
         result = p._parse_rate_limit_headers({})
-        assert result["remaining"] == 0
-        assert result["limit"] == 0
+        assert result["remaining"] is None
+        assert result["limit"] is None
 
 
 class TestRateLimitError:

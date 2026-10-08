@@ -71,6 +71,7 @@ export function parseStatus(content: string | null | undefined): { icon: string;
 /** Human-readable status label + color for a single digested source. */
 export function sourceStatusLabel(analysis: any): { label: string; color: string } {
   if (!analysis) return { label: "no analysis", color: "var(--color-ui-dim)" }
+  if (analysis.analysis_status === "failed") return { label: "analysis failed", color: "var(--color-semantic-red)" }
   if (analysis.learnings?.length > 0) return { label: `${analysis.learnings.length} learnings`, color: "var(--color-semantic-green)" }
 
   const gaps = analysis.gaps || []

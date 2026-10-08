@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useCallback } from "react"
+import { memo, useState, useEffect, useCallback, useRef } from "react"
 import type { TaskStepsResponse, StepPreview } from "../../../../api/research"
 import { getTaskSteps, executeStep, rerunTask, getStepPreview, reinitializeTask } from "../../../../api/research"
 import { TwoPanelLayout } from "../shared/TwoPanelLayout"
@@ -17,6 +17,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   const [stepping, setStepping] = useState(false)
   const [preview, setPreview] = useState<StepPreview | null>(null)
   const [prevLoading, setPrevLoading] = useState(false)
+  const loadSequence = useRef(0)
 
   useEffect(() => {
     if (externalStepId && data) {
@@ -26,7 +27,10 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
   }, [externalStepId, data])
 
   const load = useCallback(() => {
-    getTaskSteps(taskId).then(setData).catch(() => {})
+    const sequence = ++loadSequence.current
+    getTaskSteps(taskId).then(result => {
+      if (sequence === loadSequence.current) setData(result)
+    }).catch(() => {})
   }, [taskId])
 
   const fetchPreview = useCallback(() => {
@@ -57,7 +61,7 @@ export const StepsTab = memo(function StepsTab({ taskId, orchPhase, taskStatus, 
     finally { setPrevLoading(false) }
   }, [taskId, orchPhase, taskStatus])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, [load, taskStatus, orchPhase])
 
   useEffect(() => {
     if (selectedId) {

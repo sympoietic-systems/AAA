@@ -76,8 +76,10 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
     def _parse_rate_limit_headers(self, headers: Mapping[str, str]) -> LLMResult:
         return {
-            "remaining": int(headers.get("x-ratelimit-remaining-requests", 0)),
-            "limit": int(headers.get("x-ratelimit-limit-requests", 0)),
+            "remaining": int(headers["x-ratelimit-remaining-requests"])
+            if "x-ratelimit-remaining-requests" in headers
+            else None,
+            "limit": int(headers["x-ratelimit-limit-requests"]) if "x-ratelimit-limit-requests" in headers else None,
             "reset": headers.get("x-ratelimit-reset-requests", ""),
         }
 
@@ -227,13 +229,28 @@ class OpenAICompatibleProvider(BaseLLMProvider):
 
                 if response.status_code == 429:
                     rate_info = self._parse_rate_limit_headers(response.headers)
+                    limit_source = "unknown"
+                    try:
+                        error_body = response.json()
+                    except ValueError:
+                        error_body = None
+                    if isinstance(error_body, dict):
+                        error = error_body.get("error")
+                        metadata = error.get("metadata") if isinstance(error, dict) else None
+                        if (
+                            isinstance(metadata, dict)
+                            and metadata.get("limit_source") == "upstream_provider_shared_pool"
+                        ):
+                            limit_source = "upstream_provider_shared_pool"
                     retry_after = int(response.headers.get("retry-after", 0))
                     if retry_after == 0:
                         retry_after = min(2**attempt, 30)
 
                     logger.warning(
                         f"Rate limited (attempt {attempt + 1}/{max_retries + 1}). "
-                        f"Remaining: {rate_info['remaining']}/{rate_info['limit']}. "
+                        f"Limit source: {limit_source}. "
+                        f"Remaining: {rate_info['remaining'] if rate_info['remaining'] is not None else 'unknown'}/"
+                        f"{rate_info['limit'] if rate_info['limit'] is not None else 'unknown'}. "
                         f"Retry after: {retry_after}s"
                     )
 
@@ -242,10 +259,11 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                         continue
 
                     raise RateLimitError(
-                        f"Rate limit exceeded. {rate_info['remaining']}/{rate_info['limit']} remaining.",
+                        f"Rate limit exceeded (source: {limit_source}).",
                         retry_after=retry_after,
                         remaining=rate_info["remaining"],
                         limit=rate_info["limit"],
+                        limit_source=limit_source,
                     )
 
                 response.raise_for_status()

@@ -56,6 +56,7 @@ class ParsePayload(BaseModel):
 
 
 class DigestPayload(BaseModel):
+    analyzed_sources_count: int | None = Field(default=None, ge=0)
     parsed_sources_cache: list[dict] = Field(default_factory=list)
     learnings: list[str] = Field(default_factory=list)
     followups: list[str] = Field(default_factory=list)

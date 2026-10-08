@@ -378,10 +378,21 @@ async def test_service_create_and_delete_skill():
     assert len(belief_repo.list_beliefs("symbia")) == 0
 
 
-def test_skills_api_flux_control():
+def test_skills_api_flux_control(monkeypatch):
+    from unittest.mock import AsyncMock
+
     from fastapi.testclient import TestClient
 
     from backend.main import app
+    from backend.services.skill import SkillService
+
+    # This test covers API authorization and CRUD, not provider evaluation.
+    # State restored by other tests may contain an external or pending scorer.
+    monkeypatch.setattr(
+        SkillService,
+        "_compute_skill_vector",
+        AsyncMock(return_value=json.dumps({"v16d": [0.25] * 16, "v384d": []})),
+    )
 
     db_path = _setup_db("aaa_skill_api_test.db")
     skill_repo = SkillRepository(db_path)

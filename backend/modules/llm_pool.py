@@ -202,8 +202,16 @@ class ModelPoolProvider(BaseLLMProvider):
                             m for m in models_to_try if m != self._last_model_used
                         ]
 
+        # Research may recover from a prior request's cooldown, within its frozen policy.
+        # Interactive calls retain immediate failure; no timer or credential state is reset.
+        if current_scope() is not None and models_to_try and all(self._is_exhausted(m) for m in models_to_try):
+            wait_seconds = min(self._exhausted[m] for m in models_to_try) - time.time() + 0.01
+            logger.info("Research provider pool cooling down; waiting %.2fs within the existing deadline", wait_seconds)
+            await retry_delay(max(0.01, wait_seconds))
+
         for model in models_to_try:
             if self._is_exhausted(model):
+                errors.append(f"{model}: cooldown active")
                 continue
 
             # Route model based on prefix
@@ -282,6 +290,12 @@ class ModelPoolProvider(BaseLLMProvider):
                 except AttemptBudgetExceeded:
                     raise
                 except RateLimitError as e:
+                    if e.limit_source == "upstream_provider_shared_pool":
+                        errors.append(f"{model}: upstream provider capacity limited")
+                        logger.warning(
+                            "Upstream capacity limited for model %s; preserving key and trying the next model.", model
+                        )
+                        break
                     key_mgr.mark_key_exhausted(key)
                     errors.append(f"{model}: rate limited - {e}")
                     logger.warning("Credential rate limited for model %s. Rotating key...", model)
@@ -363,7 +377,7 @@ class ModelPoolProvider(BaseLLMProvider):
                 return cast(LLMResult, result)
 
             self._mark_exhausted(model)
-            logger.warning("All keys exhausted for model %s. Moving to next in pool.", model)
+            logger.warning("Model %s unavailable for this request. Moving to next in pool.", model)
 
         if not errors:
             logger.error(

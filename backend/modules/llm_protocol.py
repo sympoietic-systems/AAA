@@ -8,11 +8,20 @@ LLMResult = dict[str, Any]
 
 
 class RateLimitError(Exception):
-    def __init__(self, message: str, retry_after: int = 0, remaining: int = 0, limit: int = 0):
+    def __init__(
+        self,
+        message: str,
+        retry_after: int = 0,
+        remaining: int | None = None,
+        limit: int | None = None,
+        *,
+        limit_source: str = "unknown",
+    ):
         super().__init__(message)
         self.retry_after = retry_after
         self.remaining = remaining
         self.limit = limit
+        self.limit_source = limit_source
 
 
 class ProviderResponseError(Exception):

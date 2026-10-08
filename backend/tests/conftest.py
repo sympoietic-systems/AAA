@@ -15,8 +15,20 @@ os.environ["AAA_RUN_MIGRATIONS"] = "true"
 
 @pytest.fixture(autouse=True)
 def isolate_auth_environment(monkeypatch):
-    """Prevent a developer's shell password from changing unrelated test behavior."""
+    """Keep ordinary tests independent of developer credentials and live providers."""
     monkeypatch.setenv("AAA_PASSWORD", "")
+    for key in (
+        "AAA_LLM_API_KEY",
+        "AAA_BACKGROUND_API_KEY",
+        "AAA_VISION_API_KEY",
+        "AAA_STRUCTURAL_API_KEY",
+        "AAA_TYPESAFE_API_KEY",
+        "TYPESAFE_API_KEY",
+        "AAA_GOOGLE_API_KEY",
+        "AAA_DEEPSEEK_API_KEY",
+        "AAA_NVIDIA_API_KEY",
+    ):
+        monkeypatch.setenv(key, "")
 
 
 @pytest.fixture(scope="session")

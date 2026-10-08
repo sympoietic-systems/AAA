@@ -24,6 +24,8 @@ Reports describe verification at each task's completion. Their test counts overl
 
 ## Operator settings and boundaries
 
+Provider failures and digestion reporting are documented in [Report 050](../reports/050-research-digestion-provider-failure/README.md). Upstream model throttling preserves the key for other configured models. Research cooldown recovery remains within the frozen task deadline; failed analyses appear as failures and explanatory gaps, with only successful analyses counted.
+
 Subresearch defaults to `off`. An explicit per-task `propose` request can create a review checkpoint after qualifying source contact; approval authorizes the reviewed child scopes and allocations. Exactly two child lines gather under their parent's deadline and shared resource ceilings. Children cannot create grandchildren or perform final synthesis. NVIDIA reservations use the configured zero-price assumption; other provider ceilings must be configured as described in Report 039 before family calls are admitted. Missing billing metadata remains unknown.
 
 Checking **Allow branching** at creation explicitly requests `bounded_auto`. Trusted user dispatch freezes a covenant allowing at most two qualified children under the parent deadline and shared resource limits. Source witnesses and separated scopes remain required. Restart does not renew consent. Model-authored tasks cannot request this mode. The user authorized this rollout before independent branch calibration; that calibration remains unknown. The [manual-mode guide](RESEARCH_MANUAL_MODE.md) covers phase stepping; proposal review is a separate durable checkpoint.

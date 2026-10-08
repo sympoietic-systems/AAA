@@ -139,7 +139,11 @@ class ResearchEnvelopeMapper:
         elif phase == "parsing" and isinstance(payload, ParsePayload):
             task_state["parsed_sources_cache"] = payload.parsed_sources
         elif phase == "digesting" and isinstance(payload, DigestPayload):
-            task_state["sources_analyzed"] = task_state.get("sources_analyzed", 0) + len(payload.parsed_sources_cache)
+            task_state["sources_analyzed"] = task_state.get("sources_analyzed", 0) + (
+                payload.analyzed_sources_count
+                if payload.analyzed_sources_count is not None
+                else len(payload.parsed_sources_cache)
+            )
             if not payload.learnings:
                 task_state["stagnation_counter"] = task_state.get("stagnation_counter", 0) + 1
             else:

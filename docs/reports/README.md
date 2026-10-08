@@ -10,6 +10,7 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 
 | Report | Title & Scope | Primary Subsystem | Key Invariant / Outcome |
 | :---: | :--- | :--- | :--- |
+| **[050](050-research-digestion-provider-failure/README.md)** | Research digestion provider failure | Research / LLM pool | Upstream capacity preserves credentials; bounded cooldown recovery; explicit failed analysis |
 | **[002](002-16d-structural-scoring-benchmark-report.md)** | **16D Structural Scorer Benchmark** | `backend/modules/` | Jev vs. LLM baseline: sub-600ms latency, dual-signal Power ($s_i$) & Confidence ($c_i$) across 16 cybernetic dimensions. |
 | **[003](003-empirical-10-turn-benchmark-report.md)** | **10-Turn Adversarial Benchmark** | `backend/modules/metrics/` | Head-to-head pressure test: AAA apparatus vs. Google Gemini 3.7 Flash across 14 metrics. |
 | **[004](004-conversation-metrics-calibration-report.md)** | **Conversation Metrics Calibration** | `backend/modules/metrics/` | Calibration of Coupling Coherence ($C_t$) & Divergence Resolution Ratio ($DRR_t$) on $\mathbb{S}^{383}$. |

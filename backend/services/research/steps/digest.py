@@ -21,6 +21,19 @@ _CONTENT_JUNK_PATTERNS: list[str] = [
 ]
 
 
+def failed_analysis(category: str) -> dict:
+    """Public diagnostics contain categories, never private provider exception text."""
+    return {
+        "analysis_status": "failed",
+        "error_category": category,
+        "learnings": [],
+        "gaps": [f"Source analysis unavailable ({category}); no findings extracted."],
+        "followups": [],
+        "direct_urls": [],
+        "diffractive_notes": [],
+    }
+
+
 async def analyze_source_content(
     orch,
     task_id: str,
@@ -42,6 +55,7 @@ async def analyze_source_content(
     if len(content_stripped) < 200:
         logger.info("Skipping short content (%d chars) for %s", len(content_stripped), url[:80])
         return {
+            "analysis_status": "skipped",
             "learnings": [],
             "gaps": [f"Content too short ({len(content_stripped)} chars) — likely paywall or block"],
             "followups": [],
@@ -52,6 +66,7 @@ async def analyze_source_content(
         if junk.lower() in content_stripped[:1000].lower():
             logger.info("Skipping junk content ('%s') for %s", junk, url[:80])
             return {
+                "analysis_status": "skipped",
                 "learnings": [],
                 "gaps": [f"Blocked by anti-bot protection ('{junk}')"],
                 "followups": [],
@@ -115,7 +130,7 @@ async def analyze_source_content(
     try:
         llm = getattr(orch._state, "llm_provider", None)
         if not llm:
-            return fallback
+            return failed_analysis("provider_not_configured")
         resp = await generate_unified(
             llm,
             system_prompt=system_text,
@@ -125,6 +140,22 @@ async def analyze_source_content(
             temperature=prompt_data.get("temperature", 0.3),
             max_tokens=prompt_data.get("max_tokens"),
         )
+        if resp.get("error") or resp.get("truncated"):
+            category = (
+                "invalid_structured_response"
+                if resp.get("error") == "invalid_json_completion"
+                else "truncated_completion"
+                if resp.get("truncated")
+                else "provider_unavailable"
+            )
+            orch._log_llm_response(
+                task_id,
+                "orchestrator_digest_response",
+                resp,
+                extra={"source_url": url, "learnings_count": 0, "error_category": category},
+                step_id=step_id or None,
+            )
+            return failed_analysis(category)
         result = resp.get("json_data") or resp.get("content") or {}
         if isinstance(result, str):
             result = json.loads(result)
@@ -139,13 +170,17 @@ async def analyze_source_content(
             },
             step_id=step_id or None,
         )
-        return result if isinstance(result, dict) else fallback
+        return (
+            {**result, "analysis_status": "complete"}
+            if isinstance(result, dict)
+            else failed_analysis("invalid_structured_response")
+        )
     except Exception as e:
-        logger.error("Source analysis failed: %s", e)
+        logger.exception("Source analysis failed for task %s", task_id)
         orch._log_meta(
             task_id, "orchestrator_digest_error", {"source_url": url, "error": str(e)}, step_id=step_id or None
         )
-        return fallback
+        return failed_analysis("source_analysis_error")
 
 
 async def parallel_digest_grouped(
@@ -426,11 +461,21 @@ class DigestStep(BaseResearchStep):
             max_depth,
         )
 
+        failed_count = sum(dr.get("result", {}).get("analysis_status") == "failed" for dr in digest_results)
+        analyzed_count = sum(
+            dr.get("result", {}).get("analysis_status", "complete") == "complete" for dr in digest_results
+        )
         if orch.step_repo:
             for q_group, step_id in group_steps.items():
-                digested_for_group = [dr for dr in digest_results if dr.get("query_group") == q_group]
-                orch.step_repo.update(
-                    step_id, status="completed", result_summary=f"digested {len(digested_for_group)} sources"
+                group = [dr for dr in digest_results if dr.get("query_group") == q_group]
+                failed = sum(dr.get("result", {}).get("analysis_status") == "failed" for dr in group)
+                analyzed = sum(dr.get("result", {}).get("analysis_status", "complete") == "complete" for dr in group)
+                skipped = len(group) - analyzed - failed
+                await asyncio.to_thread(
+                    orch.step_repo.update,
+                    step_id,
+                    status="failed" if failed == len(group) and failed else "partial" if failed else "completed",
+                    result_summary=f"analyzed {analyzed} sources; {failed} failed; {skipped} skipped",
                 )
 
         new_findings = []
@@ -451,18 +496,33 @@ class DigestStep(BaseResearchStep):
                 gaps.extend(r.get("gaps", []))
 
         out_payload = DigestPayload(
-            parsed_sources_cache=parsed_sources, learnings=all_learnings, followups=followups, gaps=gaps
+            parsed_sources_cache=parsed_sources,
+            learnings=all_learnings,
+            followups=followups,
+            gaps=gaps,
+            analyzed_sources_count=analyzed_count,
         )
+
+        if failed_count and not new_findings:
+            summary = (
+                f"Source analysis unavailable: {failed_count} of {len(parsed_sources)} sources failed; no findings extracted. Retrieved source content is retained. "
+                + " ".join(dict.fromkeys(gaps))
+            )
+            state["result_summary"] = summary
+            if orch.task_repo:
+                await asyncio.to_thread(orch.task_repo.update, task_id, result_summary=summary)
 
         all_step_ids = list(group_steps.values())
         if all_learnings:
             rationale = f"Successfully digested content and extracted {len(all_learnings)} key learnings, identifying {len(gaps)} remaining information gaps."
+        elif failed_count:
+            rationale = f"Source analysis failed for {failed_count} sources; no findings were extracted. Provider gaps are retained."
         else:
             rationale = "Digested the extracted text content, but no significant new learnings could be found."
 
         return StepOutput(
-            status="completed",
-            message=f"digested {len(parsed_sources)} sources, got {len(all_learnings)} learnings",
+            status="partial" if failed_count else "completed",
+            message=f"analyzed {analyzed_count} sources, {failed_count} failed, got {len(all_learnings)} learnings",
             payload=out_payload,
             new_findings=new_findings,
             step_ids=all_step_ids,
