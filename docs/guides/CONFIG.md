@@ -372,7 +372,7 @@ Browser login exchanges the password for an opaque `aaa_session` cookie. The pas
 | POST | `/api/auth/session` | Validates the password in the Authorization header and issues a browser session |
 | DELETE | `/api/auth/session` | Revokes the current session and clears its cookie |
 
-The session cookie is HttpOnly, SameSite=Strict, and scoped to `/api`. Sessions expire seven days after issuance by default (configurable via `AAA_SESSION_TTL`) and are stored as hashed opaque tokens in the configured SQLite database, with a maximum of 1,024 records. Logout revokes the current session; records survive server restarts, and password changes invalidate existing sessions when checked. At capacity, issuing a session evicts the oldest one.
+The session cookie is HttpOnly, SameSite=Strict, and scoped to `/api`. Sessions expire seven days after issuance by default (configurable via `AAA_SESSION_TTL`) and are stored as hashed opaque tokens in a SQLite sidecar beside the configured database (for example, `aaa.sessions.db`), with a maximum of 1,024 records. The server creates the sidecar at startup; its directory must be writable. Logout revokes the current session; records survive server restarts, and password changes invalidate existing sessions when checked. At capacity, issuing a session evicts the oldest one.
 
 Session creation and deletion require the exact public Origin and `X-AAA-CSRF: 1`. Other cookie-authenticated mutations require the same checks; protected cookie reads reject an explicitly foreign Origin. The frontend's `apiFetch` supplies the custom header, while the browser supplies Origin where required. Bearer-only API requests retain their existing behavior.
 
@@ -380,7 +380,7 @@ Deployment requirements:
 
 - Remote browser access requires HTTPS; cookies are Secure outside plain-HTTP `localhost`, `127.0.0.1`, and `::1` development.
 - Serve the frontend and `/api` under the same public origin. Reverse proxies must preserve public Host and convey the original HTTPS scheme through correctly trusted forwarding headers. Do not trust forwarding headers from arbitrary clients.
-- Workers on one host may share sessions through the configured SQLite database. Separate hosts need shared session storage and SQLite-compatible coordination.
+- Workers on one host may share sessions through the SQLite sidecar. Separate hosts need shared session storage and SQLite-compatible coordination.
 - A protected 401 locks the frontend and clears its notification state. Malformed auth responses or backend outages fail closed.
 
 See [ADR-096](../decisions/ADR-096-browser-sessions-and-frontend-request-ownership.md) for the design and [SETUP.md](SETUP.md#browser-login-and-proxy-troubleshooting) for troubleshooting.

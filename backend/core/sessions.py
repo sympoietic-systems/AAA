@@ -37,6 +37,11 @@ class SessionStore:
         self._sessions: OrderedDict[str, tuple[float, bytes]] = OrderedDict()
         self._repository = AuthSessionRepository(db_path) if db_path is not None else None
 
+    def initialize(self) -> None:
+        """Initialize persistent backing storage; no-op for an in-memory store."""
+        if self._repository is not None:
+            self._repository.initialize()
+
     def issue(self) -> str:
         token = secrets.token_urlsafe(32)
         key = self._key(token)

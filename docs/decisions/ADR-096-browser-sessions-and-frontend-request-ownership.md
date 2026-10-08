@@ -13,7 +13,7 @@ Original decision was grounded in the inspected implementation and regression te
 ## Decision
 
 - Browser login uses `POST /api/auth/session` with the password in an Authorization header for that request only. The response sets an opaque HttpOnly, SameSite=Strict cookie scoped to `/api`. Existing bearer API clients retain their contract.
-- Sessions live in the configured SQLite database: at most 1,024 hashed opaque tokens, seven-day default absolute expiry (configurable via `AAA_SESSION_TTL`), logout revocation, and password-rotation invalidation. Sessions survive backend restarts and are shared by workers using the same database. Capacity pressure evicts the oldest issued session; expired and revoked records are bounded by issuance cleanup and capacity.
+- Sessions live in a dedicated SQLite sidecar beside the configured application database: at most 1,024 hashed opaque tokens, seven-day default absolute expiry (configurable via `AAA_SESSION_TTL`), logout revocation, and password-rotation invalidation. Sessions survive backend restarts and are shared by workers using the same sidecar. The split isolates login writes from application database contention. Capacity pressure evicts the oldest issued session; expired and revoked records are bounded by issuance cleanup and capacity.
 - HTTPS cookies are Secure. Plain HTTP is supported only for the loopback hostnames `localhost`, `127.0.0.1`, and `::1`; remote deployments must use HTTPS. Session mutations require an exact matching Origin and `X-AAA-CSRF: 1`. Cookie-authenticated reads reject an explicitly foreign Origin, even when legacy CORS settings allow it.
 - `/api/auth/verify` remains a status endpoint. The frontend validates its response shape and requires an explicit disabled-auth response. Invalid responses fail closed. Old localStorage passwords are deleted rather than migrated.
 - `apiFetch` is explicit, validates normalized same-origin API URLs, preserves cancellation and headers, and rejects redirects. It does not replace global fetch. A protected 401 ends the UI session and clears notification state.
@@ -24,7 +24,7 @@ Original decision was grounded in the inspected implementation and regression te
 
 ## Alternatives and consequences
 
-Persistent browser bearer storage was rejected because same-origin script compromise exposes the reusable password. Stateless signed cookies were rejected because logout must revoke the server-side session. Workers on one host may share the configured database; deployments on separate hosts need shared storage and SQLite-compatible coordination.
+Persistent browser bearer storage was rejected because same-origin script compromise exposes the reusable password. Stateless signed cookies were rejected because logout must revoke the server-side session. Workers on one host may share the session sidecar; deployments on separate hosts need shared storage and SQLite-compatible coordination.
 
 Reverse proxies must preserve the public Host and convey the original HTTPS scheme through correctly trusted forwarding headers. The Vite development proxy preserves Host for origin validation. This is a deliberate same-origin browser API contract; cross-origin browser clients cannot use these session cookies.
 

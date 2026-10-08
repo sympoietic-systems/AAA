@@ -85,7 +85,7 @@ internal: `ResearchActionReceipt` → action_id, kind, intent, input_version, de
 internal: `subresearch_policy` → `off|propose|bounded_auto`; proposal → branch scopes, rationale, overlap, risk, budget split
 internal: `EvidencePacket` → source/version/span refs, claims/support relations, exclusions, unavailable evidence, contradictions, gaps
 internal: `ProviderAttemptReceipt` → task/action/request IDs, provider/model, start/end, retry, status, finish_reason, truncated, cancellation
-internal: browser session → hash-only opaque token + absolute expiry in configured SQLite DB; restart-stable; logout/password rotation revoke; capacity ≤1,024
+internal: browser session → hash-only opaque token + absolute expiry in SQLite sidecar beside configured DB; restart-stable; logout/password rotation revoke; capacity ≤1,024
 
 ## §V
 
@@ -197,6 +197,7 @@ V124: degraded assistant content ∉ generation history/compressed blocks/checkp
 V125: retrospective quality audit default 14 days; bounded sequential calls + checkpoint/resume + content hash; manual overrides preserved; no deletion or silent rewrite; deployment/backfill outcomes stated separately.
 V128: provider reasoning remains separate from final content; missing visible content or length-limited output ⊥ persisted reply; saved assistant generation receipt contains request ID + finish/truncation + usage/control metadata only, no duplicated prompt/reasoning; degraded quality notification → Glitch category
 V129: browser sessions survive process restart via persisted token hashes; absolute expiry, logout, password rotation, capacity eviction → reject; raw cookie token ⊥ database
+V130: browser session DB isolated from application DB; auth issue/revoke I/O ⊥ blocked by application write transactions
 
 ## §T
 
@@ -425,3 +426,4 @@ B109|2026-10-08|research proposal child tags were absent from the sanitizer allo
 B113|2026-10-08|provider adapter promoted reasoning when final content was absent and accepted length-limited partial text|reject missing-final and truncated completions; correlate saved chat and dream replies with compact request/finish/usage receipts; V128
 B114|2026-10-08|dream auxiliary context selected degraded assistant replies and themes despite chat filtering|exclude degraded statuses from both dream recency paths; add V124 regression tests
 B115|2026-10-08|browser cookie outlived its process-local session record, forcing login after restart|persist bounded token hashes + expiry/revocation in SQLite; offload repository I/O; V129
+B116|2026-10-08|application DB writer lock blocked browser session insert until SQLite timeout|move session table to dedicated SQLite sidecar; initialize at startup; V130
