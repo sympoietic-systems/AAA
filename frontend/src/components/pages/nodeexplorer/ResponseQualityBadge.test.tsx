@@ -15,6 +15,13 @@ describe("response quality review", () => {
     expect(screen.getByText("Excluded from generation context")).toBeTruthy()
   })
 
+  it("shows a prominent Glitch-linked warning without claiming context exclusion", () => {
+    render(<ResponseQualityBadge messageId={3996} linkedGlitch />)
+    expect(screen.getByRole("note", { name: "Degraded response flagged in Glitch" })).toBeTruthy()
+    expect(screen.getByText(/Review the linked trace/)).toBeTruthy()
+    expect(screen.queryByText("Excluded from generation context")).toBeNull()
+  })
+
   it("shows exclusion and restores context only after a successful manual review", async () => {
     vi.mocked(apiFetch).mockResolvedValue(new Response(JSON.stringify({ ...quality, status: "sound", source: "manual", excluded_from_context: false })))
     render(<ResponseQualityBadge messageId={3996} quality={quality} />)

@@ -3,16 +3,25 @@ import { apiFetch, BASE } from "../../../api/http"
 import type { ResponseQuality } from "../../../api/types"
 import { syncNotifications } from "../../../stores/notificationStore"
 
-export function ResponseQualityBadge({ messageId, quality, status }: {
+export function ResponseQualityBadge({ messageId, quality, status, linkedGlitch }: {
   messageId: number
   quality?: ResponseQuality | null
   status?: ResponseQuality["status"]
+  linkedGlitch?: boolean
 }) {
   const [override, setOverride] = useState<ResponseQuality | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const current = override ?? quality
   if (!current) {
+    if (linkedGlitch) return <div
+      role="note"
+      aria-label="Degraded response flagged in Glitch"
+      className="mt-2 border-l-4 border-red-500 bg-red-950/40 px-3 py-2 text-xs font-mono text-red-100"
+    >
+      <strong>⚠ DEGRADED RESPONSE</strong>
+      <span className="ml-2">Flagged in Glitch. Review the linked trace for details.</span>
+    </div>
     if (status !== "degraded" && status !== "uncertain") return null
     return <div
       role="note"

@@ -4,8 +4,29 @@ import {
   areNumberArraysEqual,
   areStringArraysEqual,
   areNotesEqual,
+  isResponseQualityGlitch,
 } from '../messageBubbleUtils'
-import type { NoteInfo } from '../../../../api/client'
+import type { NoteInfo, SedimentNotification } from '../../../../api/client'
+
+describe('isResponseQualityGlitch', () => {
+  const notification: SedimentNotification = {
+    id: 'quality-glitch-3996',
+    type: 'glitch',
+    conversationId: 'conversation-1',
+    messageId: 3996,
+    timestamp: '2026-10-08T00:00:00Z',
+    snippet: 'Degraded assistant response',
+  }
+
+  it('matches a Glitch notification to its assistant message ID', () => {
+    expect(isResponseQualityGlitch(notification, 3996)).toBe(true)
+  })
+
+  it('does not mark another message or a different notification category', () => {
+    expect(isResponseQualityGlitch(notification, 3997)).toBe(false)
+    expect(isResponseQualityGlitch({ ...notification, type: 'trace' }, 3996)).toBe(false)
+  })
+})
 
 describe('DIMENSION_NAMES', () => {
   it('has 16 dimensions', () => {

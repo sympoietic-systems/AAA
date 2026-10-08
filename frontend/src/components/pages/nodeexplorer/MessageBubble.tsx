@@ -11,8 +11,9 @@ import { formatTime } from "../../../utils/dateFormat"
 import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
-import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
+import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin, isResponseQualityGlitch } from "./messageBubbleUtils"
 import { ResponseQualityBadge } from "./ResponseQualityBadge"
+import { useNotifications } from "../../../stores/notificationStore"
 import { BeliefNucleateTag, DreamTriggerTag } from "./ResponseArtifactTag"
 import { ResearchProposalCard } from "./ResearchProposalCard"
 import { SomaticAlertBanner } from "./SomaticAlertBanner"
@@ -46,6 +47,8 @@ export const MessageBubble = memo(function MessageBubble({
 }) {
   const isHuman = msg.speaker === "human"
   const isSystem = msg.speaker === "system"
+  const notifications = useNotifications()
+  const hasQualityGlitch = notifications.some((notification) => isResponseQualityGlitch(notification, msg.id))
 
   // Compute siblings for navigation
   const currentIndex = siblingIds.indexOf(msg.id)
@@ -370,12 +373,13 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <div ref={bubbleRef} className={`mb-3 ${isHuman ? "" : "pl-4"}`}>
       {!isHuman && !isSystem && (
-        (msg.quality?.source === "manual" || msg.quality?.status === "degraded" || msg.quality?.status === "uncertain" || msg.quality_status === "degraded" || msg.quality_status === "uncertain") && (
+        (hasQualityGlitch || msg.quality?.source === "manual" || msg.quality?.status === "degraded" || msg.quality?.status === "uncertain" || msg.quality_status === "degraded" || msg.quality_status === "uncertain") && (
         <ResponseQualityBadge
           key={`${msg.id}-${msg.quality?.assessed_at ?? msg.quality_status ?? "unassessed"}`}
           messageId={msg.id}
           quality={msg.quality}
           status={msg.quality_status}
+          linkedGlitch={hasQualityGlitch}
         />
         )
       )}

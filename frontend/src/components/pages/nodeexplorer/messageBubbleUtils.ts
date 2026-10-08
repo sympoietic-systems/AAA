@@ -1,4 +1,12 @@
-import type { NoteInfo } from "../../../api/client"
+import type { NoteInfo, SedimentNotification } from "../../../api/client"
+
+export function isResponseQualityGlitch(notification: SedimentNotification, messageId: number): boolean {
+  if (notification.type !== "glitch") return false
+  if (notification.id === `quality-glitch-${messageId}`) return true
+  const linkedByMessageId = notification.messageId === messageId
+  const linkedBySource = notification.sourceType === "message" && notification.sourceId === String(messageId)
+  return (linkedByMessageId || linkedBySource) && /response.?quality|quality/i.test(notification.source ?? "")
+}
 
 export const DIMENSION_NAMES = [
   "Homeostatic", "Amplifying", "Cyclic", "Bifurcated",
