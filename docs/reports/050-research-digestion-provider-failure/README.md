@@ -28,6 +28,12 @@ A second check at 07:07 UTC still returned the same Alibaba upstream shared-pool
 
 Deploy the tested commit, then start a new research task. The old task's expired frozen deadline is preserved; this patch does not silently replay it. A paid model can still experience upstream capacity throttling. Other configured paid models can now be attempted with the same usable key. No model preference or production configuration was changed by this fix.
 
+### Follow-up: search POST redirect failure
+
+The next user-reported Search failure was `POST redirects are disabled`, with no source URLs and `undefined` tab counts. This error originates in the application's bounded HTTP wrapper: research sent a POST to DuckDuckGo Lite, but the wrapper deliberately rejects POST redirects to prevent replaying request bodies. Search now sends an encoded GET query through the acquisition wrapper in both research and standalone calls. Redirect destinations retain per-hop validation, redirect ceilings and response-size limits. The failed-step UI omits absent badge counts.
+
+The deterministic regression reproduced the exact error before the change. After the change, redirected search returns the fixture source, preserves query characters, and rejects a redirect to a private address before issuing that request. Related backend verification: 39 tests passed; backend lint, formatting and the 89-module strict typing gate passed. All 146 frontend tests, standard/strict TypeScript checks and production build passed; the lint ratchet reported zero regressions against its existing 164 errors and 10 warnings. The full backend suite was not repeated for this scoped follow-up. This does not establish live DuckDuckGo availability or the quality of the reported long search query. After deployment, retry the Search step only if its task remains eligible and its provider deadline is still valid; otherwise start a fresh copy or whole-task retry.
+
 ## Verification
 
 Regression coverage includes bounded cooldown recovery, deadline exhaustion, interactive fail-fast behavior, upstream-versus-key throttling, absent quota headers, private-metadata exclusion, analysis failures, successful-analysis counts, terminal UI refresh and stale-response exclusion.

@@ -260,34 +260,28 @@ async def fetch_via_jina(url: str, config: dict) -> str:
 
 
 async def _search_ddg_lite(query: str, n: int = 3) -> list[dict]:
-    """Fetch DuckDuckGo Lite directly via HTTP POST and parse HTML for result links.
+    """Fetch DuckDuckGo Lite with an encoded GET query and bounded redirects.
 
     DuckDuckGo Lite returns clean HTML with direct result links in <a> tags.
     No redirect URLs — plain, parseable HTML.
     """
 
-    search_url = "https://lite.duckduckgo.com/lite/"
+    search_url = "https://lite.duckduckgo.com/lite/?" + urllib.parse.urlencode({"q": query})
     try:
         from backend.services.research.acquisition import acquisition_http, current_acquisition
 
-        if current_acquisition() is not None:
-            response = await acquisition_http("ddg", search_url, method="POST", data={"q": query}, timeout=15)
-            html_text = response.text if response.status_code == 200 else ""
-            return await asyncio.to_thread(_parse_ddg_lite_html, html_text, n)
-        import httpx
-
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.post(
-                search_url,
-                data={"q": query},
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Referer": "https://lite.duckduckgo.com/",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                    "Accept-Language": "en-US,en;q=0.9",
-                },
-            )
-            html_text = resp.text
+        response = await acquisition_http(
+            "ddg",
+            search_url,
+            timeout=15,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://lite.duckduckgo.com/",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+        )
+        html_text = response.text if response.status_code == 200 else ""
     except Exception as e:
         logger.warning("DDG Lite fetch failed: %s", e)
         from backend.services.research.acquisition import current_acquisition

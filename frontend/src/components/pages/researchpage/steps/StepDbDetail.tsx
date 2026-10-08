@@ -333,7 +333,7 @@ const SelectedStepDetail = memo(function SelectedStepDetail({ taskId, data, sele
           <button key={t} onClick={() => setTab(t)}
             className={`text-[9px] uppercase cursor-pointer transition-colors
               ${tab === t ? "text-ui-primary" : "text-ui-dim hover:text-ui-secondary"}`}>
-            {t}{tabBadges ? ` (${tabBadges[t]})` : ""}
+            {t}{tabBadges[t] !== undefined ? ` (${tabBadges[t]})` : ""}
           </button>
         ))}
       </div>
