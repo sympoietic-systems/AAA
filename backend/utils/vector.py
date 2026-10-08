@@ -192,6 +192,8 @@ def build_history_message(
         metrics=metrics,
         model_used=row.get("model_used"),
         provider_used=row.get("provider_used"),
+        quality_status=row.get("quality_status", "unassessed"),
+        quality=json.loads(row["quality_receipt"]) if row.get("quality_receipt") else None,
         structural_signature=sig_list,
         structural_justification=justification,
         parent_message_id=row.get("parent_message_id"),

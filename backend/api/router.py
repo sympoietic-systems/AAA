@@ -20,6 +20,7 @@ from backend.api.routes.notifications import router as notifications_router
 from backend.api.routes.preview import live_router as live_preview_router
 from backend.api.routes.refusals import router as refusals_router
 from backend.api.routes.research import router as research_router
+from backend.api.routes.response_quality import router as response_quality_router
 from backend.api.routes.scheduler import router as scheduler_router
 from backend.api.routes.search import router as search_router
 from backend.api.routes.sediment import router as sediment_router
@@ -34,6 +35,7 @@ router.include_router(agent_router)
 router.include_router(chat_router)
 router.include_router(beliefs_router)
 router.include_router(history_router)
+router.include_router(response_quality_router)
 router.include_router(conversations_router)
 router.include_router(tokens_router)
 router.include_router(health_router)

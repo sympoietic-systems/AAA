@@ -137,6 +137,7 @@ class ConsolidationMixin:
         leaf_message_id = leaf_message.id
 
         ancestor_msgs = self.message_repo.get_ancestor_path(leaf_message_id)
+        ancestor_msgs = [m for m in ancestor_msgs if m.quality_status != "degraded"]
         ancestor_ids = [m.id for m in ancestor_msgs if m.id is not None]
 
         checkpoint = self.checkpoint_repo.get_latest_checkpoint_for_path(conversation_id, ancestor_ids)

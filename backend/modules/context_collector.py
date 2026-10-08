@@ -1,3 +1,4 @@
+import asyncio
 import re
 from typing import Any
 
@@ -122,6 +123,11 @@ class ContextCollectorModule(ProcessingModule):
             payload["branch_context_tag"] = "root"
             payload["ancestor_message_ids"] = [msg.id for msg in raw_msgs if msg.id is not None]
 
+        excluded_ids = await asyncio.to_thread(self._repo.degraded_ids, conversation_id) if conversation_id else set()
+        payload["quality_excluded_message_ids"] = sorted(excluded_ids)
+        raw_msgs = [row for row in raw_msgs if row.quality_status != "degraded"]
+        payload["ancestor_message_ids"] = [row.id for row in raw_msgs if row.id is not None]
+
         # Load notes for visibility stripping and entanglement injection
         notes = self._note_repo.get_notes_by_conversation(conversation_id) if conversation_id else []
         notes_by_id = {n["id"]: n for n in notes}
@@ -133,7 +139,7 @@ class ContextCollectorModule(ProcessingModule):
 
         # R5: Load compressed blocks for middle history if LLM compression enabled
         compressed_blocks: dict[int, str] = {}
-        if self._llm_compression_enabled and self._compressed_message_repo and conversation_id:
+        if self._llm_compression_enabled and self._compressed_message_repo and conversation_id and not excluded_ids:
             try:
                 tier2_msg_ids = [
                     row.id

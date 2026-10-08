@@ -4,11 +4,13 @@ from backend.storage.repositories.base import BaseRepository
 from backend.storage.repositories.conversation.message_core import MessageCoreRepository
 from backend.storage.repositories.conversation.message_graph import MessageGraphRepository
 from backend.storage.repositories.conversation.message_history import MessageHistoryRepository
+from backend.storage.repositories.conversation.message_quality import MessageQualityRepository
 from backend.storage.repositories.conversation.message_vector import MessageVectorRepository
 
 
 class MessageRepository(
     MessageCoreRepository,
+    MessageQualityRepository,
     MessageHistoryRepository,
     MessageVectorRepository,
     MessageGraphRepository,

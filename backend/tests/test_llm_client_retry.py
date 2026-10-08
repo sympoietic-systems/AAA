@@ -37,36 +37,34 @@ class TestParseMessage:
         assert result["truncated"] is False
         assert result["finish_reason"] == "stop"
 
-    def test_detects_truncation_from_length(self):
+    def test_rejects_truncated_visible_completion_from_length(self):
         p = _make_provider()
         message = {"role": "assistant", "content": "Truncated..."}
         data = {"choices": [{"finish_reason": "length"}]}
-        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
-        assert result["truncated"] is True
-        assert result["finish_reason"] == "length"
+        with pytest.raises(EmptyTruncatedCompletionError, match="request_id=fixture-request"):
+            p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
 
-    def test_v67_rejects_empty_truncated_completion(self):
+    def test_v128_rejects_empty_truncated_completion(self):
         p = _make_provider()
         message = {"role": "assistant", "content": ""}
         data = {"choices": [{"finish_reason": "length"}]}
 
-        with pytest.raises(EmptyTruncatedCompletionError, match="without returning final content"):
+        with pytest.raises(EmptyTruncatedCompletionError, match="complete response"):
             p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
 
     def test_detects_truncation_from_max_tokens(self):
         p = _make_provider()
         message = {"role": "assistant", "content": "Truncated..."}
         data = {"choices": [{"finish_reason": "max_tokens"}]}
-        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
-        assert result["truncated"] is True
+        with pytest.raises(EmptyTruncatedCompletionError):
+            p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
 
-    def test_uses_reasoning_when_content_empty(self):
+    def test_v128_rejects_reasoning_without_final_visible_content(self):
         p = _make_provider()
         message = {"role": "assistant", "content": None, "reasoning": "I think therefore I am"}
         data = {"choices": [{"finish_reason": "stop"}]}
-        result = p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
-        assert result["content"] == "I think therefore I am"
-        assert result["reasoning"] == "I think therefore I am"
+        with pytest.raises(ProviderResponseError, match="reasoning without final visible content"):
+            p._parse_message(message, data, request_id="fixture-request", http_status=200, generation_controls={})
 
     def test_handles_openrouter_reasoning_details(self):
         p = _make_provider()

@@ -20,7 +20,7 @@ class ProviderResponseError(Exception):
 
 
 class EmptyTruncatedCompletionError(ProviderResponseError):
-    """A provider exhausted its completion budget without returning final content."""
+    """A provider exhausted its completion budget before returning a complete final response."""
 
 
 class BaseLLMProvider(ABC):

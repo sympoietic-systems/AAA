@@ -59,6 +59,8 @@ class HistoryMessage(BaseModel):
     provider_used: str | None = None
     structural_signature: list[float] | None = None
     structural_justification: str | None = None
+    quality_status: str = "unassessed"
+    quality: dict[str, object] | None = None
     parent_message_id: int | None = None
     active_skills: list[str] = Field(default_factory=list, description="Skill names active for this response")
     active_beliefs: list[str] = Field(
@@ -101,6 +103,8 @@ class ChatResponse(BaseModel):
     model_used: str | None = None
     provider_used: str | None = None
     structural_justification: str | None = None
+    quality_status: str = "unassessed"
+    quality: dict[str, object] | None = None
     user_message_id: int | None = None
     user_structural_signature: list[float] | None = None
     user_structural_justification: str | None = None

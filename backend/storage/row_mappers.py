@@ -50,6 +50,9 @@ def _row_to_message(row: sqlite3.Row) -> Message:
         active_skills=row["active_skills"] if "active_skills" in row.keys() else None,
         active_beliefs=row["active_beliefs"] if "active_beliefs" in row.keys() else None,
         activation_provenance=row["activation_provenance"] if "activation_provenance" in row.keys() else None,
+        quality_status=row["quality_status"] if "quality_status" in row.keys() else "unassessed",
+        quality_receipt=row["quality_receipt"] if "quality_receipt" in row.keys() else None,
+        generation_receipt=row["generation_receipt"] if "generation_receipt" in row.keys() else None,
     )
 
 

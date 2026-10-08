@@ -69,6 +69,9 @@ class Message:
     active_skills: str | None = None
     active_beliefs: str | None = None
     activation_provenance: str | None = None
+    quality_status: str = "unassessed"
+    quality_receipt: str | None = None
+    generation_receipt: str | None = None
 
 
 @dataclass

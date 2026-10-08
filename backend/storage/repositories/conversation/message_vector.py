@@ -115,7 +115,7 @@ class MessageVectorRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT id, speaker, embedding, embedding_dim FROM conversation_log
-               WHERE conversation_id != ? AND conversation_id != ''
+               WHERE quality_status != 'degraded' AND conversation_id != ? AND conversation_id != ''
                ORDER BY id DESC LIMIT ?""",
             (exclude_conversation_id, limit),
         ).fetchall()
@@ -155,7 +155,7 @@ class MessageVectorRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT id, structural_signature FROM conversation_log
-               WHERE conversation_id != ? AND conversation_id != '' AND structural_signature IS NOT NULL
+               WHERE quality_status != 'degraded' AND conversation_id != ? AND conversation_id != '' AND structural_signature IS NOT NULL
                ORDER BY id DESC LIMIT ?""",
             (exclude_conversation_id, limit),
         ).fetchall()
@@ -174,7 +174,7 @@ class MessageVectorRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT id, embedding, embedding_dim, structural_signature FROM conversation_log
-               WHERE conversation_id != ? AND conversation_id != '' AND embedding IS NOT NULL
+               WHERE quality_status != 'degraded' AND conversation_id != ? AND conversation_id != '' AND embedding IS NOT NULL
                ORDER BY id DESC LIMIT ?""",
             (exclude_conversation_id, limit),
         ).fetchall()
@@ -247,7 +247,7 @@ class MessageVectorRepository(BaseRepository):
         query_str = f"""
             SELECT id, speaker, content, embedding, embedding_dim, timestamp
             FROM conversation_log
-            WHERE conversation_id = ? AND id != ? AND id NOT IN ({exclude_placeholders})
+            WHERE quality_status != 'degraded' AND conversation_id = ? AND id != ? AND id NOT IN ({exclude_placeholders})
               AND id NOT IN (
                   SELECT source_id FROM message_links WHERE target_id = ?
                   UNION

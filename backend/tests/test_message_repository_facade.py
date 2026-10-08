@@ -4,6 +4,7 @@ from backend.storage.repositories.conversation.message import MessageRepository
 from backend.storage.repositories.conversation.message_core import MessageCoreRepository
 from backend.storage.repositories.conversation.message_graph import MessageGraphRepository
 from backend.storage.repositories.conversation.message_history import MessageHistoryRepository
+from backend.storage.repositories.conversation.message_quality import MessageQualityRepository
 from backend.storage.repositories.conversation.message_vector import MessageVectorRepository
 
 
@@ -40,6 +41,7 @@ def test_message_repository_facade_has_focused_non_overlapping_collaborators():
             "update_embedding",
             "update_signature",
         },
+        MessageQualityRepository: {"degraded_ids", "list_quality", "save_quality"},
         MessageHistoryRepository: {
             "count_messages",
             "get_last_message_timestamp",

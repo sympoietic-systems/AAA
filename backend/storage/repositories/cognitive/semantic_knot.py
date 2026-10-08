@@ -69,6 +69,8 @@ class SemanticKnotRepository(BaseRepository):
         rows = conn.execute(
             """SELECT id, embedding, structural_signature, concept_payload FROM semantic_knots
                WHERE conversation_id != ? AND embedding IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM conversation_log cl
+                   WHERE cl.conversation_id=semantic_knots.conversation_id AND cl.quality_status='degraded')
                ORDER BY created_at DESC LIMIT ?""",
             (exclude_conversation_id, limit),
         ).fetchall()
@@ -101,7 +103,9 @@ class SemanticKnotRepository(BaseRepository):
         conn = self._conn()
         rows = conn.execute(
             """SELECT id, embedding FROM semantic_knots
-               WHERE conversation_id != ? AND embedding IS NOT NULL""",
+               WHERE conversation_id != ? AND embedding IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM conversation_log cl
+                   WHERE cl.conversation_id=semantic_knots.conversation_id AND cl.quality_status='degraded')""",
             (exclude_conversation_id,),
         ).fetchall()
 

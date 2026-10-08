@@ -106,11 +106,6 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             if isinstance(details, list):
                 reasoning = " ".join(d.get("text", "") for d in details if isinstance(d, dict))
 
-        # If content is null/empty but we have reasoning, use reasoning as content
-        # This happens with reasoning models that output thinking but no final answer
-        if not content and reasoning:
-            content = reasoning
-
         # Detect truncation from finish_reason
         finish_reason = None
         if "choices" in data and data["choices"]:
@@ -118,24 +113,6 @@ class OpenAICompatibleProvider(BaseLLMProvider):
         elif data.get("stop_reason"):
             finish_reason = data.get("stop_reason")  # Anthropic format
 
-        truncated = finish_reason in ("length", "max_tokens")
-        if truncated:
-            logger.warning(
-                "LLM completion truncated: provider=%s model=%s request_id=%s finish_reason=%s content_chars=%s",
-                self.provider_name,
-                data.get("model", self._model),
-                request_id or "unavailable",
-                finish_reason,
-                len(content) if isinstance(content, str) else "unknown",
-            )
-            if not content:
-                raise EmptyTruncatedCompletionError(
-                    "Provider exhausted its completion budget without returning final content"
-                )
-
-        content_type = type(content).__name__ if content is not None else "NoneType"
-        content_chars = len(content) if isinstance(content, str) else None
-        reasoning_chars = len(reasoning) if isinstance(reasoning, str) else None
         raw_usage = data.get("usage")
         usage: dict[str, Any] = raw_usage if isinstance(raw_usage, dict) else {}
         usage_summary = {
@@ -143,6 +120,27 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             for key in ("prompt_tokens", "completion_tokens", "total_tokens")
             if usage.get(key) is not None
         }
+        truncated = finish_reason in ("length", "max_tokens")
+        if truncated:
+            logger.warning(
+                "LLM completion truncated: provider=%s model=%s request_id=%s finish_reason=%s "
+                "content_chars=%s usage=%s controls=%s",
+                self.provider_name,
+                data.get("model", self._model),
+                request_id or "unavailable",
+                finish_reason,
+                len(content) if isinstance(content, str) else "unknown",
+                usage_summary,
+                generation_controls,
+            )
+            raise EmptyTruncatedCompletionError(
+                "Provider exhausted its completion budget before returning a complete response "
+                f"(request_id={request_id or 'unavailable'}, finish_reason={finish_reason})"
+            )
+
+        content_type = type(content).__name__ if content is not None else "NoneType"
+        content_chars = len(content) if isinstance(content, str) else None
+        reasoning_chars = len(reasoning) if isinstance(reasoning, str) else None
         if not isinstance(content, (str, type(None))):
             logger.warning(
                 "LLM completion has non-text content: provider=%s model=%s request_id=%s "
@@ -165,6 +163,15 @@ class OpenAICompatibleProvider(BaseLLMProvider):
                 reasoning_chars,
                 finish_reason or "unavailable",
                 usage_summary,
+            )
+            if reasoning:
+                raise ProviderResponseError(
+                    "Provider returned reasoning without final visible content "
+                    f"(request_id={request_id or 'unavailable'}, finish_reason={finish_reason or 'unavailable'})"
+                )
+            raise ProviderResponseError(
+                "Provider returned no final visible content "
+                f"(request_id={request_id or 'unavailable'}, finish_reason={finish_reason or 'unavailable'})"
             )
         logger.info(
             "LLM completion received: provider=%s requested_model=%s response_model=%s "

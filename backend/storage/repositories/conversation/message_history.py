@@ -97,7 +97,7 @@ class MessageHistoryRepository(BaseRepository):
                 f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification, cl.parent_message_id,
-                          cl.active_skills, cl.active_beliefs, cl.context_sent,
+                          cl.active_skills, cl.active_beliefs, cl.context_sent, cl.quality_status, cl.quality_receipt,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -116,7 +116,7 @@ class MessageHistoryRepository(BaseRepository):
                 """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification, cl.parent_message_id,
-                          cl.active_skills, cl.active_beliefs, cl.context_sent,
+                          cl.active_skills, cl.active_beliefs, cl.context_sent, cl.quality_status, cl.quality_receipt,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -148,7 +148,7 @@ class MessageHistoryRepository(BaseRepository):
             f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
                       cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                       cl.structural_signature, cl.structural_justification, cl.parent_message_id,
-                      cl.active_skills, cl.active_beliefs, cl.context_sent,
+                      cl.active_skills, cl.active_beliefs, cl.context_sent, cl.quality_status, cl.quality_receipt,
                       (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                       cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                       cm.agent_divergence, cm.deficit,
@@ -186,7 +186,7 @@ class MessageHistoryRepository(BaseRepository):
             f"""SELECT cl.*, c.title as conversation_title
                FROM conversation_log cl
                LEFT JOIN conversations c ON cl.conversation_id = c.id
-               WHERE cl.id IN ({placeholders})""",
+               WHERE cl.quality_status != 'degraded' AND cl.id IN ({placeholders})""",
             message_ids,
         ).fetchall()
         results = []

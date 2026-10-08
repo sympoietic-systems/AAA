@@ -44,7 +44,18 @@ export interface AttachmentInfo {
   file_name: string; file_type: string; token_count: number; preview?: string | null
 }
 
+export interface ResponseQuality {
+  status: "unassessed" | "sound" | "uncertain" | "degraded"
+  content_hash: string
+  confidence?: number | null
+  source: string
+  reason: string
+  assessed_at?: string
+  excluded_from_context: boolean
+}
+
 export interface ChatMessage {
+  quality_status?: ResponseQuality["status"]; quality?: ResponseQuality | null
   id: number; timestamp: string; conversation_id?: string; speaker: "human" | "apparatus" | "system"; content: string
   thinking?: string; content_tokens?: number; thinking_tokens?: number | null
   metrics?: MetricsInfo; homeostatic_recommendations?: HomeostaticRecommendations; attachments?: AttachmentInfo[] | null

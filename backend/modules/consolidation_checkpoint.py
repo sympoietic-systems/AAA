@@ -42,7 +42,7 @@ class ConsolidationCheckpointModule(ProcessingModule):
 
     async def process(self, payload: dict) -> dict:
         conversation_id = payload.get("conversation_id", "")
-        if not conversation_id:
+        if not conversation_id or payload.get("quality_excluded_message_ids"):
             return payload
 
         raw_msg_count = payload.get("raw_msg_count", 0)

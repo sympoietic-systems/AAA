@@ -21,6 +21,7 @@ from backend.services.background_tasks import (
 )
 from backend.services.keyed_lock import KeyedLockRegistry
 from backend.services.metrics import MetricsService
+from backend.services.response_quality import assess_message
 from backend.services.semantic_knot import SemanticKnotService
 from backend.services.title import TitleService
 from backend.storage.models import Message
@@ -438,7 +439,7 @@ class ChatService:
                 assistant_sig = await scorer.score_async(
                     response_text,
                     context={
-                        "_check_response_quality": True,
+                        "_check_response_quality": False,
                         "_current_user_message": content,
                         "_finish_reason": result.payload.get("finish_reason", "unavailable"),
                         "_truncated": result.payload.get("truncated", False),
@@ -482,6 +483,7 @@ class ChatService:
                 active_skills=active_skill_names,
                 active_beliefs=active_belief_labels,
                 activation_provenance=result.payload.get("activation_provenance"),
+                generation_receipt=result.payload.get("generation_receipt"),
             )
 
             # Save proposed agential resonance links (Tier 1)
@@ -528,6 +530,14 @@ class ChatService:
                     )
                 except Exception:
                     logger.exception("Failed to process research proposals")
+
+            persisted_response = await asyncio.to_thread(repo.get_by_id, response_msg.id)
+            quality = await assess_message(
+                repo,
+                state.config,
+                persisted_response or response_msg,
+                getattr(state, "response_quality_semaphore", None),
+            )
 
             payload_metrics = result.payload.get("metrics")
             recommendations = result.payload.get("homeostatic_recommendations")
@@ -693,6 +703,8 @@ class ChatService:
                 homeostatic_recommendations=MetricsService.build_recommendations(recommendations),
                 attachments=self._build_response_attachments(attachments, result),
                 context_sent=result.payload.get("context_sent"),
+                quality_status=quality["status"],
+                quality=quality,
                 model_used=response_msg.model_used,
                 provider_used=response_msg.provider_used,
                 structural_justification=justification,
@@ -787,6 +799,8 @@ class ChatService:
             homeostatic_recommendations=None,
             attachments=self._build_response_attachments(attachments),
             context_sent=response_msg.context_sent,
+            quality_status=response_msg.quality_status,
+            quality=json.loads(response_msg.quality_receipt) if response_msg.quality_receipt else None,
             model_used=response_msg.model_used,
             provider_used=response_msg.provider_used,
             structural_justification=response_msg.structural_justification or get_justification(response_msg.content),

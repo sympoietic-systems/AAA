@@ -77,6 +77,19 @@ class LLMClientModule(ProcessingModule):
             payload["model_used"] = result["model"]
         if result.get("provider_used"):
             payload["provider_used"] = result["provider_used"]
+        generation_receipt = {
+            key: result[key] for key in ("request_id", "finish_reason", "truncated") if result.get(key) is not None
+        }
+        usage = result.get("usage")
+        if isinstance(usage, dict):
+            generation_receipt["usage"] = {
+                key: usage[key]
+                for key in ("prompt_tokens", "completion_tokens", "total_tokens")
+                if isinstance(usage.get(key), int)
+            }
+        if isinstance(result.get("generation_controls"), dict):
+            generation_receipt["generation_controls"] = result["generation_controls"]
+        payload["generation_receipt"] = generation_receipt
         if result.get("truncated"):
             payload["truncated"] = result["truncated"]
         if result.get("finish_reason"):

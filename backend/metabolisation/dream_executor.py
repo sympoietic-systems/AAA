@@ -10,6 +10,7 @@ import numpy as np
 
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
+from backend.services.response_quality import assess_message
 from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.vector import cosine_similarity
 
@@ -189,7 +190,16 @@ class DreamExecutorMixin:
             active_skills=[s["name"] for s in result.payload.get("loaded_skills", []) if s.get("name")],
             active_beliefs=[b["label"] for b in result.payload.get("attractor_window", []) if b.get("label")],
             activation_provenance=result.payload.get("activation_provenance"),
+            generation_receipt=result.payload.get("generation_receipt"),
         )
+
+        quality = await assess_message(
+            self.message_repo,
+            self.app_state.config,
+            assistant_msg,
+            getattr(self.app_state, "response_quality_semaphore", None),
+        )
+        assistant_msg.quality_status = quality["status"]
 
         # Embed assistant response
         response_embedder = getattr(self.app_state, "embedder", None)

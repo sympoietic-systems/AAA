@@ -8,6 +8,7 @@ import numpy as np
 
 from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
+from backend.modules.response_quality import quality_sample
 from backend.utils.prompt_loader import get_prompt
 from backend.utils.vector import CYBERNETIC_DIMENSIONS
 
@@ -269,7 +270,7 @@ class JevStructuralScorer(StructuralScorer):
             return fallback_power, fallback_conf
 
         state = {
-            "text": text[:3000],
+            "text": quality_sample(text) if check_response_quality else text[:3000],
             "char_count": len(text),
         }
         if context:

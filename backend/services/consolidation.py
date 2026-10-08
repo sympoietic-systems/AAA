@@ -10,6 +10,7 @@ class ConsolidationService:
         async def _do_consolidate():
             try:
                 rows = message_repo.get_recent_with_metrics(limit=msg_count + 10, conversation_id=conversation_id)
+                rows = [row for row in rows if row.get("quality_status") != "degraded"]
                 if not rows:
                     return
                 lines = []

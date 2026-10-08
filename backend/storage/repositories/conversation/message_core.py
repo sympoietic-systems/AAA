@@ -34,8 +34,14 @@ class MessageCoreRepository(BaseRepository):
         active_skills: list[str] | str | None = None,
         active_beliefs: list[str] | str | None = None,
         activation_provenance: dict[str, Any] | None = None,
+        generation_receipt: dict[str, Any] | str | None = None,
     ) -> Message:
         provenance_str = serialize_activation_trace(activation_provenance)
+        generation_receipt_str = (
+            json.dumps(generation_receipt, separators=(",", ":"))
+            if isinstance(generation_receipt, dict)
+            else generation_receipt
+        )
         with self.atomic():
             conn = self._conn()
             skills_str = json.dumps(active_skills) if isinstance(active_skills, list) else active_skills
@@ -52,8 +58,8 @@ class MessageCoreRepository(BaseRepository):
                     )
             conn.execute(
                 """INSERT INTO conversation_log
-                   (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs, activation_provenance)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (agent_id, speaker, content, thinking, context_sent, embedding, embedding_model, embedding_dim, conversation_id, content_tokens, thinking_tokens, model_used, provider_used, structural_signature, structural_justification, parent_message_id, active_skills, active_beliefs, activation_provenance, generation_receipt)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     agent_id,
                     speaker,
@@ -74,6 +80,7 @@ class MessageCoreRepository(BaseRepository):
                     skills_str,
                     beliefs_str,
                     provenance_str,
+                    generation_receipt_str,
                 ),
             )
             self._commit(conn)
@@ -223,7 +230,7 @@ class MessageCoreRepository(BaseRepository):
     def update_content(self, message_id: int, content: str) -> None:
         conn = self._conn()
         conn.execute(
-            "UPDATE conversation_log SET content = ? WHERE id = ?",
+            "UPDATE conversation_log SET content = ?, quality_status = 'unassessed', quality_receipt = NULL WHERE id = ?",
             (content, message_id),
         )
         conn.commit()

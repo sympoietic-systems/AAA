@@ -185,6 +185,10 @@ V118: research completion label ∈ `complete|partial|failed|cancelled`; support
 
 V119: acquisition cache publication ! durable origin receipt; cache access preserves observation/config/source lineage; expired/unsafe/cancelled output ⊥ current acquisition; shared provider/CPU capacity held until actual work exits
 V120: optional Docling default off; standard first → mechanical degradation/expected failure triggers bounded CPU fallback; immutable PDF hash + parser-specific representations/spans retain both observations/exclusions; quality unknown; rejected fallback keeps standard; capacity/input lifetime ! physical worker exit
+V123: reply quality separate from structural metrics/beliefs; bounded ending-aware sample; weak/missing Jev → uncertain; exact reasoning-only output degraded; immutable content-hash receipts + manual reversible override; stale writes rejected.
+V124: degraded assistant content ∉ generation history/compressed blocks/checkpoint summaries/retrieval; originals remain in UI/history/export; uncertainty alone ⊥ exclusion; quality traces link assistant ID; assessment covers chat + dreams regardless structural backend.
+V125: retrospective quality audit default 14 days; bounded sequential calls + checkpoint/resume + content hash; manual overrides preserved; no deletion or silent rewrite; deployment/backfill outcomes stated separately.
+V128: provider reasoning remains separate from final content; missing visible content or length-limited output ⊥ persisted reply; saved assistant generation receipt contains request ID + finish/truncation + usage/control metadata only, no duplicated prompt/reasoning; degraded quality notification → Glitch category
 
 ## §T
 
@@ -271,6 +275,8 @@ T72|x|user-requested unchecked Allow branching checkbox; trusted dispatch `bound
 T73|x|user-requested optional standard-first Docling fallback; env switch + isolated worker + VPS runbook; 217 regression tests + frozen PDF routing checks; independent parser accuracy deferred to T75|V69,V105,V114,V119,V120,I.env,I.domain
 T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; independent release review remains T71|V108,V114,V117,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
+
+T77|~|persistent reply quality; chat/dream tail checks; context exclusion; badges + reversible review in Creases/Traces; 14-day resumable audit; gates/docs/commit|V123,V124,V125,V7,V17,V30,I.api,I.internal
 
 ## §B
 
@@ -400,3 +406,5 @@ B105|2026-10-07|live harness omitted explicit migrations, selected undersized fi
 B106|2026-10-07|live Super comparison exposed invalid-JSON fallback reported error=null, enabling empty reflection to look successful; synthesis reported repeated analyses as distinct sources; regression fixtures omitted required envelope fields/step repository seam|safe parse-error marker + delivery_failed propagation + durable partial terminal test; unique usable parent/child source/document counts; cancellation observations terminal and incomplete count explicit; preserve pre-fix receipts, rerun live after fix; V108,V114,V118; no new invariant
 
 B107|2026-10-07|main integration duplicates formatted telemetry patch and adds m053 backfill swallowing OperationalError; new migration test unformatted; added assertion import unsorted|preserve main backfill + tested metrics getter; format merged files; propagate database errors; existing error invariant + migration failure assertion; no new invariant
+B112|2026-10-08|new message quality collaborator was absent from the repository facade contract test|declare the focused collaborator and its methods in facade invariant test; V124
+B113|2026-10-08|provider adapter promoted reasoning when final content was absent and accepted length-limited partial text|reject missing-final and truncated completions; correlate saved chat and dream replies with compact request/finish/usage receipts; V128

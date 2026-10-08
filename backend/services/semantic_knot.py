@@ -43,7 +43,9 @@ class SemanticKnotService:
                     except Exception:
                         pass
 
-                messages_to_compact = [r for r in older_rows if r["id"] > last_compacted_msg_id]
+                messages_to_compact = [
+                    r for r in older_rows if r["id"] > last_compacted_msg_id and r.get("quality_status") != "degraded"
+                ]
                 if len(messages_to_compact) < 4:
                     return
 

@@ -152,6 +152,7 @@ What becomes easier/harder?
 
 | [111](ADR-111-approved-research-child-gathering.md) | Approved Research Child Gathering | accepted for opt-in implementation | 2026-10-06 |
 | [112](ADR-112-standard-first-docling-fallback.md) | Optional Standard-First Docling Fallback | accepted | 2026-10-06 |
+| [114](ADR-114-response-quality-exclusion.md) | Persistent Response Quality and Context Exclusion | accepted for implementation | 2026-10-08 |
 
 ## Creating a New ADR
 

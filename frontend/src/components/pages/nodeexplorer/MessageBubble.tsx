@@ -12,6 +12,7 @@ import { StructuralAutopoieticGlyph } from "../../UI/StructuralAutopoieticGlyph"
 import { ContextViewer } from "../../panels/contextviewer/ContextViewer"
 import { VitalityBar } from "./VitalityBar"
 import { DIMENSION_NAMES, areNumberArraysEqual, areStringArraysEqual, areNotesEqual, getSelectionCharacterOffsetWithin } from "./messageBubbleUtils"
+import { ResponseQualityBadge } from "./ResponseQualityBadge"
 import { BeliefNucleateTag, DreamTriggerTag } from "./ResponseArtifactTag"
 import { ResearchProposalCard } from "./ResearchProposalCard"
 import { SomaticAlertBanner } from "./SomaticAlertBanner"
@@ -435,6 +436,10 @@ export const MessageBubble = memo(function MessageBubble({
         )}
       </div>
 
+      {msg.quality && (msg.quality.source === "manual" || msg.quality.status === "degraded" || msg.quality.status === "uncertain") && (
+        <ResponseQualityBadge key={`${msg.id}-${msg.quality.assessed_at}`} messageId={msg.id} quality={msg.quality} />
+      )}
+
       <div className="text-[9px] text-[#555] mt-1 select-none flex flex-wrap items-start justify-between gap-x-3 gap-y-1 font-mono">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0 flex-1">
           {msg.timestamp && (
@@ -669,6 +674,8 @@ export const MessageBubble = memo(function MessageBubble({
          prevProps.msg.structural_justification === nextProps.msg.structural_justification &&
          prevProps.msg.truncated === nextProps.msg.truncated &&
          prevProps.msg.finish_reason === nextProps.msg.finish_reason &&
+         prevProps.msg.quality_status === nextProps.msg.quality_status &&
+         prevProps.msg.quality === nextProps.msg.quality &&
          areStringArraysEqual(prevProps.msg.active_skills, nextProps.msg.active_skills) &&
          areStringArraysEqual(prevProps.msg.active_beliefs, nextProps.msg.active_beliefs) &&
          areNumberArraysEqual(prevProps.msg.structural_signature, nextProps.msg.structural_signature) &&

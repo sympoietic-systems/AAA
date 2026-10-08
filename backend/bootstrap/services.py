@@ -96,6 +96,7 @@ class AppServices:
     background_engine: BackgroundTaskEngine
     background_provider: BaseLLMProvider | None
     vision_provider: BaseLLMProvider | None
+    response_quality_semaphore: asyncio.Semaphore = dataclass_field(default_factory=lambda: asyncio.Semaphore(2))
     conversation_locks: KeyedLockRegistry = dataclass_field(default_factory=KeyedLockRegistry)
     research_task_manager: ResearchTaskManager | None = None
     startup_scheduler: BackgroundStartupScheduler | None = None
