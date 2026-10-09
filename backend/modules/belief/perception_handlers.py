@@ -183,39 +183,48 @@ class PerceptionMetabolismHandler:
         engine: Any,
         agent_id: str,
         theme_text: str,
+        source_id: str | None = None,
     ) -> None:
+        import asyncio
+
         try:
-            source_weight = engine._get_source_weight("conversational_pattern")
-            theme_vec = engine._scorer.score(theme_text)
-            dc = calculate_concept_density(theme_text)
-
-            if dc < engine._NUCLEATION_THRESHOLD:
-                return
-
-            closest = engine._find_closest_active_belief(
-                agent_id, theme_vec, min_similarity=engine._NUCLEATION_THRESHOLD
+            await asyncio.to_thread(
+                PerceptionMetabolismHandler._metabolize_pattern_sync, engine, agent_id, theme_text, source_id
             )
-            b_vec = parse_vector_16d(closest.vector_16d) if closest else None
-            if closest is not None and b_vec is not None:
-                alignment = cosine_similarity(theme_vec, b_vec)
-                engine._accrete_belief(
-                    closest,
-                    theme_vec,
-                    source_weight,
-                    alignment,
-                    perturbation=1.0,
-                    source_type="chat_turn",
-                    source_id=None,
-                )
-            else:
-                engine._nucleate_proto_belief(
-                    agent_id=agent_id,
-                    statement=theme_text[:200],
-                    vector=theme_vec,
-                    source_type="chat_turn",
-                    source_id="cross_conversation",
-                    source_weight=source_weight,
-                )
-            logger.info(f"Conversational pattern metabolized: '{theme_text[:80]}...'")
-        except Exception as e:
-            logger.error(f"Error metabolizing conversational pattern: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Error metabolizing conversational pattern")
+
+    @staticmethod
+    def _metabolize_pattern_sync(engine: Any, agent_id: str, theme_text: str, source_id: str | None) -> None:
+        source_weight = engine._get_source_weight("conversational_pattern")
+        import hashlib
+
+        theme_vec = engine._scorer.score(theme_text)
+        dc = calculate_concept_density(theme_text)
+
+        if dc < engine._NUCLEATION_THRESHOLD:
+            return
+
+        closest = engine._find_closest_active_belief(agent_id, theme_vec, min_similarity=engine._NUCLEATION_THRESHOLD)
+        b_vec = parse_vector_16d(closest.vector_16d) if closest else None
+        if closest is not None and b_vec is not None:
+            alignment = cosine_similarity(theme_vec, b_vec)
+            engine._accrete_belief(
+                closest,
+                theme_vec,
+                source_weight,
+                alignment,
+                perturbation=1.0,
+                source_type="conversational_pattern",
+                source_id=source_id,
+            )
+        else:
+            engine._nucleate_proto_belief(
+                agent_id=agent_id,
+                statement=theme_text[:200],
+                vector=theme_vec,
+                source_type="conversational_pattern",
+                source_id=source_id or "pattern:" + hashlib.sha256(theme_text.encode()).hexdigest(),
+                source_weight=source_weight,
+            )
+        logger.info(f"Conversational pattern metabolized: '{theme_text[:80]}...'")

@@ -506,7 +506,8 @@ class ChatService:
             belief_repo = getattr(state, "belief_repo", None)
             if note_repo or belief_repo:
                 try:
-                    response_text = process_self_annotations(
+                    response_text = await asyncio.to_thread(
+                        process_self_annotations,
                         response_text=response_text,
                         conversation_id=conversation_id,
                         message_id=response_msg.id,
@@ -514,6 +515,7 @@ class ChatService:
                         message_repo=repo,
                         belief_repo=belief_repo,
                         agent_id=agent_id,
+                        config=state.config,
                     )
                 except Exception:
                     logger.exception("Failed to process self-annotations")

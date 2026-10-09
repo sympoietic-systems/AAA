@@ -114,6 +114,9 @@ belief_review:
   origin_intake:
     explicit_chat: false       # V2 opt-in; rollout remains gated
     explicit_dream: false
+    passive_chat: false
+    conversation_pattern: false
+    scar_fold: false
 
 # ── Vision Model Pool ─────────────────────────────
 vision_llm:
@@ -151,6 +154,8 @@ The homeostatic regulator clamps chat temperature to a default range of `0.5`–
 `belief_admission.jev_shadow` controls optional Jev advisory assessment on the unpromoted legacy explicit route. Disabling it leaves candidates in human review; it does not disable receipts or authorize admission. This setting is separate from `research_triage.enabled`.
 
 `belief_review.origin_intake.explicit_chat` and `explicit_dream` are independent strict boolean flags, default false. T6 implements these routes locally; production enablement remains T18. Migration 065 retains an agent/origin promotion marker. Once promoted, disabling its flag records paused v2 encounters and cannot restore the legacy writer. V2 evaluation remains T9 work: T6 returns unavailable/abstained checkpoints with `v2_evaluator_pending_T9` or `origin_paused`. It does not call Jev on v2 or grant adoption authority. See [ADR-119](../decisions/ADR-119-explicit-belief-origin-intake.md) and [Report 053](../reports/053-belief-v2-explicit-intake/README.md).
+
+T7 adds strict boolean `passive_chat`, `conversation_pattern` and `scar_fold` flags with the same default-off promotion/pause rules. Passive scope/time remain unresolved; pattern ancestry is unavailable when originating messages are absent. These routes record abstained checkpoints, never independent warrant or adoption. Scar-fold's unsafe empty-set legacy fallback is repaired globally to a pending proposal even when its v2 flag is off; legacy activity updates on existing beliefs remain separate. Scar batches above 16 segments raise a visible validation failure. No T7 production enablement has occurred. See [ADR-120](../decisions/ADR-120-passive-belief-origin-intake.md) and [Report 054](../reports/054-belief-v2-passive-intake/README.md).
 
 ## Stateful Model Pool & Fallback Prioritization
 

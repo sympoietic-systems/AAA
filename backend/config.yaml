@@ -279,6 +279,9 @@ belief_review:
   origin_intake:
     explicit_chat: false
     explicit_dream: false
+    passive_chat: false
+    conversation_pattern: false
+    scar_fold: false
 
 belief_admission:
   jev_shadow: true  # Advisory only; human review required. Independent of research_triage.

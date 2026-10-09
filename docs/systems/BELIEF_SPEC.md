@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1–T6 complete locally; T7–T18 pending. Date: 2026-10-09.
+Status: T1–T7 complete locally; T8–T18 pending. Date: 2026-10-09.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -39,6 +39,8 @@ T5 local persistence: agent-scoped encounter/claim sidecars + immutable admissio
 T6 local explicit adapters: `admit_candidate` routes enabled/promoted chat/dream to source-bound v2; `belief_review.origin_intake.explicit_chat/explicit_dream` default false; migration 065 promotion + annotation links; off-after-promotion retains paused encounters, no legacy fallback. Native assessments projected for legacy page/trace parity. V2 evaluator deferred T9; no semantic promotion. [ADR-119](../decisions/ADR-119-explicit-belief-origin-intake.md), [Report 053](../reports/053-belief-v2-explicit-intake/README.md).
 
 I.intake: extend `backend/services/belief_admission.py` → shared origin-aware intake. Origins: explicit chat/dream, passive chat, document perception, shared note, web, conversation pattern, scar-fold fallback creation. Skill bridge creation ! separate derived-skill provenance/authority contract; no semantic adoption inferred from bridge projection. Inventory actual call sites before migration; bypasses prohibited once origin promoted.
+
+T7 local passive adapters: chat/pattern/scar opt-in + durable pause; actual message/hash/segment binding; pattern ancestry unavailable; unresolved scope → awaiting_context + abstained T9 checkpoint; no independent warrant/adoption. Scar empty-set fallback globally → pending proposal. Bootstrap callback preserves layering; same admission ledger/projection. [ADR-120](../decisions/ADR-120-passive-belief-origin-intake.md), [Report 054](../reports/054-belief-v2-passive-intake/README.md).
 
 I.encounter: typed encounter → `{id,agent_id,origin,source_type,source_id,source_version_or_hash,source_timestamp,received_at,statement,statement_hash,scope,temporal_scope,source_quote_or_reference,lineage,context_status}`. Source binding/availability explicit; missing fields retain reason. Event identity includes agent + stable source identity/version + emission/segment identity; claim identity separate from encounter identity.
 
@@ -104,7 +106,7 @@ T3|x|freeze typed encounter/assessment/decision/state contracts, relation adapte
 T4|x|[source packet](../reports/049-belief-v2-review-corpus/README.md) + [automated provisional freeze](../reports/051-belief-v2-automated-review/README.md); all 54 cases accounted; 80 valid outputs, 26 dual-reviewed cases; source-bound lineage/consequence/conflict/context + disagreement/failure outcomes retained; live coverage partial; independent gold remains T15 obligation|V7,V8,V22,V26,I.lineage,I.eval
 T5|x|additive persistence: source-bound encounter/claim identities, immutable admission-ledger assessment links, CAS review decisions; agent isolation + concurrent retry/restart; [Report 052](../reports/052-belief-v2-persistence/README.md): 27 focused + 881 full tests passed, strict/static/frontend gates passed|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|x|explicit chat/dream opt-in v2 intake; default-off flags + durable promotion/pause; legacy page/trace receipt projection + inert historical XML; [Report 053](../reports/053-belief-v2-explicit-intake/README.md): 88 focused + 897 full tests passed; strict/static/frontend gates passed; evaluation deferred T9|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
-T7|.|adapt passive chat + conversation-pattern + scar-fold fallback creators; origins/source segments preserved; no reflection-created adopted belief; bypass audit + parity tests|V1,V2,V3,V7,V19,I.intake
+T7|x|passive chat/pattern/scar source-bound intake; durable pause + preserved unknown ancestry; scar fallback → pending proposal; [Report 054](../reports/054-belief-v2-passive-intake/README.md): 87 focused + 914 isolated full tests passed; strict/static/frontend gates passed; T9 evaluator deferred|V1,V2,V3,V7,V19,I.intake
 T8|.|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
 T9|.|extend advisory Jev assessment, referent validation, pending/deferred nomination + relation adapter; preserve existing triage contracts; outage/repetitive/stale replay tests|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
 T10|.|separate source-lineage support from internal activity + recurrence; forward typed events; inspectable unknown ancestry; no historical invented deltas/support|V7,V8,V16,V17,I.lineage,I.events
@@ -156,7 +158,7 @@ Rollout: only T18 mutates production under explicit authorization. Independent o
 ## §B
 
 id|date|cause|fix
-B1|2026-10-08|scar-fold fallback creates crystallized belief without admission; origin omitted from initial intake inventory|planned T7; V1,V7; skill bridge authority reviewed in T3
+B1|2026-10-08|scar-fold fallback creates crystallized belief without admission; origin omitted from initial intake inventory|T7 repaired locally: pending fallback + opt-in v2 source/segment intake; V1,V7; default-off and promoted fallback regression tests; no production rollout
 B2|2026-10-08|generic impact serialized as confidence delta; wall-clock sweep repeatedly charges total inactivity; event insert failure swallowed|T2 resolved locally; V17,V18; typed nullable actual deltas + atomic checkpoint/mass/event; shared legacy helper route; report 047
 B3|2026-10-08|accretion could label delta from stale caller snapshot as measured persisted change|T2 resolved locally; V17; writer-lock reread + mutation/event transaction; rollback + stale snapshot tests; report 047
 B4|2026-10-08|post-annotation import edit missed final formatter run|ruff format + full format check; mechanical; existing completion gate sufficient
@@ -178,7 +180,11 @@ B17|2026-10-09|draft literals/optional indexing failed mypy; Ruff removed fixtur
 
 B18|2026-10-09|draft marked known dream context ambiguous solely because lineage was internal, conflating availability with independence|retain available owned source + internal lineage; V3,V7; chat/dream parity asserts available context without independent support; restart full gate against corrected code
 
-Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
+B19|2026-10-09|T7 draft tests assumed empty initial belief set despite seeded skill projections; fallback branch not reached; fixture table typo + lint/format corrections|compare pre-existing standing; explicit empty-set fixture + actual bootstrap routes; V1,V7 existing; no new invariant
+B20|2026-10-09|T7 sync pattern extraction moved broad catch to new helper, violating architecture-debt ratchet|retain catch at existing async boundary; helper propagates errors; root quality ratchet + V19; architecture regression test
+B21|2026-10-09|shared-checkout T7 full gate included concurrent research edits; research-child metabolism assertion failed (1 vs 2); second pytest process observed|retain 922-pass/1-fail receipt; isolate T7 over completed T6 in managed worktree; no unrelated repair; V21 + existing isolation rule
+
+Entries distinguish observed cause from planned repair; B1 resolved locally in T7, no production claim. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 
 ## References
 

@@ -27,7 +27,10 @@ class ExplicitBeliefRepository(BaseRepository):
         if row is None:
             raise ConstraintViolation("Emission bindings missing", entity="belief_intake")
         e, n = json.loads(row[0]), json.loads(row[1])
-        bindings = [(e["source"]["source_id"], e["source"]["source_sha256"], True)]
+        if e["origin"] == "conversation_pattern":
+            # No owned originating messages supplied: retained as unavailable, never warrant.
+            return e["source"]["context_status"] != "available" and n["conversation_id"] is None
+        bindings = [(e["source"]["source_id"], e["source"]["source_sha256"], e["origin"] != "passive_chat")]
         if n["parent_sha256"] is not None:
             bindings.append((n["parent_message_id"], n["parent_sha256"], False))
         for message_id, expected, apparatus in bindings:
@@ -156,15 +159,16 @@ class ExplicitBeliefRepository(BaseRepository):
             "emission_sha256": n["emission_sha256"],
             "proposal_id": row["record_id"],
             "source": {
-                "type": "intention",
+                "type": "intention" if e["origin"].startswith("explicit_") else e["source"]["source_type"],
                 "author": agent_id,
                 "origin": e["origin"].removeprefix("explicit_"),
                 "conversation_id": n["conversation_id"],
-                "message_id": int(e["source"]["source_id"]),
+                "message_id": int(e["source"]["source_id"]) if n["conversation_id"] else None,
                 "message_sha256": e["source"]["source_sha256"],
                 "parent_message_id": n["parent_message_id"],
                 "evidence_sha256": n["parent_sha256"],
-                "activity": "internal",
+                "activity": e["source"]["activity"],
+                "context_status": e["source"]["context_status"],
                 "lineage": e["lineage"],
                 "scope": e["scope"],
                 "temporal_scope": e["temporal_scope"],

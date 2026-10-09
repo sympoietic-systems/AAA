@@ -20,6 +20,7 @@ def process_self_annotations(
     message_repo,
     belief_repo=None,
     agent_id: str = "symbia",
+    config: dict | None = None,
 ) -> str:
     """Post-process Symbia's response to normalize annotation tags for the frontend.
 
@@ -35,7 +36,8 @@ def process_self_annotations(
        is created, and the tag is rewritten with the new ID.
     3. **Scar-fold truncation safeguard & belief writeback** — ``<scar_fold>`` / ``<scar-fold>``
        content is truncated to 200 characters as a safeguard, and internal monologue text
-       is written back to persistent belief nodes as a ``scar_monologue`` event.
+       nominates source-bound candidates when promoted. The legacy empty-set
+       fallback creates a pending proposal; existing nodes retain activity events.
     """
     original_text = response_text
 
@@ -125,21 +127,6 @@ def process_self_annotations(
         )
 
     # --- Scar-fold truncation safeguard & belief writeback ---
-    scar_fold_matches = list(re.finditer(r"<(scar_fold|scar-fold)>([\s\S]*?)</\1>", original_text))
-    if scar_fold_matches and belief_repo:
-        try:
-            for match in scar_fold_matches:
-                monologue_text = match.group(2).strip()
-                if monologue_text:
-                    _process_scar_monologue_belief_writeback(
-                        belief_repo=belief_repo,
-                        agent_id=agent_id,
-                        message_id=message_id,
-                        monologue_text=monologue_text,
-                    )
-        except Exception:
-            logger.exception("Failed to write scar-fold monologue to belief repository")
-
     def truncate_scar_fold(match):
         tag = match.group(1)
         content = match.group(2)
@@ -152,6 +139,25 @@ def process_self_annotations(
     if processed != original_text and message_repo:
         message_repo.update_content(message_id, processed)
 
+    # Bind the final persisted representation, including truncation and annotation IDs.
+    scar_fold_matches = list(re.finditer(r"<(scar_fold|scar-fold)>([\s\S]*?)</\1>", processed))
+    if scar_fold_matches and belief_repo:
+        from backend.errors import ValidationGlitch
+
+        if len(scar_fold_matches) > 16:
+            raise ValidationGlitch("Scar-fold batch exceeds 16 segments", entity="belief_intake")
+        for index, match in enumerate(scar_fold_matches):
+            monologue_text = match.group(2).strip()
+            if monologue_text:
+                _process_scar_monologue_belief_writeback(
+                    belief_repo=belief_repo,
+                    agent_id=agent_id,
+                    message_id=message_id,
+                    monologue_text=monologue_text,
+                    config=config,
+                    segment_id=f"scar:{index}",
+                )
+
     return processed
 
 
@@ -160,8 +166,25 @@ def _process_scar_monologue_belief_writeback(
     agent_id: str,
     message_id: int,
     monologue_text: str,
+    config: dict | None = None,
+    segment_id: str = "scar:0",
 ):
-    """# ponytail: minimal belief writeback helper for persistent scar-fold monologue reflections."""
+    """Route scar reflection into intake; legacy activity cannot create crystallized standing."""
+    from backend.services.belief_passive_intake import passive_intake
+
+    db_path = getattr(belief_repo, "_db_path", None)
+    if isinstance(db_path, str):
+        receipt = passive_intake(
+            db_path,
+            agent_id,
+            monologue_text,
+            origin="scar_fold",
+            source_id=str(message_id),
+            segment_id=segment_id,
+            config=config or {},
+        )
+        if receipt is not None:
+            return receipt
     beliefs = belief_repo.list_beliefs(agent_id) if hasattr(belief_repo, "list_beliefs") else []
     target_belief_id = None
     if beliefs:
@@ -171,21 +194,37 @@ def _process_scar_monologue_belief_writeback(
             current_mass = getattr(target_belief, "ontological_mass", 0.5)
             belief_repo.update_belief_mass(target_belief_id, min(1.0, current_mass + 0.05))
 
-    if target_belief_id is None and hasattr(belief_repo, "create_belief"):
-        target_belief_id = str(uuid.uuid4())
-        new_b = belief_repo.create_belief(
-            id=target_belief_id,
+    if target_belief_id is None:
+        # Reflection can nominate a proposal, never manufacture adopted/crystallized standing.
+        proposal_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"scar:{agent_id.lower()}:{message_id}:{segment_id}"))
+        statement = monologue_text[:200]
+        prior = belief_repo.get_proposal(proposal_id) if hasattr(belief_repo, "get_proposal") else None
+        if prior:
+            from backend.errors import ConstraintViolation
+
+            if prior.provisional_statement != statement:
+                raise ConstraintViolation("Scar-fold retry changed its statement", entity="belief_intake")
+            return prior
+        return belief_repo.create_proposal(
+            id=proposal_id,
             agent_id=agent_id,
-            label="scar-monologue-insight",
-            statement=f"Monologue Insight: {monologue_text[:150]}",
-            origin="emergent",
-            confidence=0.5,
-            ontological_mass=0.5,
-            somatic_anchor="conceptual",
-            vector_16d=json.dumps([0.0] * 16),
-            lifecycle_stage="crystallized",
+            provisional_statement=statement,
+            source_trace=json.dumps(
+                [
+                    {
+                        "type": "scar_fold",
+                        "id": str(message_id),
+                        "segment_id": segment_id,
+                        "activity": "internal",
+                        "independence_status": "internal",
+                    }
+                ]
+            ),
+            confidence=0.10,
+            nucleation_mass=0.05,
+            initial_signature=json.dumps([0.0] * 16),
+            status="pending",
         )
-        target_belief_id = getattr(new_b, "id", target_belief_id)
 
     if hasattr(belief_repo, "insert_belief_event") and target_belief_id:
         belief_repo.insert_belief_event(

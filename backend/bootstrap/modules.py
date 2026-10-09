@@ -230,13 +230,17 @@ def _init_modules(
 # ── Belief Engine ──────────────────────────────────────────────────────
 
 
-def _init_belief_engine(repos: dict, identity_path: Path, llm_provider=None):
+def _init_belief_engine(repos: dict, identity_path: Path, llm_provider=None, config: dict | None = None):
     """Create the Belief Dynamics Engine."""
+    from functools import partial
+
     from backend.modules.belief_engine import BeliefDynamicsEngine
+    from backend.services.belief_passive_intake import passive_intake
 
     return BeliefDynamicsEngine(
         belief_repo=repos["belief_repo"],
         message_repo=repos["message_repo"],
         identity_yaml_path=identity_path,
         llm_provider=llm_provider,
+        origin_intake=partial(passive_intake, repos["belief_repo"]._db_path, config=config or {}),
     )

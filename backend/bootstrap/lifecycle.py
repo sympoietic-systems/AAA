@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
     modules = _init_modules(config, repos, embedder, structural_provider, vision_provider)
 
     # 5. Beliefs
-    belief_metabolism = _init_belief_engine(repos, identity_path, structural_provider)
+    belief_metabolism = _init_belief_engine(repos, identity_path, structural_provider, config=config)
 
     # 6. Prompt assembler
     ctx_cfg = config.get("context", {})

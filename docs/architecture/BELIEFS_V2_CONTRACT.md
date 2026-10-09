@@ -51,6 +51,8 @@ Explicit encounters bind the actual apparatus message and stable parser segment 
 
 Canonical review states are `candidate`, `awaiting_context`, `under_review`, `adopted`, `deferred`, `declined`, and `superseded`. Review state does not derive from mass, confidence, lifecycle stage, or a relation label. Standing carries scope, challenges, warrant dimensions, lineage uncertainty, and decision provenance. Participation is a separate bounded intended use: question, comparison, experiment proposal, scoped dissent, or provisional premise. None grants a tool veto or execution authority.
 
+T7 passive chat/pattern/scar adapters reuse the same ledger, promotion markers and annotation projection. Their flags default off; promoted pauses retain encounters. Actual message hashes bind chat/scar observations; patterns retain unknown ancestry and null conversation links. Scope/time remain unresolved, so distinct unscoped observations do not fabricate an exact-repeat claim identity. Scar fallback globally creates a pending proposal instead of a crystallized belief. An injected bootstrap callback preserves module/service layering; synchronous intake is offloaded once. [ADR-120](../decisions/ADR-120-passive-belief-origin-intake.md), [Report 054](../reports/054-belief-v2-passive-intake/README.md).
+
 | Existing representation | Compatibility projection | Authority limit |
 | --- | --- | --- |
 | `pending` proposal | Legacy status retained; candidate workflow hint | No invented assessment or commitment |

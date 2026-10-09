@@ -32,7 +32,7 @@ class EmissionAnnotations(FrozenRecord):
     consequence: str = Field(max_length=1000)
     evidence_quote: str = Field(max_length=2000)
     emission_sha256: Sha256 | None = None
-    conversation_id: str = Field(min_length=1, max_length=128)
+    conversation_id: str | None = Field(min_length=1, max_length=128)
     parent_message_id: int | None
     parent_sha256: Sha256 | None
     context_issues: tuple[str, ...] = Field(max_length=20)

@@ -11,19 +11,17 @@ class ContractBeliefRepository:
     def list_beliefs(self, agent_id):
         return []
 
-    def create_belief(
+    def create_proposal(
         self,
         *,
         id,
         agent_id,
-        label,
-        statement,
-        origin,
+        provisional_statement,
+        source_trace,
         confidence,
-        ontological_mass,
-        somatic_anchor,
-        vector_16d,
-        lifecycle_stage="crystallized",
+        nucleation_mass,
+        initial_signature,
+        status,
     ):
         self.created = locals()
         return type("Belief", (), {"id": id})()
@@ -97,7 +95,6 @@ def test_v63_scar_fold_writeback_uses_repository_contract():
     )
 
     assert belief_repo.created is not None
-    assert belief_repo.created["ontological_mass"] == 0.5
-    assert belief_repo.event is not None
-    assert belief_repo.event["belief_id"] == belief_repo.created["id"]
-    assert belief_repo.event["event_type"] == "scar_monologue"
+    assert belief_repo.created["nucleation_mass"] == 0.05
+    assert belief_repo.created["status"] == "pending"
+    assert belief_repo.event is None

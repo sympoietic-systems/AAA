@@ -577,11 +577,16 @@ async def main():
             identity_data = yaml.safe_load(f)
             agent_name = identity_data.get("agent", {}).get("name", "symbia")
 
+    from functools import partial
+
+    from backend.services.belief_passive_intake import passive_intake
+
     belief_metabolism = BeliefDynamicsEngine(
         belief_repo=belief_repo,
         message_repo=message_repo,
         identity_yaml_path=identity_path,
         llm_provider=structural_provider,
+        origin_intake=partial(passive_intake, belief_repo._db_path, config=config),
     )
 
     # 7. Initialize Background task engine

@@ -43,6 +43,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         identity_yaml_path: Path,
         learning_rate_beta: float = 0.05,
         llm_provider: object | None = None,
+        origin_intake=None,
     ):
         self._belief_repo = belief_repo
         self._message_repo = message_repo
@@ -50,6 +51,7 @@ class BeliefDynamicsEngine(ProcessingModule):
         self._beta = learning_rate_beta
         self._scorer = CompositeStructuralScorer()
         self._llm_provider = llm_provider
+        self._origin_intake = origin_intake
         self._source_weights = {
             "chat_turn": 0.4,
             "user_assertion": 0.4,
@@ -141,6 +143,16 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_id: str,
         source_weight: float,
     ) -> str | None:
+        if self._origin_intake is not None and source_type in {"chat_turn", "user_assertion", "conversational_pattern"}:
+            receipt = self._origin_intake(
+                agent_id,
+                statement,
+                origin="conversation_pattern" if source_type == "conversational_pattern" else "passive_chat",
+                source_id=source_id,
+                segment_id="pattern:0" if source_type == "conversational_pattern" else "passive:0",
+            )
+            if receipt is not None:
+                return str(receipt["proposal_id"])
         existing = self._belief_repo.list_beliefs(agent_id)
 
         initial_mass = 0.05 * source_weight / 0.5
@@ -499,7 +511,8 @@ class BeliefDynamicsEngine(ProcessingModule):
                     source_id=str(user_message_id),
                 )
             elif dc > self._NUCLEATION_THRESHOLD:
-                self._nucleate_proto_belief(
+                await asyncio.to_thread(
+                    self._nucleate_proto_belief,
                     agent_id=agent_id,
                     statement=user_msg.content[:200],
                     vector=user_vec,
@@ -698,11 +711,13 @@ class BeliefDynamicsEngine(ProcessingModule):
         self,
         agent_id: str,
         theme_text: str,
+        source_id: str | None = None,
     ) -> None:
         await PerceptionMetabolismHandler.metabolize_conversational_pattern(
             self,
             agent_id=agent_id,
             theme_text=theme_text,
+            source_id=source_id,
         )
 
     async def compute_ecosystem_health(self, agent_id: str = "symbia") -> dict:
