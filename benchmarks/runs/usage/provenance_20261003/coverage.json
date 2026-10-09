@@ -1,9 +1,0 @@
-{
-  "source": "D:\\01_GIT\\AAA\\backend\\data\\aaa.db",
-  "apparatus_rows": 1878,
-  "coverage": {
-    "unknown": 1878
-  },
-  "injections": [],
-  "interpretation": "Missing coverage is unknown; injection is not demonstrated response influence."
-}

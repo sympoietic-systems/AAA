@@ -52,8 +52,18 @@ data/
 reports/*/
 !reports/README.md
 benchmarks/runs/
+docs/reports/
+benchmarks/suites/**/output/
 *.log
 **/*.log
 .tmp_pytest_nvidia/
 .local/
 .venv-docling/
+
+# Local test output
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+junit*.xml
+test-results/

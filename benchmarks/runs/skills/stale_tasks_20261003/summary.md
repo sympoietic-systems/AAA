@@ -1,7 +1,0 @@
-# Skill vitality audit
-
-65 skills; 3 dormancy candidates.
-
-Activation traces are incomplete; always-active injections may be absent. Zero observed activations is not zero lifetime use.
-
-Adversarial executions: 3/3.
