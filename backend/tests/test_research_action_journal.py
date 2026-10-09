@@ -56,6 +56,32 @@ def install_step(monkeypatch, execute):
 
 
 @pytest.mark.asyncio
+async def test_v133_optional_processing_timeout_retains_findings_and_partial_receipt(setup, monkeypatch):
+    orch, tasks, _ = setup
+    orch._step_executor.METABOLISM_TIMEOUT_SECONDS = 0.01
+
+    async def stalled(*args):
+        await asyncio.Event().wait()
+
+    orch._metabolize_step.side_effect = stalled
+    install_step(
+        monkeypatch,
+        AsyncMock(return_value=StepOutput(payload=PlanPayload(), new_findings=["saved research finding"])),
+    )
+    try:
+        result = await asyncio.wait_for(orch.execute_step("task"), 1)
+        state = orch._get_state("task")
+        assert state["all_findings"] == ["saved research finding"]
+        assert state["phase"] == "searching"
+        assert state["delivery_degraded"]
+        assert result["delivery_status"] == "partial"
+        assert orch._action_journal.repo.get("task", result["action_id"]).status == "partial"
+        assert json.loads(tasks.get("task")["orchestrator_state"])["all_findings"] == ["saved research finding"]
+    finally:
+        await orch.aclose()
+
+
+@pytest.mark.asyncio
 async def test_v118_invalid_structured_fallback_cannot_complete_task(setup, monkeypatch):
     from backend.services.research.task_state import SynthesizePayload
 

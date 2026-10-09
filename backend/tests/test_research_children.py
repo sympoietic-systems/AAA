@@ -144,7 +144,8 @@ async def test_v114_parent_alone_merges_raw_archives_and_conflicts(setup, monkey
     assert result["next_phase"] == "consolidating"
     rows = ResearchChildRunRepository(tasks._db_path).list_parent("task")
     assert [row["status"] for row in rows] == ["complete", "complete"]
-    assert orch._metabolize_step.await_count == 2  # original parent reflection + parent gathering only
+    assert orch._metabolize_step.await_count == 1  # only parent gathering has findings; children remain isolated
+    assert orch._metabolize_step.await_args.args[:2] == ("task", "branch_gathering")
     for row in rows:
         packet = json.loads(row["packet_json"])
         assert packet["evidence"]["segments"][0]["text"] == "Common raw source with conflicting interpretations"

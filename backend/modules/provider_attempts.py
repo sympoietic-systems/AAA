@@ -157,8 +157,10 @@ async def retry_delay(seconds: float) -> None:
 
 async def bounded_call(call: Callable[[], Coroutine[Any, Any, Any]], timeout: float) -> Any:
     """Bound a phase even when a nested service does not use the provider hook."""
-    if timeout <= 0 or _slots.locked():
-        raise AttemptBudgetExceeded("Research phase execution boundary exhausted")
+    if timeout <= 0:
+        raise AttemptBudgetExceeded("Research phase deadline exceeded")
+    if _slots.locked():
+        raise AttemptBudgetExceeded("Research execution capacity exhausted")
     await _slots.acquire()
     task = asyncio.create_task(call())
     _outstanding.add(task)

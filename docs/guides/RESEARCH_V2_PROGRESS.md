@@ -57,3 +57,7 @@ The final NVIDIA replay produced a legacy report and a V2 partial result after a
 Every cycle now runs at most six search queries, including reflection followups. Depth remains the cycle-count control. Explicit step recovery opens a fresh bounded revision in the existing task and retains old receipts; Digest reuses successful analyses and calls the model only for missing or failed results. Automatic mode continues afterward. Configuration and operator actions are in [CONFIG.md](CONFIG.md#research-cycle-and-recovery-limits); verification and production timeout evidence are owned by [Report 050](../reports/050-research-digestion-provider-failure/README.md).
 
 The new-research form now defaults to depth 4, allowing more cycles than its previous depth 2. You can adjust depth before dispatch; evaluation and resource limits may stop the run earlier. Existing tasks retain their selected depth.
+
+## Post-phase timeout and failure visibility (T80)
+
+Optional belief processing now has a short bound and records partial delivery while retaining saved research findings. Pre-execution phase failures get a visible failed row when a plan exists; completed query groups remain intact. Incident evidence and verification belong to [Report 050](../reports/050-research-digestion-provider-failure/README.md), with same-task operator recovery in the [rollout guide](RESEARCH_V2_ROLLOUT.md#smaller-cycles-and-same-task-recovery).

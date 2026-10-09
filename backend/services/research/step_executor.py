@@ -8,7 +8,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from backend.modules.provider_attempts import bounded_call
+from backend.modules.provider_attempts import AttemptBudgetExceeded, bounded_call
 from backend.services.research import action_scheduler
 from backend.services.research.action_journal import ResearchActionJournal
 from backend.services.research.provider_observation import ProviderObservations, observe_provider_calls
@@ -34,6 +34,32 @@ class ResearchStepExecutor:
         self._pipeline_graph = pipeline_graph
         self._phase_block = phase_block
         self._phase_sub_sequence = phase_sub_sequence
+
+    METABOLISM_TIMEOUT_SECONDS = 15.0
+
+    async def _metabolize_bounded(self, task_id: str, phase: str, findings: list[str], state: dict[str, Any]) -> bool:
+        """Optional belief processing cannot consume the remaining research window."""
+        if not findings or state.get("research_child"):
+            return True
+        timeout = self.METABOLISM_TIMEOUT_SECONDS
+        deadline = ((state.get("action_journal_policy") or {}).get("provider_policy") or {}).get("deadline")
+        if deadline:
+            timeout = min(timeout, (datetime.fromisoformat(deadline) - datetime.now(UTC)).total_seconds())
+        reason = "deadline_exhausted"
+        if timeout > 0:
+            try:
+                await bounded_call(lambda: self._orchestrator._metabolize_step(task_id, phase, findings), timeout)
+                return True
+            except AttemptBudgetExceeded as exc:
+                reason = "execution_capacity" if "capacity exhausted" in str(exc) else "timeout"
+        logger.warning("Research belief processing skipped: task=%s phase=%s reason=%s", task_id, phase, reason)
+        await asyncio.to_thread(
+            self._orchestrator._log_meta,
+            task_id,
+            "research_metabolism_incomplete",
+            {"phase": phase, "reason": reason, "timeout_seconds": max(0, timeout)},
+        )
+        return False
 
     async def _resolve_dispatch_consent(self, task_id: str, state: dict[str, Any]) -> None:
         if (
@@ -245,8 +271,9 @@ class ResearchStepExecutor:
                 orchestrator.apply_step_output(s, phase, output)
 
                 # Metabolize research findings into belief system
-                if not s.get("research_child"):
-                    await orchestrator._metabolize_step(task_id, phase, output.new_findings or [])
+                if not await self._metabolize_bounded(task_id, phase, output.new_findings or [], s):
+                    s["delivery_degraded"] = True
+                    action_status = "partial"
 
                 result.update(
                     {
@@ -437,14 +464,30 @@ class ResearchStepExecutor:
                 # Mark running steps as failed so they're visible in the UI for rerun
                 if orchestrator.step_repo:
                     try:
-                        all_steps = orchestrator.step_repo.get_by_task(task_id) or []
-                        for st in all_steps:
-                            if st["status"] == "running":
-                                orchestrator.step_repo.update(
-                                    st["id"], status="failed", result_summary=f"Step failed: {e}"
-                                )
+                        all_steps = await asyncio.to_thread(orchestrator.step_repo.get_by_task, task_id) or []
+                        failed_type = ResearchStepRegistry.get_step(phase).step_type
+                        current_steps = [
+                            st
+                            for st in all_steps
+                            if st.get("phase_group") == s.get("phase_group") and st.get("step_type") == failed_type
+                        ]
+                        if not current_steps:
+                            failed_id = await asyncio.to_thread(
+                                orchestrator._create_or_update_step, s, task_id, failed_type
+                            )
+                            current_steps = [{"id": failed_id, "status": "running"}]
+                            output_refs = (failed_id,)
+                        for st in current_steps:
+                            if st.get("status") not in {"running", "failed"}:
+                                continue
+                            await asyncio.to_thread(
+                                orchestrator.step_repo.update,
+                                st["id"],
+                                status="failed",
+                                result_summary=f"Step failed: {e}",
+                            )
                     except Exception:
-                        pass
+                        logger.exception("Failed to persist failed phase row for task %s phase %s", task_id, phase)
 
                 # Force phase to complete so the while-loop exits.
                 # But preserve the failing phase name so the caller knows which step failed.
