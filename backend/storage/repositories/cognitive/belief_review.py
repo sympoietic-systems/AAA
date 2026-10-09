@@ -40,6 +40,17 @@ class BeliefReviewRepository(BaseRepository):
         return hashlib.sha256(self._record_statement(agent_id, record_id).encode()).hexdigest()
 
     def _source_hash(self, agent_id: str, source_type: str, source_id: str | None, quote: str = "") -> str | None:
+        if source_type in {"document_artifact", "shared_note_artifact"} and source_id is not None:
+            from backend.storage.repositories.cognitive.belief_sources import BeliefSourceRepository
+
+            material = BeliefSourceRepository(self._db_path).bound_snapshot(
+                agent_id, source_type.removesuffix("_artifact"), source_id
+            )
+            if material is None or not material["text"]:
+                raise ResourceNotFound("External source representation unavailable", entity="belief_encounter")
+            if quote and quote not in str(material["text"]):
+                raise ConstraintViolation("Encounter quote is absent from external source", entity="belief_encounter")
+            return str(material["hash"])
         if source_type not in {"message", "chat_turn"} or source_id is None:
             return None
         row = (

@@ -11,10 +11,11 @@ from backend.services.belief_explicit_intake import EmissionAnnotations
 from backend.services.belief_review_contracts import Assessment, Encounter, LineageEntry, SourceReference
 from backend.services.belief_review_store import BeliefReviewStore, _agent, _json
 from backend.storage.repositories.cognitive.belief_explicit import ExplicitBeliefRepository
+from backend.storage.repositories.cognitive.belief_sources import BeliefSourceRepository
 from backend.storage.repositories.conversation.conversation import ConversationRepository
 from backend.storage.repositories.conversation.message import MessageRepository
 
-PassiveOrigin = Literal["passive_chat", "conversation_pattern", "scar_fold"]
+PassiveOrigin = Literal["passive_chat", "conversation_pattern", "scar_fold", "document", "shared_note", "web"]
 
 
 def _hash(text: str) -> str:
@@ -30,21 +31,84 @@ def passive_intake(
     source_id: str,
     segment_id: str,
     config: dict[str, Any],
+    conversation_id: str | None = None,
+    source_text: str = "",
 ) -> dict[str, Any] | None:
     """Sync use case; async callers offload once. None allows only unpromoted legacy routing."""
     settings = config.get("belief_review", {})
     if not isinstance(settings, dict) or not isinstance(settings.get("origin_intake", {}), dict):
         raise ValidationGlitch("Origin settings must be mappings", entity="belief_intake")
     enabled = settings.get("origin_intake", {}).get(origin, False)
-    if type(enabled) is not bool or origin not in {"passive_chat", "conversation_pattern", "scar_fold"}:
+    if type(enabled) is not bool or origin not in {
+        "passive_chat",
+        "conversation_pattern",
+        "scar_fold",
+        "document",
+        "shared_note",
+        "web",
+    }:
         raise ValidationGlitch("Passive origin requires a boolean flag and known origin", entity="belief_intake")
     agent_id = _agent(agent_id)
     repo = ExplicitBeliefRepository(db_path)
     if not enabled and not repo.promoted(agent_id, origin):
         return None
+    supplied_conversation = conversation_id
     conversation_id = None
     issues = ["scope_and_temporal_scope_unresolved"]
-    if origin == "conversation_pattern":
+    external_hash = None
+    comment = ""
+    lineage: tuple[LineageEntry, ...]
+    if origin in {"document", "shared_note", "web"}:
+        if not supplied_conversation or len(source_text) > 50000:
+            raise ValidationGlitch(
+                "External intake requires bounded representation and conversation", entity="belief_intake"
+            )
+        material = BeliefSourceRepository(db_path).snapshot(agent_id, supplied_conversation, origin, source_id)
+        conversation_id = supplied_conversation
+        if origin == "web":
+            material = {
+                "text": source_text,
+                "comment": "",
+                "parents": [],
+                "reason": "web_upstream_context_unverified",
+                "hash": _hash(source_text),
+            }
+        external_hash = str(material["hash"])
+        statement = str(material["text"])[:2000] or "Source representation unavailable; awaiting context."
+        comment = str(material["comment"])
+        issues.append(str(material["reason"]))
+        available = origin != "web" and bool(material["text"])
+        bound_source_id = str(material.get("source_id", source_id))
+        source = SourceReference(
+            source_type=origin + ("_artifact" if available or origin == "web" else "_locator"),
+            source_id=bound_source_id,
+            source_sha256=external_hash,
+            source_version=external_hash,
+            activity="unknown",
+            context_status="available" if available else "ambiguous" if material["text"] else "missing",
+            quote=str(material["text"])[:2000],
+            reference=f"{conversation_id}/{origin}/{source_id}"[:500],
+            unavailable_reason="" if available else str(material["reason"]),
+        )
+        lineage = (
+            LineageEntry(
+                source_id=bound_source_id,
+                source_sha256=external_hash,
+                parent_sources=tuple(material["parents"]),
+                independence_status="derived",
+                uncertainty="Representation ancestry does not establish independent warrant",
+            ),
+        )
+        if material.get("parent_hash"):
+            lineage += (
+                LineageEntry(
+                    source_id=str(material["parents"][0]),
+                    source_sha256=str(material["parent_hash"]),
+                    independence_status="internal" if material.get("parent_activity") == "internal" else "unknown",
+                    uncertainty="Parent message is not independent external evidence",
+                ),
+            )
+    elif origin == "conversation_pattern":
         source = SourceReference(
             source_type="conversation_pattern",
             source_id=source_id,
@@ -94,7 +158,11 @@ def passive_intake(
                 uncertainty="Source ownership does not establish independent warrant",
             ),
         )
-    identity = _hash(json.dumps([agent_id, origin, source_id, segment_id]))
+    identity = _hash(
+        json.dumps(
+            [agent_id, origin, source_id, segment_id] + ([conversation_id, external_hash] if external_hash else [])
+        )
+    )
     encounter_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "belief-passive:" + identity))
     assessment_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "belief-assessment:" + identity))
     encounter = Encounter(
@@ -110,7 +178,7 @@ def passive_intake(
     )
     annotation = EmissionAnnotations(
         label="scar-monologue-insight" if origin == "scar_fold" else origin.replace("_", "-"),
-        rationale="Structural activity nominated this observation; novelty and warrant remain unassessed.",
+        rationale=comment or "Structural activity nominated this observation; novelty and warrant remain unassessed.",
         consequence="",
         evidence_quote=source.quote,
         conversation_id=conversation_id,

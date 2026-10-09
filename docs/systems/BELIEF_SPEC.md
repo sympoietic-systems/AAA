@@ -42,6 +42,8 @@ I.intake: extend `backend/services/belief_admission.py` → shared origin-aware 
 
 T7 local passive adapters: chat/pattern/scar opt-in + durable pause; actual message/hash/segment binding; pattern ancestry unavailable; unresolved scope → awaiting_context + abstained T9 checkpoint; no independent warrant/adoption. Scar empty-set fallback globally → pending proposal. Bootstrap callback preserves layering; same admission ledger/projection. [ADR-120](../decisions/ADR-120-passive-belief-origin-intake.md), [Report 054](../reports/054-belief-v2-passive-intake/README.md).
 
+T8 local external adapters: document ready first-chunk snapshot + note quotation/comment separation; actual owned representations available, upstream independence unknown; web excerpt ambiguous, no fetch; immutable versioned encounters + stale binding checks; opt-in/default false + durable pause; T9 deferred. [ADR-121](../decisions/ADR-121-external-belief-origin-intake.md), [Report 055](../reports/055-belief-v2-external-intake/README.md).
+
 I.encounter: typed encounter → `{id,agent_id,origin,source_type,source_id,source_version_or_hash,source_timestamp,received_at,statement,statement_hash,scope,temporal_scope,source_quote_or_reference,lineage,context_status}`. Source binding/availability explicit; missing fields retain reason. Event identity includes agent + stable source identity/version + emission/segment identity; claim identity separate from encounter identity.
 
 I.assessment: extend existing admission receipt → `{receipt_id,encounter_id,candidate_id,policy_version,rubric_version,comparison_snapshots,context_hash,referent_status,relations,warrant_dimensions,consequence_or_tension,challenge,exclusions,evaluator_status,model,assessment_confidence,abstain_reason,started_at,completed_at}`. Completed receipt immutable; new assessment references prior receipt. Hash binds content, not credibility.
@@ -107,7 +109,7 @@ T4|x|[source packet](../reports/049-belief-v2-review-corpus/README.md) + [automa
 T5|x|additive persistence: source-bound encounter/claim identities, immutable admission-ledger assessment links, CAS review decisions; agent isolation + concurrent retry/restart; [Report 052](../reports/052-belief-v2-persistence/README.md): 27 focused + 881 full tests passed, strict/static/frontend gates passed|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
 T6|x|explicit chat/dream opt-in v2 intake; default-off flags + durable promotion/pause; legacy page/trace receipt projection + inert historical XML; [Report 053](../reports/053-belief-v2-explicit-intake/README.md): 88 focused + 897 full tests passed; strict/static/frontend gates passed; evaluation deferred T9|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
 T7|x|passive chat/pattern/scar source-bound intake; durable pause + preserved unknown ancestry; scar fallback → pending proposal; [Report 054](../reports/054-belief-v2-passive-intake/README.md): 87 focused + 914 isolated full tests passed; strict/static/frontend gates passed; T9 evaluator deferred|V1,V2,V3,V7,V19,I.intake
-T8|.|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
+T8|x|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
 T9|.|extend advisory Jev assessment, referent validation, pending/deferred nomination + relation adapter; preserve existing triage contracts; outage/repetitive/stale replay tests|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
 T10|.|separate source-lineage support from internal activity + recurrence; forward typed events; inspectable unknown ancestry; no historical invented deltas/support|V7,V8,V16,V17,I.lineage,I.events
 T11|.|workshop family review + scoped relations + teachback fork + shared-commitment decision + decline counter-trace; version conflict tests; human mutation boundary|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
@@ -183,6 +185,10 @@ B18|2026-10-09|draft marked known dream context ambiguous solely because lineage
 B19|2026-10-09|T7 draft tests assumed empty initial belief set despite seeded skill projections; fallback branch not reached; fixture table typo + lint/format corrections|compare pre-existing standing; explicit empty-set fixture + actual bootstrap routes; V1,V7 existing; no new invariant
 B20|2026-10-09|T7 sync pattern extraction moved broad catch to new helper, violating architecture-debt ratchet|retain catch at existing async boundary; helper propagates errors; root quality ratchet + V19; architecture regression test
 B21|2026-10-09|shared-checkout T7 full gate included concurrent research edits; research-child metabolism assertion failed (1 vs 2); second pytest process observed|retain 922-pass/1-fail receipt; isolate T7 over completed T6 in managed worktree; no unrelated repair; V21 + existing isolation rule
+
+B22|2026-10-09|T8 fixture tried to configure real scorer method as mock; external binding bool inferred Any|inject scorer at actual boundary; explicit bool conversion; existing V1,V20 + typing gate; no new invariant
+
+B23|2026-10-09|T8 draft credited intake agent as external author; apparatus parent lineage unknown; owned representation availability conflated with upstream independence|unknown authorship + internal parent lineage + owned source resolvers; V3,V7,V20 existing; source/parent and stale oracles
 
 Entries distinguish observed cause from planned repair; B1 resolved locally in T7, no production claim. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 

@@ -277,6 +277,9 @@ vision_llm:
 
 belief_review:
   origin_intake:
+    document: false
+    shared_note: false
+    web: false
     explicit_chat: false
     explicit_dream: false
     passive_chat: false

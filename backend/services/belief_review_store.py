@@ -94,7 +94,12 @@ class BeliefReviewStore:
 
     def _register(self, encounter: Encounter) -> SavedEncounter:
         value = _validated(encounter)
-        if value.source.context_status == "available" and value.source.source_type not in {"message", "chat_turn"}:
+        if value.source.context_status == "available" and value.source.source_type not in {
+            "message",
+            "chat_turn",
+            "document_artifact",
+            "shared_note_artifact",
+        }:
             value = Encounter.model_validate(
                 {
                     **value.model_dump(),

@@ -27,6 +27,26 @@ class ExplicitBeliefRepository(BaseRepository):
         if row is None:
             raise ConstraintViolation("Emission bindings missing", entity="belief_intake")
         e, n = json.loads(row[0]), json.loads(row[1])
+        if e["origin"] in {"document", "shared_note", "web"}:
+            from backend.storage.repositories.cognitive.belief_sources import BeliefSourceRepository
+
+            if (
+                not self._conn()
+                .execute(
+                    "SELECT 1 FROM conversations WHERE id=? AND LOWER(agent_id)=?", (n["conversation_id"], agent_id)
+                )
+                .fetchone()
+            ):
+                return False
+            sources = BeliefSourceRepository(self._db_path)
+            if e["source"]["context_status"] == "available":
+                material = sources.bound_snapshot(agent_id, e["origin"], e["source"]["source_id"])
+                return bool(material and material["hash"] == e["source"]["source_sha256"])
+            material = sources.snapshot(agent_id, n["conversation_id"], e["origin"], e["source"]["source_id"])
+            return bool(
+                e["source"]["context_status"] != "available"
+                and (e["origin"] == "web" or material["hash"] == e["source"]["source_sha256"])
+            )
         if e["origin"] == "conversation_pattern":
             # No owned originating messages supplied: retained as unavailable, never warrant.
             return e["source"]["context_status"] != "available" and n["conversation_id"] is None
@@ -160,10 +180,16 @@ class ExplicitBeliefRepository(BaseRepository):
             "proposal_id": row["record_id"],
             "source": {
                 "type": "intention" if e["origin"].startswith("explicit_") else e["source"]["source_type"],
-                "author": agent_id,
+                "author": "unknown" if e["origin"] in {"document", "shared_note", "web"} else agent_id,
                 "origin": e["origin"].removeprefix("explicit_"),
                 "conversation_id": n["conversation_id"],
-                "message_id": int(e["source"]["source_id"]) if n["conversation_id"] else None,
+                "message_id": int(e["source"]["source_id"])
+                if n["conversation_id"] and e["source"]["source_type"] in {"message", "chat_turn"}
+                else None,
+                "source_id": e["source"]["source_id"],
+                "source_version": e["source"]["source_version"],
+                "reference": e["source"]["reference"],
+                "unavailable_reason": e["source"]["unavailable_reason"],
                 "message_sha256": e["source"]["source_sha256"],
                 "parent_message_id": n["parent_message_id"],
                 "evidence_sha256": n["parent_sha256"],

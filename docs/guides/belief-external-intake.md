@@ -1,0 +1,13 @@
+# External belief intake
+
+T8 adds local document, shared-note and web nomination adapters. [BELIEF_SPEC](../systems/BELIEF_SPEC.md) owns task status; [ADR-121](../decisions/ADR-121-external-belief-origin-intake.md) records the source boundary. Production rollout remains T18.
+
+`belief_review.origin_intake.document`, `shared_note` and `web` are independent strict boolean settings, all false by default. Never-promoted origins retain legacy behavior. Once an agent/origin has a migration 065 promotion marker, disabling the flag retains paused v2 encounters with `origin_paused`; it does not reopen legacy creation. No new migration is introduced by T8.
+
+Inspect the candidate admission history and received/assessed traces using the same encounter and assessment IDs. The source projection includes source identity, version/hash, reference, context status, unavailable reason and lineage. Document sources identify a local file record and bind the first parsed chunk. Shared notes identify the note and retain the selected quotation separately from commentary. Upstream authorship is unknown. Available local source context does not establish independence or resolved claim scope.
+
+A ready transparent document chunk or stored shared-note quotation has available local representation context. Its upstream identity, independence and full claim scope may remain unknown. Missing, private, revoked, oversized or unsupported sources produce unavailable-source receipts. A changed source during completion yields a stale assessment. Web excerpts remain ambiguous because no durable upstream source resolver exists. Do not treat a URL identifier or content hash as verification of an upstream page.
+
+All T8 assessments abstain pending T9 and retain candidates awaiting context. No Jev/provider request, source fetch, semantic relation, independent support or adoption decision occurs at intake. Existing legacy structural accretion remains activity. Source markup is retained as data; it cannot trigger review/adoption instructions.
+
+The source read is bounded to one document chunk and 50,000 characters per representation/parent, 2,000 characters of note commentary, and 2,000 retained quote characters. Existing contract limits bound source identifiers and segment payloads. Rejected payloads cannot promote an origin. Pending checkpoint recovery uses the existing T5 mechanism without provider replay. [Report 055](../reports/055-belief-v2-external-intake/README.md) owns verification receipts.

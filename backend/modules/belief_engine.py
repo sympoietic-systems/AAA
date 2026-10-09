@@ -142,8 +142,37 @@ class BeliefDynamicsEngine(ProcessingModule):
         source_type: str,
         source_id: str,
         source_weight: float,
+        conversation_id: str | None = None,
+        source_text: str = "",
+        parent_message_id: int | None = None,
     ) -> str | None:
-        if self._origin_intake is not None and source_type in {"chat_turn", "user_assertion", "conversational_pattern"}:
+        legacy_note = source_type == "shared_note"
+        external_origins = {
+            "file": "document",
+            "ingested_document": "document",
+            "shared_note": "shared_note",
+            "web_probe": "web",
+        }
+        if self._origin_intake is not None and source_type in external_origins:
+            receipt = self._origin_intake(
+                agent_id,
+                statement,
+                origin=external_origins[source_type],
+                source_id=source_id,
+                segment_id="external:0",
+                conversation_id=conversation_id,
+                source_text=source_text,
+            )
+            if receipt is not None:
+                return str(receipt["proposal_id"])
+        if source_type == "shared_note" and parent_message_id is not None:
+            # Preserve the legacy route until this origin is promoted.
+            source_type, source_id = "chat_turn", str(parent_message_id)
+        if (
+            not legacy_note
+            and self._origin_intake is not None
+            and source_type in {"chat_turn", "user_assertion", "conversational_pattern"}
+        ):
             receipt = self._origin_intake(
                 agent_id,
                 statement,
