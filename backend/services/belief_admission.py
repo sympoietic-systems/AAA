@@ -59,6 +59,23 @@ async def admit_candidate(
 
     v2 = await explicit_intake(db_path, conversation_id, message_id, data, config=config, origin=origin)
     if v2 is not None:
+        settings = config.get("belief_review", {}).get("assessment", {})
+        if settings.get("enabled", False):
+            from backend.services.belief_assessment import assess_encounter
+            from backend.storage.repositories.cognitive.belief_explicit import ExplicitBeliefRepository
+
+            conversation = v2["source"]["conversation_id"]
+            from backend.storage.repositories.conversation.conversation import ConversationRepository
+
+            owner = await asyncio.to_thread(ConversationRepository(db_path).get, conversation)
+            if owner is None:
+                raise ValueError("Assessment conversation unavailable")
+            await assess_encounter(
+                db_path, str(owner.agent_id).lower(), str(v2["encounter_id"]), config=config, evaluator=evaluator
+            )
+            return await asyncio.to_thread(
+                ExplicitBeliefRepository(db_path).projection, str(owner.agent_id).lower(), str(v2["encounter_id"])
+            )
         return v2
     candidate = Candidate.model_validate(data)
     repo = AdmissionRepository(db_path)

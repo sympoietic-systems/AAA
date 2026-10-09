@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1–T7 complete locally; T8–T18 pending. Date: 2026-10-09.
+Status: T1–T9 complete locally; T10–T18 pending. Date: 2026-10-09.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -49,6 +49,8 @@ I.encounter: typed encounter → `{id,agent_id,origin,source_type,source_id,sour
 I.assessment: extend existing admission receipt → `{receipt_id,encounter_id,candidate_id,policy_version,rubric_version,comparison_snapshots,context_hash,referent_status,relations,warrant_dimensions,consequence_or_tension,challenge,exclusions,evaluator_status,model,assessment_confidence,abstain_reason,started_at,completed_at}`. Completed receipt immutable; new assessment references prior receipt. Hash binds content, not credibility.
 
 I.decision: workshop decision → `{id,candidate_or_belief_id,actor,authority,policy,expected_version,previous_state,next_state,scope,rationale,positions,dissent,receipt_ids,timestamp}`. No fabricated bilateral agreement. Stale version → conflict response; no overwrite.
+
+T9 local advisory use case: optional `referent_contexts` bind validated candidate/comparison hashes; original encounters immutable. Independent `belief_review.assessment.enabled` default false; explicit chat/dream runtime integration; other origins ! supplied scoped context. Queue/call/scan bounds + source/version final checks; same attempt ⊥ provider replay; new attempt → predecessor-linked receipt. No autonomous lease worker. Consequence/empirical/artistic/tension separate; conflict survives uncertainty. Requested/returned model separate; nullable reported model. [ADR-122](../decisions/ADR-122-advisory-belief-assessment.md), [guide](../guides/belief-advisory-assessment.md), [Report 056](../reports/056-belief-v2-advisory-assessment/README.md). Semantic calibration T15; support T10; HTTP/auth T11; rollout T18.
 
 I.state: frozen review state `candidate/awaiting_context/under_review/adopted/deferred/declined/superseded`; participation + situated standing separate. Mapping to existing proposal/lifecycle fields frozen in [T3 contract](../architecture/BELIEFS_V2_CONTRACT.md) before migration; legacy API behavior preserved or explicitly versioned.
 
@@ -110,7 +112,7 @@ T5|x|additive persistence: source-bound encounter/claim identities, immutable ad
 T6|x|explicit chat/dream opt-in v2 intake; default-off flags + durable promotion/pause; legacy page/trace receipt projection + inert historical XML; [Report 053](../reports/053-belief-v2-explicit-intake/README.md): 88 focused + 897 full tests passed; strict/static/frontend gates passed; evaluation deferred T9|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
 T7|x|passive chat/pattern/scar source-bound intake; durable pause + preserved unknown ancestry; scar fallback → pending proposal; [Report 054](../reports/054-belief-v2-passive-intake/README.md): 87 focused + 914 isolated full tests passed; strict/static/frontend gates passed; T9 evaluator deferred|V1,V2,V3,V7,V19,I.intake
 T8|x|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
-T9|.|extend advisory Jev assessment, referent validation, pending/deferred nomination + relation adapter; preserve existing triage contracts; outage/repetitive/stale replay tests|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
+T9|x|advisory Jev use case + explicit runtime flag; validated referents + bounded pending/adopted/deferred nomination; versioned relation adapter; immutable replay/outage/stale handling; [Report 056](../reports/056-belief-v2-advisory-assessment/README.md): focused/full/static/frontend gates closed; calibration T15, rollout T18|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
 T10|.|separate source-lineage support from internal activity + recurrence; forward typed events; inspectable unknown ancestry; no historical invented deltas/support|V7,V8,V16,V17,I.lineage,I.events
 T11|.|workshop family review + scoped relations + teachback fork + shared-commitment decision + decline counter-trace; version conflict tests; human mutation boundary|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
 T12|.|bounded complete-interval event/receipt/decision API reads; UTC cursor/snapshot semantics; agent auth/input bounds; five-part reasoning projection|V12,V13,V17,V20,I.api,I.events
@@ -189,6 +191,9 @@ B21|2026-10-09|shared-checkout T7 full gate included concurrent research edits; 
 B22|2026-10-09|T8 fixture tried to configure real scorer method as mock; external binding bool inferred Any|inject scorer at actual boundary; explicit bool conversion; existing V1,V20 + typing gate; no new invariant
 
 B23|2026-10-09|T8 draft credited intake agent as external author; apparatus parent lineage unknown; owned representation availability conflated with upstream independence|unknown authorship + internal parent lineage + owned source resolvers; V3,V7,V20 existing; source/parent and stale oracles
+B24|2026-10-09|T9 draft stale-check import missing; fixture guessed proposal mass columns and omitted required seed fields; stale summary header despite T8 closed row|mechanical import + schema-bound nucleation_mass/confidence oracle + complete seeds + header correction; existing V3,V4,V16 + static/status gates; no new invariant
+B25|2026-10-09|T9 draft attached every warrant dimension to internal nomination, hiding separately bound human parent quotation; zero capacity wait always timed out even with free slot|quote source refs + unknown/internal parent ancestry distinct from nomination; immediate free-slot acquisition; V7,V8,V19 existing; parent-source + zero-wait oracles
+B26|2026-10-09|TypeSafe legacy model fallback could appear as reported provider identity; error logs echoed raw provider body|separate nullable returned_model; preserve legacy model field; status/class-only diagnostics; V6,V20; missing-model + sanitized-error oracles
 
 Entries distinguish observed cause from planned repair; B1 resolved locally in T7, no production claim. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 

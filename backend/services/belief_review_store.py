@@ -180,6 +180,8 @@ class BeliefReviewStore:
                 "requested_model",
             )
         }
+        if value.referent_contexts:
+            fields["referent_contexts"] = value.model_dump(mode="json")["referent_contexts"]
         stale = value
         unavailable = value
         if value.completed_at is not None:

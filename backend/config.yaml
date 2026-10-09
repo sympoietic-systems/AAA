@@ -276,6 +276,12 @@ vision_llm:
   api_base: "https://openrouter.ai/api/v1"
 
 belief_review:
+  assessment:
+    enabled: false  # T9 advisory only; rollout requires T18 approval.
+    confidence_floor: 0.85
+    call_timeout: 10.0
+    capacity_wait: 2.0
+    max_active: 128
   origin_intake:
     document: false
     shared_note: false

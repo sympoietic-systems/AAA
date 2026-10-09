@@ -7,6 +7,7 @@ from typing import Annotated, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
+from backend.modules.sensory.belief_context import ClaimContext
 from backend.utils.belief_candidate import statement_key
 
 Identifier = Annotated[str, StringConstraints(min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_.:-]+$")]
@@ -141,6 +142,17 @@ class WarrantDimension(FrozenRecord):
     challenge: Scope = ""
 
 
+class ReferentContextSnapshot(FrozenRecord):
+    record_id: Identifier
+    context: ClaimContext
+
+    @model_validator(mode="after")
+    def bounded_antecedents(self) -> Self:
+        if any(len(candidate) > 200 for binding in self.context.bindings for candidate in binding.candidates):
+            raise ValueError("Referent antecedents exceed bounded context snapshot")
+        return self
+
+
 class Assessment(FrozenRecord):
     id: Identifier
     agent_id: AgentId
@@ -150,6 +162,7 @@ class Assessment(FrozenRecord):
     context_hash: Sha256
     referent_status: Literal["validated", "missing", "stale", "ambiguous", "unknown"]
     comparison_snapshots: tuple[ComparisonSnapshot, ...] = Field(default=(), max_length=10)
+    referent_contexts: tuple[ReferentContextSnapshot, ...] = Field(default=(), max_length=11)
     relations: tuple[RelationObservation, ...] = Field(default=(), max_length=10)
     warrant_dimensions: tuple[WarrantDimension, ...] = Field(default=(), max_length=16)
     consequence_or_tension: str = Field(default="", max_length=1000)
@@ -170,6 +183,17 @@ class Assessment(FrozenRecord):
         comparisons = {c.record_id: c for c in self.comparison_snapshots}
         if len(comparisons) != len(self.comparison_snapshots):
             raise ValueError("Duplicate comparison snapshot")
+        contexts = {c.record_id: c.context for c in self.referent_contexts}
+        if len(contexts) != len(self.referent_contexts) or any(
+            rid not in comparisons and rid != self.candidate_id for rid in contexts
+        ):
+            raise ValueError("Referent context lacks unique candidate/comparison identity")
+        if any(
+            contexts[rid].statement_sha256 != snapshot.statement_sha256
+            for rid, snapshot in comparisons.items()
+            if rid in contexts
+        ):
+            raise ValueError("Referent context statement hash does not match comparison")
         if any(c.agent_id != self.agent_id for c in self.comparison_snapshots):
             raise ValueError("Comparison belongs to another agent")
         if len({r.comparison_id for r in self.relations}) != len(self.relations):

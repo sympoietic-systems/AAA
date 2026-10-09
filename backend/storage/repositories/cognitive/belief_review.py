@@ -1,6 +1,7 @@
 """Agent-scoped atomic v2 persistence. No provider calls or interpretation of warrant."""
 
 import hashlib
+import json
 import sqlite3
 from typing import cast
 
@@ -208,7 +209,7 @@ class BeliefReviewRepository(BaseRepository):
             encounter = self._encounter_row(value.agent_id, value.encounter_id)
             if encounter["record_id"] != value.record_id:
                 raise ConstraintViolation("Assessment candidate link mismatch", entity="belief_assessment")
-            if encounter["context_available"]:
+            if encounter["context_available"] and json.loads(value.receipt_json)["referent_status"] != "stale":
                 source_hash = self._source_hash(value.agent_id, str(encounter["source_type"]), encounter["source_id"])
                 if source_hash != encounter["source_hash"]:
                     raise ConstraintViolation("Encounter source changed before assessment", entity="belief_assessment")

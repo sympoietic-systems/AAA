@@ -120,9 +120,8 @@ class TypeSafeDecisionClient:
                 response = await client.post(url, json=payload, headers=headers)
                 if response.status_code != 200:
                     logger.warning(
-                        "TypeSafe Jev request returned HTTP %d: %s",
+                        "TypeSafe Jev request returned HTTP %d",
                         response.status_code,
-                        response.text[:200],
                     )
                     return {
                         "success": False,
@@ -139,6 +138,7 @@ class TypeSafeDecisionClient:
                 return {
                     "success": True,
                     "model": data.get("model", selected_model),
+                    "returned_model": data.get("model"),
                     "answers": answers,
                     "usage": usage,
                     "error": None,
@@ -153,7 +153,7 @@ class TypeSafeDecisionClient:
                 "error": f"Timeout after {self.timeout}s",
             }
         except Exception as e:
-            logger.warning("TypeSafe Jev evaluation failed: %s", e)
+            logger.warning("TypeSafe Jev evaluation failed: %s", type(e).__name__)
             return {
                 "success": False,
                 "model": selected_model,

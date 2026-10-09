@@ -78,6 +78,8 @@ async def test_evaluate_success_mock():
         assert res["answers"]["q_choice"]["decision"] == "api-design"
         assert res["answers"]["q_choice"]["confidence"] == 0.89
         assert res["answers"]["gate_action"]["probability"] == 0.85
+        assert res["model"] == client.model  # Legacy request/fallback field remains compatible.
+        assert res["returned_model"] is None  # Missing provider identity is never invented.
 
 
 @pytest.mark.asyncio

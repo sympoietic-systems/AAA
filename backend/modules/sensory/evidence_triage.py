@@ -54,6 +54,7 @@ class EvidenceTriage:
             "input_sha256": hashlib.sha256(json.dumps(state, sort_keys=True).encode()).hexdigest(),
             "status": "unavailable",
             "answers": {},
+            "returned_model": None,
         }
         if not self.client.is_configured:
             receipt["reason"] = "unconfigured"
@@ -64,7 +65,7 @@ class EvidenceTriage:
         except (TimeoutError, OSError, ValueError) as error:
             receipt["reason"] = type(error).__name__
         else:
-            if result.get("success") is True and isinstance(result.get("answers"), dict):
+            if isinstance(result, dict) and result.get("success") is True and isinstance(result.get("answers"), dict):
                 answers = {}
                 for key in questions:
                     value = result["answers"].get(key)
@@ -75,6 +76,9 @@ class EvidenceTriage:
                             if field in value and isinstance(value[field], (str, int, float, bool, type(None)))
                         }
                 receipt.update(status="evaluated", answers=json.loads(mask_secrets(json.dumps(answers))))
+                returned = result.get("returned_model") if "returned_model" in result else result.get("model")
+                if isinstance(returned, str) and 0 < len(returned) <= 200 and mask_secrets(returned) == returned:
+                    receipt["returned_model"] = returned
             else:
                 # Provider error bodies can contain credentials or source text. Do not persist them.
                 receipt["reason"] = "provider_failure"

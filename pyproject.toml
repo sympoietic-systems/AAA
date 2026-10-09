@@ -52,6 +52,9 @@ strict = true
 follow_imports = "silent"
 files = [
     "backend/services/belief_passive_intake.py",
+    "backend/services/belief_assessment.py",
+    "backend/modules/sensory/belief_assessment.py",
+    "backend/storage/repositories/cognitive/belief_assessment.py",
     "backend/storage/repositories/cognitive/belief_sources.py",
     "backend/modules/belief/perception_handlers.py",
     "backend/services/belief_explicit_intake.py",

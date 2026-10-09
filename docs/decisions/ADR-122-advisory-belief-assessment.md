@@ -1,0 +1,15 @@
+# ADR-122: Source-bound advisory belief assessment
+
+Status: accepted for local T9 implementation, 2026-10-09. Production enablement remains T18.
+
+`assess_encounter` extends the existing immutable admission ledger. Services orchestrate source reads and provider calls; the sensory membrane has no persistence/decision capability; the repository has no standing-decision port. Assessments cannot adopt, decline, merge, collapse or change legacy mass/confidence.
+
+Candidate/comparison context requires declared scope/time and exact statement hashes. Pronouns require valid supplied spans and unambiguous antecedents. Missing/stale context abstains. Optional `referent_contexts` preserve validated context without rewriting encounters. Nomination scans at most 100 adopted/legacy, 64 pending, 32 deferred and four historical representations; at most ten comparisons reach Jev. Legacy lifecycle labels never establish adoption. Prior evaluator verdicts are excluded from classifier evidence.
+
+Versioned admission-v1 relations retain compatibility. Equivalent/contradictory judgments require matching declared scope/time; mismatches retain raw answers with insufficient context. Consequence, factual grounding, artistic grounding and tension remain separate. Strong conflict can survive uncertain usefulness/warrant. Internal nomination and separately bound parent quotation retain distinct provenance; human quotation ancestry stays unknown. No independent-support counts are produced.
+
+`belief_review.assessment.enabled` independently defaults false. Explicit chat/dream integration invokes the callable use case; other origins require supplied scoped context. This installs no autonomous queue consumer. Two shared process-local evaluator slots, bounded persisted active work, capacity wait and outer timeout constrain calls. No transaction spans a provider await. Identical attempts reuse receipts; changed context/model rejects replay; explicit new attempts append predecessor-linked history. Cancellation records unknown provider outcome without automatic retry; hard interruption remains pending under T5 recovery.
+
+Final source/parent/comparison/version changes yield stale receipts. Exhaustion, outage, invalid choices and unsafe metadata remain visible. Provider-reported model is nullable, separate from requested-model fallback; logs retain status/class rather than provider error bodies. Page/history and received/assessed traces project the same receipt identity, context, relations, grounding and challenge.
+
+Symbia's completed consultation `d836a7b2-7a91-4659-8744-5f4664f7bcb4` cautioned against contradiction as a proxy for warrant/usefulness and against losing presently inarticulable conflicts. Her reply assumed such coupling was planned; that premise was not adopted. Consultation markup remains inert evidence. HTTP/auth commands remain T11, support accounting T10, independent calibration T15 and rollout T18. [Report 056](../reports/056-belief-v2-advisory-assessment/README.md) owns local gates; no live semantic accuracy or production certification is claimed.
