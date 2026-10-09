@@ -25,6 +25,7 @@ class EncounterWrite:
     source_id: str | None
     source_hash: str | None
     source_quote: str
+    accounting_json: str | None = None
 
 
 @dataclass(frozen=True)

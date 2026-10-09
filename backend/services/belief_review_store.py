@@ -11,6 +11,7 @@ from pydantic import TypeAdapter
 
 from backend.core.logging_config import mask_secrets
 from backend.errors import ConstraintViolation, SecurityViolation, ValidationGlitch
+from backend.modules.sensory.belief_lineage import observation
 from backend.services.belief_review_contracts import (
     Actor,
     AgentId,
@@ -139,6 +140,7 @@ class BeliefReviewStore:
             value.source.source_id,
             value.source.source_sha256,
             value.source.quote,
+            json.dumps(observation(value.model_dump(mode="json")), sort_keys=True),
         )
         stored = self.repository.register(write)
         return SavedEncounter(

@@ -11,3 +11,5 @@ Inspect candidate admission history and match assessment IDs to received/assesse
 Same-attempt retry reuses its pending/completed/failed outcome without a provider replay. Changed input rejects stale replay. Explicit reassessment uses a new attempt ID and links its predecessor. Timeout, exhaustion, outage, malformed output, cancellation and changed bindings remain visible. Hard interruption uses T5 checkpoint recovery; pending is not replay authorization. Requested model and nullable provider-reported model remain separate.
 
 Offline mocked gates prove application boundaries, not semantic accuracy. Independent calibration remains T15; authorized rollout/rollback T18. [Report 056](../reports/056-belief-v2-advisory-assessment/README.md) owns verification receipts.
+
+T10's separate [source-accounting ledger](belief-source-accounting.md) records newly registered encounters. Running or repeating an assessment cannot increment its source activity, recurrence or independent-support credit. Source observations and advisory warrant dimensions remain separate in receipt projection.

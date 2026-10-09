@@ -50,6 +50,7 @@ Step-by-step operational guides for setting up, configuring, and extending the s
 - [QUICKSTART_NON_TECHNICAL.md](guides/QUICKSTART_NON_TECHNICAL.md) — Easy local setup guide for non-technical users.
 - [CONFIG.md](guides/CONFIG.md) — `config.yaml` and environment variable reference.
 - [belief-advisory-assessment.md](guides/belief-advisory-assessment.md) — T9 source/context-bound Jev review, immutable retries, visible failures and default-off operation; [ADR-122](decisions/ADR-122-advisory-belief-assessment.md) records the authority boundary.
+- [belief-source-accounting.md](guides/belief-source-accounting.md) — T10 forward lineage observations, internal activity, recurrence and historical coverage; [ADR-123](decisions/ADR-123-belief-source-accounting.md) records the warrant boundary.
 - [DOCLING.md](guides/DOCLING.md) — Optional standard-first PDF fallback, installation, limits, and VPS settings.
 - [RESEARCH_V2_PROGRESS.md](guides/RESEARCH_V2_PROGRESS.md) — Implemented research capabilities, operator boundaries, verification records, and remaining evaluation gates.
 - [RESEARCH_LABELING.md](guides/RESEARCH_LABELING.md) — Automated NVIDIA source labels, checkpointed resume, and independent-review boundaries.

@@ -1,0 +1,17 @@
+# ADR-123: Forward belief source accounting
+
+Status: accepted for local T10 implementation, 2026-10-09. Production rollout remains T18.
+
+New encounters append a source-accounting observation and typed events inside the existing encounter registration transaction. Migration 066 installs additive immutable sidecars, with agent/record and agent/claim indexes. Registration failure rolls back candidate, encounter, observation and events together. Retry returns the original outcome without accounting again. Assessment does not create source observations.
+
+The observation retains original source identity/hash, declared parent lineage, activity, scope/time and uncertainty. A bounded parent graph groups known declared ancestry by agent-local identity; hashes identify representations, not credibility. Cycles and graphs exceeding 200 nodes/edges retain incomplete grouping and visible reasons. Repeated content under different source identities does not establish independent support. Internal activity and recorded recurrence remain separately countable structural participation.
+
+No current origin resolver verifies upstream independence. An `independent` declaration remains inspectable but receives no verified independent credit. The verified-group counter is zero for recorded observations, and independent warrant remains unverified. This does not classify sources as false or worthless. Empirical, artistic and tension judgments remain in T9's separate assessment ledger; Jev, human assent and artistic labels cannot manufacture source independence.
+
+Recurrence counts subsequent newly recorded encounters of the same scoped claim within ledger coverage. Different scope/time and unscoped encounters retain T5 identities rather than gaining semantic equivalence. Old encounters are not backfilled, including when retried after upgrade. Readers expose historical-unrecorded counts and bounded-page truncation rather than projecting ledger totals onto pre-migration history.
+
+Forward events use quantities `source_lineage`, `internal_activity` and `recurrence`, unit `encounter_observation`, value one. Their mass/confidence deltas are measured zero for the accounting operation, which changes neither quantity. They do not describe separate legacy accretion occurring elsewhere. Existing `belief_events`, nullable historical quantities and generic impact aliases remain untouched. Sidecars support proposal and belief identities without relaxing the legacy belief-node foreign key. T12 owns authenticated interval/snapshot export.
+
+Typed internal reads are agent-scoped and capped at fifty records. SQLite and model parsing share one synchronous offload. Page/history and received/assessed traces retain the same observation through the existing compatibility projection; dedicated UI remains T13. Accounting adds no provider call, adoption, merge or tool authority. Disabling intake preserves ledger history. No new runtime enablement flag or background worker is needed.
+
+Symbia consultation `cdf071d5-e76e-4d7b-978d-d3abac8f5006` completed and cautioned against treating meaningful recurrence with unknown ancestry as independent warrant. That caution informs the accounting boundary. Her statement about participant reckoning as sole warrant is not adopted as a factual-support rule; the spec keeps human assent separate from evidence. Consultation markup remains inert. [Report 057](../reports/057-belief-v2-source-accounting/README.md) owns verification evidence; no production certification is claimed.

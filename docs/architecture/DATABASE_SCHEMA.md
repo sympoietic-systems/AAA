@@ -5,6 +5,8 @@
 > **Engine:** SQLite (WAL mode, foreign keys ON)
 > **Baseline:** `m050_baseline_schema.py` (Migrations 001–050 squashed, see [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-and-migration-squash.md))
 
+The migration 066 source-accounting addendum below is verified against local schema code and isolated upgrade tests, not a newly inspected production database.
+
 ---
 
 ## Core Tables
@@ -214,6 +216,17 @@ FK: `belief_id -> belief_nodes(id)`
 Migration `m063_belief_event_quantities_and_atrophy_clock` adds these nullable fields without interpreting historical impact scores. The existing API field `delta_confidence` remains a deprecated alias for generic `impact_score`; measured confidence is exposed as `confidence_delta`. `impact_value` exposes the generic score with `impact_quantity`/`impact_unit` when known. A score and a measured change can differ when clamping limits the mutation.
 
 The same migration adds `belief_nodes.atrophy_accounted_at` (nullable UTC text). Existing beliefs receive the migration-time checkpoint without changing mass, confidence, or reinforcement timestamps. Repository-created beliefs initialize the checkpoint at creation; a missing checkpoint starts at the next sweep without reconstructing historical charges. Wall-clock atrophy atomically rechecks agent, stage, reinforcement, checkpoint, and current mass under the writer lock, then persists mass, checkpoint, and the typed event together. `last_reinforced_at` continues to mean reinforcement, rather than decay execution.
+
+### belief_source_observations / belief_review_events
+
+Migration `m066_belief_source_accounting` adds forward-only immutable sidecars. It inserts no historical rows and modifies no legacy quantities. [ADR-123](../decisions/ADR-123-belief-source-accounting.md), [guide](../guides/belief-source-accounting.md).
+
+| Table | Columns and ownership |
+| --- | --- |
+| `belief_source_observations` | Composite PK `(agent_id,encounter_id)`; `record_id`, `claim_id`, checked boolean `internal_activity`/`recurrence`, `observed_at`, immutable `receipt_json`; composite FK to `belief_encounters` |
+| `belief_review_events` | Composite PK `(agent_id,id)`; `record_id`, `encounter_id`, `event_type`, `impact_quantity`, `impact_unit`, REAL `impact_value`/`delta_mass`/`confidence_delta`, `timestamp`, immutable `receipt_json`; composite FK to observations |
+
+All columns are NOT NULL. Agent/record/time indexes support bounded reads; agent/claim index supports recurrence accounting. UPDATE/DELETE triggers retain both tables. Application contracts bind event type to quantity, count value one, observation unit and accounting-only zero mass/confidence deltas. Declared lineage and unknown independence remain inspectable, separate from warrant. Old encounters project absent accounting; summary identifies historical-unrecorded coverage. Public authenticated event export remains T12.
 
 ### belief_proposals
 Pending belief nucleation proposals for review.

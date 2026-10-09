@@ -101,6 +101,70 @@ class Encounter(FrozenRecord):
         return self
 
 
+class SourceAccounting(FrozenRecord):
+    policy_version: Literal["belief-source-accounting-v1"]
+    encounter_id: Identifier
+    agent_id: AgentId
+    record_id: Identifier
+    claim_id: Identifier
+    statement_sha256: Sha256
+    scope: Scope
+    temporal_scope: TemporalScope
+    source: SourceReference
+    lineage: tuple[LineageEntry, ...] = Field(max_length=50)
+    source_group_keys: tuple[Sha256, ...] = Field(max_length=200)
+    grouping_basis: Literal["declared_local_ancestry_identity"]
+    grouping_complete: bool
+    internal_activity: bool
+    recurrence: bool
+    verified_independent_groups: Literal[0]
+    independent_warrant: Literal["unverified"]
+    uncertainty: tuple[Scope, ...] = Field(max_length=16)
+    observed_at: AwareDatetime
+
+
+class SourceAccountingEvent(FrozenRecord):
+    id: Sha256
+    agent_id: AgentId
+    record_id: Identifier
+    encounter_id: Identifier
+    event_type: Literal["source_lineage_observed", "internal_activity_recorded", "recurrence_recorded"]
+    source_type: str = Field(min_length=1, max_length=64)
+    source_id: str | None = Field(max_length=200)
+    timestamp: AwareDatetime
+    impact_quantity: Literal["source_lineage", "internal_activity", "recurrence"]
+    impact_unit: Literal["encounter_observation"]
+    impact_value: float = Field(strict=True, ge=1, le=1)
+    delta_mass: float = Field(strict=True, ge=0, le=0)
+    confidence_delta: float = Field(strict=True, ge=0, le=0)
+    policy_version: Literal["belief-source-accounting-v1"]
+    independent_warrant: Literal["unverified"]
+
+    @model_validator(mode="after")
+    def quantity_matches_event(self) -> Self:
+        expected = {
+            "source_lineage_observed": "source_lineage",
+            "internal_activity_recorded": "internal_activity",
+            "recurrence_recorded": "recurrence",
+        }
+        if self.impact_quantity != expected[self.event_type]:
+            raise ValueError("Source accounting quantity mismatches event type")
+        return self
+
+
+class SourceAccountingSummary(FrozenRecord):
+    record_id: Identifier
+    agent_id: AgentId
+    observed_encounters: int = Field(ge=0)
+    internal_activity: int = Field(ge=0)
+    recurrence: int = Field(ge=0)
+    verified_independent_groups: Literal[0]
+    independent_warrant: Literal["unverified"]
+    historical_unrecorded_encounters: int = Field(ge=0)
+    truncated: bool
+    observations: tuple[SourceAccounting, ...] = Field(max_length=50)
+
+
 class ComparisonSnapshot(FrozenRecord):
     record_id: Identifier
     agent_id: AgentId

@@ -183,6 +183,9 @@ class BeliefReviewRepository(BaseRepository):
                     int(value.context_available),
                 ),
             )
+            from backend.storage.repositories.cognitive.belief_lineage import BeliefLineageRepository
+
+            BeliefLineageRepository(self._db_path).append(value, claim_id, record_id)
             return EncounterResult(True, value.encounter_json, claim_id, record_id)
 
     @with_connection

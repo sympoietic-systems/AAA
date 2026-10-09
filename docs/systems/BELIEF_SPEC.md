@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1–T9 complete locally; T10–T18 pending. Date: 2026-10-09.
+Status: T1–T10 complete locally; T11–T18 pending. Date: 2026-10-09.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -58,6 +58,8 @@ I.relations: candidate relation `equivalent/extension/contradiction/distinct/ins
 
 I.lineage: support/encounter ancestry → `{source_id,source_hash,parent_sources,independence_status,uncertainty}`; same upstream material grouped; unknown ancestry never counted independent by default. Internal activity classified separately. Count ≠ source quality.
 
+T10 local source accounting: migration 066 → immutable forward observation + typed event sidecars; atomic with new encounter; retries/assessment ⊥ extra activity. Scoped claim recurrence within recorded coverage only; declared parent roots grouped by agent/local identity, bounded graph; cycle/overflow unknown. Original lineage/independence declarations retained; verified independent groups 0 until verification authority exists; declaration/hash/assent/Jev/art ⊥ independent credit. Agent-scoped reads ≤50 + explicit truncation/historical-unrecorded counts; page/history/traces carry same observation. Event unit `encounter_observation`, value 1; accounting-only mass/confidence deltas 0; legacy event quantities/receipts untouched. HTTP/export T11/T12; UI T13. [ADR-123](../decisions/ADR-123-belief-source-accounting.md), [guide](../guides/belief-source-accounting.md), [Report 057](../reports/057-belief-v2-source-accounting/README.md).
+
 I.api: preserve existing `/api/beliefs`, proposal reads/workshop actions. Add bounded receipt/encounter/decision/lineage reads + complete-interval event export. Exact route/payload contract frozen in T3; keyset cursor + UTC interval + snapshot bound; limit 1–50. Agent/auth boundaries enforced.
 
 I.events: forward events expose `impact_quantity,impact_unit,impact_value,delta_mass,confidence_delta,event_type,source_type,timestamp`; unknown typed deltas nullable. Existing generic `delta_confidence` retained deprecated alias for `impact_score`; new clients use `confidence_delta` for measured confidence. Historical generic impact never silently reinterpreted as measured confidence/mass. Receipt/origin links added by T10/T12. No invented historical values.
@@ -113,7 +115,7 @@ T6|x|explicit chat/dream opt-in v2 intake; default-off flags + durable promotion
 T7|x|passive chat/pattern/scar source-bound intake; durable pause + preserved unknown ancestry; scar fallback → pending proposal; [Report 054](../reports/054-belief-v2-passive-intake/README.md): 87 focused + 914 isolated full tests passed; strict/static/frontend gates passed; T9 evaluator deferred|V1,V2,V3,V7,V19,I.intake
 T8|x|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
 T9|x|advisory Jev use case + explicit runtime flag; validated referents + bounded pending/adopted/deferred nomination; versioned relation adapter; immutable replay/outage/stale handling; [Report 056](../reports/056-belief-v2-advisory-assessment/README.md): focused/full/static/frontend gates closed; calibration T15, rollout T18|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
-T10|.|separate source-lineage support from internal activity + recurrence; forward typed events; inspectable unknown ancestry; no historical invented deltas/support|V7,V8,V16,V17,I.lineage,I.events
+T10|x|migration 066 forward source-lineage observations + typed events atomic with encounter; separate internal activity/recorded recurrence; unknown/declared independence ⊥ verified credit; immutable bounded reads + projection; no historical backfill; [Report 057](../reports/057-belief-v2-source-accounting/README.md): focused/full/static/frontend gates closed|V7,V8,V16,V17,I.lineage,I.events
 T11|.|workshop family review + scoped relations + teachback fork + shared-commitment decision + decline counter-trace; version conflict tests; human mutation boundary|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
 T12|.|bounded complete-interval event/receipt/decision API reads; UTC cursor/snapshot semantics; agent auth/input bounds; five-part reasoning projection|V12,V13,V17,V20,I.api,I.events
 T13|.|belief/workshop UI + traces/creases expose same receipt, five reasoning fields, lineage, status/uncertainty/dissent/family; legacy unknown + failed evaluator display|V8,V10,V13,V24,I.ui
@@ -196,6 +198,8 @@ B25|2026-10-09|T9 draft attached every warrant dimension to internal nomination,
 B26|2026-10-09|TypeSafe legacy model fallback could appear as reported provider identity; error logs echoed raw provider body|separate nullable returned_model; preserve legacy model field; status/class-only diagnostics; V6,V20; missing-model + sanitized-error oracles
 
 Entries distinguish observed cause from planned repair; B1 resolved locally in T7, no production claim. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
+
+B27|2026-10-09|T10 draft used unsupported float Literal annotations; fixture mismatched source/lineage, missing legacy FK target, reused initial segment identity|exact bounded numeric fields + schema-bound fixtures + distinct segment IDs; existing V2,V7,V16,V17 + strict/event/retry oracles; no new invariant
 
 ## References
 

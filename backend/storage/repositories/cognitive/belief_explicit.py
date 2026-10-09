@@ -156,6 +156,9 @@ class ExplicitBeliefRepository(BaseRepository):
         if row is None or (assessment_id and row["assessment_id"] != assessment_id):
             raise ConstraintViolation("Explicit emission annotation missing", entity="belief_intake")
         e = json.loads(row["encounter_json"])
+        from backend.storage.repositories.cognitive.belief_lineage import BeliefLineageRepository
+
+        source_accounting = BeliefLineageRepository(self._db_path).observation(agent_id, encounter_id)
         n = json.loads(row["annotations_json"])
         a = json.loads(row["receipt"]) if row["receipt"] else None
         completed = bool(a and a["completed_at"])
@@ -272,6 +275,7 @@ class ExplicitBeliefRepository(BaseRepository):
             "recommendation": recommendation,
             "context_issues": issues,
             "origin_context_issues": n["context_issues"],
+            "source_accounting": source_accounting,
             "exclusions": a["exclusions"] if a else [],
             "comparisons": [
                 {

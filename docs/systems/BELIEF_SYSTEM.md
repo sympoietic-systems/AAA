@@ -2,6 +2,8 @@
 
 This document describes the design, mathematical calculations, database representations, and operational roles of Symbia's belief system. It details the lifecycle stages of beliefs, the mathematical coefficients governing belief metabolism, the dynamic attractor window, the background dream engine, and critical implementation details discovered during a codebase audit.
 
+Beliefs v2 local status is owned by [BELIEF_SPEC](BELIEF_SPEC.md). T10 adds forward source-accounting sidecars for new v2 encounters, separating declared lineage, internal activity and recorded recurrence from verified warrant and legacy mass/confidence. Current resolvers verify no independent-source credit; historical encounters remain outside ledger coverage. [ADR-123](../decisions/ADR-123-belief-source-accounting.md) and the [operator guide](../guides/belief-source-accounting.md) define this boundary. Dedicated v2 UI and rollout remain later tasks.
+
 ---
 
 ## 1. Ontological Foundation: Cognitive Autopoiesis
@@ -241,7 +243,7 @@ With the default configuration, beliefs do **not** atrophy during periods of con
     *   If newly formed proto-hypotheses are continually ignored across hundreds or thousands of conversational turns without positive reinforcement, they naturally decline toward the collapse threshold ($m < 0.02$) and spectral margin, preventing clutter in working memory.
 
 5.  **Event Recording:**
-    *   The turn-decay path currently updates mass without a per-belief event; the optional wall-clock path writes an `atrophy` event atomically with its accounting checkpoint. Mass/confidence telemetry coverage for other producers is tracked separately in Beliefs v2 T10.
+    *   The turn-decay path currently updates mass without a per-belief event; the optional wall-clock path writes an `atrophy` event atomically with its accounting checkpoint. Telemetry coverage remains producer-specific. T10's forward source-lineage/internal-activity/recurrence events describe accounting observations separately from these legacy mass/confidence operations.
     *   Reinforced beliefs update `last_reinforced_at` and accrete mass dynamically per interaction.
 
 ---
