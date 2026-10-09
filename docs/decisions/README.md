@@ -158,6 +158,8 @@ What becomes easier/harder?
 | [117](ADR-117-provisional-automated-belief-review.md) | Provisional Automated Belief Review | accepted for offline implementation | 2026-10-08 |
 | [118](ADR-118-belief-review-persistence.md) | Additive Belief Review Persistence | accepted for local implementation | 2026-10-09 |
 
+| [119](ADR-119-explicit-belief-origin-intake.md) | Explicit Belief Origin Intake | accepted for local implementation | 2026-10-09 |
+
 ## Creating a New ADR
 
 1. Copy an existing ADR as a template

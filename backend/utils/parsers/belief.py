@@ -91,6 +91,7 @@ def parse_belief_nucleate_tags(text: str) -> tuple[str, list[dict]]:
                     "label": label_val,
                     "rationale": rationale_val,
                     "emission_sha256": hashlib.sha256(current_text[start_idx:replace_end].encode("utf-8")).hexdigest(),
+                    "segment_id": f"belief:{len(proposed_beliefs)}",
                     **admission_fields,
                 }
             )

@@ -43,6 +43,12 @@ Migration 064 extends the admission ledger and adds immutable encounter/claim/as
 
 T5 verifies message/chat-turn sources through agent-owned conversations, actual content hashes and literal quotes. Unsupported source kinds become explicitly ambiguous until their origin resolver exists. Pending work is durable and recoverable through clamped keyset reads; recovery never replays a provider. Completed assessments and links are immutable; new assessments append to the latest completed predecessor. `reject-secrets-v1` checks recognized secret patterns and configured credentials before storage; it rejects unsafe inputs instead of silently changing their bound hashes. Original source hashes and application input hashes remain separate.
 
+### T6 explicit origin binding
+
+Chat/dream retain their shared `admit_candidate` entry point. Strict boolean `belief_review.origin_intake.explicit_chat` / `explicit_dream` flags default off. Migration 065 retains agent/origin promotion markers and immutable emission annotations. Once promoted, disabling an origin keeps v2 encounters with `origin_paused`; it cannot restore legacy writes. Never-promoted origins preserve legacy admission.
+
+Explicit encounters bind the actual apparatus message and stable parser segment index. Original tag digest, cleaned-message hash and statement snapshot are distinct; parent quote/hash/lineage is separate. Chat parent independence stays unknown; dream/apparatus-parent lineage is internal. Final parent binding rechecks share the completion transaction. T6 v2 assessments explicitly defer evaluation to T9 and grant no adoption authority. Linked annotation/assessment records project the existing page/trace receipt shape without another authoritative ledger payload. [ADR-119](../decisions/ADR-119-explicit-belief-origin-intake.md), [Report 053](../reports/053-belief-v2-explicit-intake/README.md).
+
 Canonical review states are `candidate`, `awaiting_context`, `under_review`, `adopted`, `deferred`, `declined`, and `superseded`. Review state does not derive from mass, confidence, lifecycle stage, or a relation label. Standing carries scope, challenges, warrant dimensions, lineage uncertainty, and decision provenance. Participation is a separate bounded intended use: question, comparison, experiment proposal, scoped dissent, or provisional premise. None grants a tool veto or execution authority.
 
 | Existing representation | Compatibility projection | Authority limit |

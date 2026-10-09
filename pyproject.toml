@@ -51,6 +51,9 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/belief_explicit_intake.py",
+    "backend/storage/repositories/cognitive/belief_explicit.py",
+    "backend/storage/migrations/m065_belief_explicit_intake.py",
     "backend/storage/belief_review.py",
     "backend/storage/migrations/m064_belief_review_persistence.py",
     "backend/storage/repositories/cognitive/belief_review.py",

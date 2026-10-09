@@ -110,6 +110,10 @@ background_llm:
 # ── Explicit Belief Admission ────────────────────
 belief_admission:
   jev_shadow: true              # Advisory assessment only; human review still controls belief changes
+belief_review:
+  origin_intake:
+    explicit_chat: false       # V2 opt-in; rollout remains gated
+    explicit_dream: false
 
 # ── Vision Model Pool ─────────────────────────────
 vision_llm:
@@ -144,7 +148,9 @@ background_llm:
 
 The homeostatic regulator clamps chat temperature to a default range of `0.5`–`0.8` (base `0.7`, ADR-098). Collapse pressure still informs interventions and bounded penalty controls; stagnation-induced temperature surges remain deprecated, but it no longer enables thinking or increases the chat completion-token cap. Provider-configured thinking and explicit per-call overrides remain available. Provider logs include request/model metadata, finish reason, truncation state, output lengths, token usage when supplied, and effective controls. Empty, malformed, and non-text completions are logged without recording prompt or response text. On the normal Jev structural-scoring path, a response-local quality judgment is logged separately from the 16 structural dimensions; it does not change or retry the answer. See [ADR-099](../decisions/ADR-099-chat-response-quality-diagnostics.md) and [ADR-103](../decisions/ADR-103-disable-metric-triggered-thinking-escalation.md).
 
-`belief_admission.jev_shadow` controls whether explicit belief candidates receive an optional Jev advisory assessment. Disabling it leaves candidates in human review; it does not disable candidate receipts or enable automatic admission. This setting is separate from `research_triage.enabled`.
+`belief_admission.jev_shadow` controls optional Jev advisory assessment on the unpromoted legacy explicit route. Disabling it leaves candidates in human review; it does not disable receipts or authorize admission. This setting is separate from `research_triage.enabled`.
+
+`belief_review.origin_intake.explicit_chat` and `explicit_dream` are independent strict boolean flags, default false. T6 implements these routes locally; production enablement remains T18. Migration 065 retains an agent/origin promotion marker. Once promoted, disabling its flag records paused v2 encounters and cannot restore the legacy writer. V2 evaluation remains T9 work: T6 returns unavailable/abstained checkpoints with `v2_evaluator_pending_T9` or `origin_paused`. It does not call Jev on v2 or grant adoption authority. See [ADR-119](../decisions/ADR-119-explicit-belief-origin-intake.md) and [Report 053](../reports/053-belief-v2-explicit-intake/README.md).
 
 ## Stateful Model Pool & Fallback Prioritization
 

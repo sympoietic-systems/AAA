@@ -55,6 +55,11 @@ async def admit_candidate(
     evaluator: EvidenceTriage | None = None,
     origin: str = "chat",
 ) -> dict[str, Any]:
+    from backend.services.belief_explicit_intake import explicit_intake
+
+    v2 = await explicit_intake(db_path, conversation_id, message_id, data, config=config, origin=origin)
+    if v2 is not None:
+        return v2
     candidate = Candidate.model_validate(data)
     repo = AdmissionRepository(db_path)
     messages = MessageRepository(db_path)

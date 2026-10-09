@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1–T5 complete locally; T6–T18 pending. Date: 2026-10-09.
+Status: T1–T6 complete locally; T7–T18 pending. Date: 2026-10-09.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -35,6 +35,8 @@ T3 executable contract: `backend/services/belief_review_contracts.py`; reserved 
 
 
 T5 local persistence: agent-scoped encounter/claim sidecars + immutable admission-ledger assessment links + CAS decision/state versions. [ADR-118](../decisions/ADR-118-belief-review-persistence.md), [Report 052](../reports/052-belief-v2-persistence/README.md). Intake lacks decision-write capability; source availability resolved against owned records; unsupported origins remain ambiguous. HTTP auth/action matrix T11, source adapters T6–T8, rollout T18.
+
+T6 local explicit adapters: `admit_candidate` routes enabled/promoted chat/dream to source-bound v2; `belief_review.origin_intake.explicit_chat/explicit_dream` default false; migration 065 promotion + annotation links; off-after-promotion retains paused encounters, no legacy fallback. Native assessments projected for legacy page/trace parity. V2 evaluator deferred T9; no semantic promotion. [ADR-119](../decisions/ADR-119-explicit-belief-origin-intake.md), [Report 053](../reports/053-belief-v2-explicit-intake/README.md).
 
 I.intake: extend `backend/services/belief_admission.py` → shared origin-aware intake. Origins: explicit chat/dream, passive chat, document perception, shared note, web, conversation pattern, scar-fold fallback creation. Skill bridge creation ! separate derived-skill provenance/authority contract; no semantic adoption inferred from bridge projection. Inventory actual call sites before migration; bypasses prohibited once origin promoted.
 
@@ -101,7 +103,7 @@ T2|x|repair typed event semantics/client compatibility + elapsed-time decay acco
 T3|x|freeze typed encounter/assessment/decision/state contracts, relation adapter, skill-bridge provenance/authority, auth/API routes, queue/comparison defaults, compatibility + flag/rollback semantics; adversarial design review|V3,V4,V5,V11,V12,V19,V20,V21,V25,I.encounter,I.assessment,I.decision,I.state,I.relations,I.api,I.config
 T4|x|[source packet](../reports/049-belief-v2-review-corpus/README.md) + [automated provisional freeze](../reports/051-belief-v2-automated-review/README.md); all 54 cases accounted; 80 valid outputs, 26 dual-reviewed cases; source-bound lineage/consequence/conflict/context + disagreement/failure outcomes retained; live coverage partial; independent gold remains T15 obligation|V7,V8,V22,V26,I.lineage,I.eval
 T5|x|additive persistence: source-bound encounter/claim identities, immutable admission-ledger assessment links, CAS review decisions; agent isolation + concurrent retry/restart; [Report 052](../reports/052-belief-v2-persistence/README.md): 27 focused + 881 full tests passed, strict/static/frontend gates passed|V2,V11,V12,V19,V20,V21,I.encounter,I.assessment,I.decision,I.state
-T6|.|adapt explicit chat/dream emission to new shared intake; preserve existing receipts/UI contracts and inert historical XML|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
+T6|x|explicit chat/dream opt-in v2 intake; default-off flags + durable promotion/pause; legacy page/trace receipt projection + inert historical XML; [Report 053](../reports/053-belief-v2-explicit-intake/README.md): 88 focused + 897 full tests passed; strict/static/frontend gates passed; evaluation deferred T9|V1,V2,V3,V12,V14,I.intake,I.encounter,I.assessment
 T7|.|adapt passive chat + conversation-pattern + scar-fold fallback creators; origins/source segments preserved; no reflection-created adopted belief; bypass audit + parity tests|V1,V2,V3,V7,V19,I.intake
 T8|.|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
 T9|.|extend advisory Jev assessment, referent validation, pending/deferred nomination + relation adapter; preserve existing triage contracts; outage/repetitive/stale replay tests|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
@@ -169,6 +171,12 @@ B11|2026-10-08|test insertion split existing rate-limit assertions across functi
 B12|2026-10-09|draft storage treated source availability as caller assertion and current standing lacked stale binding visibility|T5 guarded owned source/hash/quote, unavailable-origin normalization, read binding status; V3,V20,V25 existing invariants; named regression oracles report 052
 B13|2026-10-09|draft reassessment ordering could use lexical IDs instead of committed append order; explicit unknown record link collided with nullable claim identity|T5 ledger append order + explicit scoped identity check; V2,V12; reassessment-head and explicit-unknown-link tests
 B14|2026-10-09|parallel pytest sessions share conftest cleanup of all backend test DBs; broad run had missing tables while focused run exited; causal attribution uncertain|serialize final backend runs; retain failed gates separately; existing quality isolation rule sufficient; no production impact
+
+B15|2026-10-09|T5 proposal-history reader returned native assessment JSON into legacy receipt UI; separate admission reader already filtered namespace|T6 unified history projection; V12,V14 existing; real chat/dream page/trace parity + native T5 receipt filtering
+B16|2026-10-09|draft explicit grounding checked parent before checkpoint but final completion bound only apparatus message|T6 parent/apparatus recheck in same writer transaction; V3,V20 existing; parent-change regression yields stale assessment
+B17|2026-10-09|draft literals/optional indexing failed mypy; Ruff removed fixture import; real-caller fixture reused old reply then omitted pipeline status|typed membrane + fixture re-export + regeneration/result-shape repair; existing strict/static/isolation gates sufficient; 88 focused tests passed
+
+B18|2026-10-09|draft marked known dream context ambiguous solely because lineage was internal, conflating availability with independence|retain available owned source + internal lineage; V3,V7; chat/dream parity asserts available context without independent support; restart full gate against corrected code
 
 Entries distinguish observed cause from planned repair; B1 not resolved. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047; no production claim. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 

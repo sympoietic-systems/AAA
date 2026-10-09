@@ -691,15 +691,9 @@ class BeliefRepository(BaseRepository):
 
     @with_connection
     def get_admission_history(self, proposal_id: str) -> list[dict[str, Any]]:
-        receipts = (
-            self._conn()
-            .execute(
-                "SELECT receipt FROM belief_admission WHERE proposal_id=? ORDER BY created_at DESC LIMIT 50",
-                (proposal_id,),
-            )
-            .fetchall()
-        )
-        return [json.loads(r[0]) for r in receipts]
+        from backend.storage.repositories.cognitive.belief_admission import AdmissionRepository
+
+        return AdmissionRepository(self._db_path).history(proposal_id)
 
     @with_connection
     def list_proposals(self, agent_id: str) -> list[BeliefProposal]:

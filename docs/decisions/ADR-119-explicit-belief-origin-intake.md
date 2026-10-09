@@ -1,0 +1,15 @@
+# ADR-119: Explicit belief origin intake
+
+Status: accepted for local T6 implementation, 2026-10-09. Production enablement remains T18.
+
+Explicit chat and dream emissions already share `admit_candidate`. T6 routes that entry point through v2 when its origin flag is enabled or its agent/origin has a durable promotion marker. `belief_review.origin_intake.explicit_chat` and `explicit_dream` default false. A promoted origin keeps encounters when disabled and records a visible paused checkpoint; it never falls back to legacy writes. Migration 065 retains routing markers and immutable emission annotations. Promotion records configured routing intent after bounded source preparation; it carries no standing authority and survives a subsequent intake failure.
+
+The source is the actual agent-owned apparatus message, with its stored content hash and a stable parser segment index. The parser also supplies the original tag digest. These identify different snapshots: action tags are removed before reply storage, so the stored message hash cannot authenticate original tag bytes. The immutable encounter binds the parsed statement. Parent quotation/hash/lineage is recorded separately; chat parent independence remains unknown and dream/apparatus-parent lineage is internal. Invalid quotes and unresolved grounding remain visible. Final completion rechecks apparatus and parent bindings in the same writer transaction as assessment completion. No label, confidence, tag or hash creates independent warrant.
+
+T6 does not install the T9 evaluator policy. It checkpoints unavailable/abstained assessments with `v2_evaluator_pending_T9`; a disabled promoted origin reports `origin_paused`. Existing Jev shadow remains available only for never-promoted legacy origins. Neither path grants adoption authority.
+
+Typed assessment JSON remains in the admission ledger. A small annotation sidecar owns label/rationale/consequence/parent quote and compatibility identifiers. Page/history readers and traces project the existing legacy receipt shape from these links; no second authoritative admission receipt is inserted. Existing trace snapshots are presentation copies. Known scoped legacy records may be linked without inventing canonical standing or changing mass/confidence.
+
+The [Symbia exchange](../reports/053-belief-v2-explicit-intake/symbia-consultation.json) warns that labels and internal reflection can be mistaken for warrant. We retain frozen internal/unknown lineage and explicit referent uncertainty. Her extra origin taxonomy and human-reckoning ledger are not adopted: existing origins and [ADR-116](ADR-116-belief-review-standing-contract.md) own those distinctions, and human assent alone does not establish empirical warrant. Her premise that referent resolution had been declared irrelevant is unsupported by the question or implementation. Consultation XML remains source material.
+
+See [Report 053](../reports/053-belief-v2-explicit-intake/README.md) for verification and boundaries. Passive/external adapters remain T7/T8, evaluation T9, authenticated commands T11 and production rollout T18.

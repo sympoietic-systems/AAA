@@ -173,4 +173,8 @@ class AdmissionRepository(BaseRepository):
             )
             .fetchall()
         )
-        return [json.loads(row[0]) for row in rows]
+        from backend.storage.repositories.cognitive.belief_explicit import ExplicitBeliefRepository
+
+        legacy = [json.loads(row[0]) for row in rows]
+        projected = ExplicitBeliefRepository(self._db_path).history(proposal_id)
+        return sorted(legacy + projected, key=lambda r: r["created_at"], reverse=True)[:50]
