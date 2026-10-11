@@ -201,6 +201,7 @@ V130: ∀ session repository mutation → commit/rollback before connection scop
 V131: optional search ranking ≤ 15s/query; timeout → retrieved-order fallback; completed query URLs persist before next selection; busy phase manual execution → 409 before state mutation; worker preserves existing terminal status
 V132: every cycle search queries <= 6, including reflection; explicit same-task recovery -> new bounded execution revision + dependency on successful parse; retained analyses reused; old action/attempt receipts immutable; stale action cannot replace current analysis/checkpoint
 V133: optional research belief processing <= min(15s, remaining watchdog); empty/child findings skip; timeout/capacity -> recorded partial delivery, retained findings, parent cancellation propagates; expired phase with plan -> visible failed step; completed query rows retained; deadline and capacity errors distinct
+V134: fresh + retained Digest analyses -> canonical text lists before evidence/persistence/aggregation; recognized text objects + scalar text project without metadata claims or character iteration; originals retained; unsupported shapes -> explicit source failure; group completion follows valid combined payload
 
 ## §T
 
@@ -288,6 +289,7 @@ T73|x|user-requested optional standard-first Docling fallback; env switch + isol
 T74|x|user-requested automated NVIDIA source labeling; validated provisional annotations + checkpoint/resume + bounded calls; 23 tests; current 70-source packet labeled with explicit NVIDIA/Codex provenance; independent release review remains T71|V108,V114,V117,I.benchmark
 T79|x|smaller bounded research cycles + same-task step recovery; retained sources/analyses + immutable old receipts; fresh watchdog/attempt revision; automatic continuation; gates/docs/commit|V132,V131,V30,I.api
 T80|x|bound optional research belief processing; persist pre-execution phase failure; retain completed query groups; regression gates + incident/operator docs|V133,V132,V30,I.api
+T81|x|normalize structured Digest output + retained-analysis recovery; preserve raw metadata; defer group completion until combined payload valid; regression/full gates + operator docs|V134,V132,V30,I.api
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -445,3 +447,4 @@ B124|2026-10-09|second-cycle Digest inherited 43s of 600s watchdog; reflection s
 B125|2026-10-09|full gate exposed child-reserve fixture relying on implicit64 default + resonance mock guessing next user ID after user already persisted|freeze64 explicitly in branch fixture; target actual latest human message in isolated temp DB; preserve reserve/link assertions; V115,V30
 B126|2026-10-09|optional research metabolism awaited outside phase timeout; pre-execution failure lacked step row; ambiguous boundary error|bounded auxiliary processing + partial receipt; visible failed row with existing plan; preserve completed groups; split deadline/capacity; V133; production gap attribution remains inferred
 B127|2026-10-09|child merge fixture counted empty parent reflection as belief work; overlapping verification sessions shared test DB|assert sole nonempty parent gathering call + preserve child archive isolation; serialize verification per checkout; V133,V30
+B128|2026-10-11|model learning/gap/followup objects reached string aggregation; source groups completed before combined Digest validated|canonical text projection before evidence/storage/aggregation including retained data; raw metadata retained; unknown shapes fail explicitly; scalar notes become one note; V134

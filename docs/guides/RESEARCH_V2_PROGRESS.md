@@ -61,3 +61,7 @@ The new-research form now defaults to depth 4, allowing more cycles than its pre
 ## Post-phase timeout and failure visibility (T80)
 
 Optional belief processing now has a short bound and records partial delivery while retaining saved research findings. Pre-execution phase failures get a visible failed row when a plan exists; completed query groups remain intact. Incident evidence and verification belong to [Report 050](../reports/050-research-digestion-provider-failure/README.md), with same-task operator recovery in the [rollout guide](RESEARCH_V2_ROLLOUT.md#smaller-cycles-and-same-task-recovery).
+
+## Structured Digest results and retained-analysis recovery (T81)
+
+Digest now projects recognized model-authored objects and scalar text into text lists before evidence recording, storage and aggregation. Original structured metadata remains retained; unsupported shapes fail explicitly. Saved analyses use the same boundary during recovery. Group completion follows successful construction of the combined payload. Operator recovery is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#recovery-after-structured-digest-output); production receipts and replay results remain in local [Report 050](../reports/050-research-digestion-provider-failure/README.md).

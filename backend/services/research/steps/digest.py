@@ -34,6 +34,48 @@ def failed_analysis(category: str) -> dict:
     }
 
 
+def normalize_analysis(result: object) -> dict:
+    """Project recognized text fields without treating metadata as findings.
+
+    Keep the original structured analysis alongside its text projection so
+    retained analyses can be recovered without losing model-authored context.
+    """
+    if not isinstance(result, dict):
+        return failed_analysis("invalid_structured_response")
+    normalized = dict(result)
+    text_keys = {
+        "learnings": ("learning", "text"),
+        "gaps": ("gap", "text"),
+        "followups": ("followup", "query", "text"),
+        "direct_urls": ("url",),
+        "diffractive_notes": ("note", "text"),
+    }
+    changed = False
+    for field, keys in text_keys.items():
+        items = result.get(field, [])
+        if items is None:
+            items = []
+        if isinstance(items, str):
+            items = [items]
+            changed = True
+        if not isinstance(items, list):
+            return {**failed_analysis("invalid_structured_response"), "raw_analysis": result}
+        texts = []
+        for item in items:
+            text = item
+            if isinstance(item, dict):
+                text = next((item[key] for key in keys if isinstance(item.get(key), str) and item[key].strip()), None)
+            if not isinstance(text, str):
+                return {**failed_analysis("invalid_structured_response"), "raw_analysis": result}
+            if text.strip():
+                texts.append(text.strip())
+        normalized[field] = texts
+        changed = changed or texts != items
+    if changed:
+        normalized["raw_analysis"] = result.get("raw_analysis", result)
+    return normalized
+
+
 async def analyze_source_content(
     orch,
     task_id: str,
@@ -171,7 +213,7 @@ async def analyze_source_content(
             step_id=step_id or None,
         )
         return (
-            {**result, "analysis_status": "complete"}
+            normalize_analysis({**result, "analysis_status": "complete"})
             if isinstance(result, dict)
             else failed_analysis("invalid_structured_response")
         )
@@ -209,7 +251,7 @@ async def parallel_digest_grouped(
                 step_id = group_steps.get(q_group) or list(group_steps.values())[0]
                 query_text = queries[q_group - 1] if (q_group - 1) < len(queries) else objective
 
-                existing = source.get("existing_analysis")
+                existing = normalize_analysis(source.get("existing_analysis"))
                 reuse = (
                     orch._get_state(task_id).get("_reuse_completed_digests") is True
                     and isinstance(existing, dict)
@@ -230,6 +272,7 @@ async def parallel_digest_grouped(
                         max_depth,
                         step_id=step_id,
                     )
+                result = normalize_analysis(result)
                 if action_id and orch._get_state(task_id).get("active_action_id") != action_id:
                     raise asyncio.CancelledError
                 packet = None
@@ -477,11 +520,35 @@ class DigestStep(BaseResearchStep):
             max_depth,
         )
         state["_reuse_completed_digests"] = False
+        digest_results = [{**dr, "result": normalize_analysis(dr.get("result"))} for dr in digest_results]
 
         failed_count = sum(dr.get("result", {}).get("analysis_status") == "failed" for dr in digest_results)
         analyzed_count = sum(
             dr.get("result", {}).get("analysis_status", "complete") == "complete" for dr in digest_results
         )
+        new_findings = []
+        all_learnings = []
+        followups = []
+        gaps = []
+
+        for dr in digest_results:
+            r = dr["result"]
+            learnings = r["learnings"]
+            all_learnings.extend(learnings)
+            new_findings.extend(
+                f"[{dr['source_title'] or dr['source_url'][:80]}]: " + learning for learning in learnings
+            )
+            followups.extend(r["followups"])
+            gaps.extend(r["gaps"])
+
+        out_payload = DigestPayload(
+            parsed_sources_cache=parsed_sources,
+            learnings=all_learnings,
+            followups=followups,
+            gaps=gaps,
+            analyzed_sources_count=analyzed_count,
+        )
+
         if orch.step_repo:
             for q_group, step_id in group_steps.items():
                 group = [dr for dr in digest_results if dr.get("query_group") == q_group]
@@ -494,31 +561,6 @@ class DigestStep(BaseResearchStep):
                     status="failed" if failed == len(group) and failed else "partial" if failed else "completed",
                     result_summary=f"analyzed {analyzed} sources; {failed} failed; {skipped} skipped",
                 )
-
-        new_findings = []
-        all_learnings = []
-        followups = []
-        gaps = []
-
-        for dr in digest_results:
-            r = dr.get("result", {})
-            learnings = r.get("learnings", []) if isinstance(r, dict) else []
-            all_learnings.extend(learnings)
-            if learnings:
-                new_findings.extend(
-                    f"[{dr['source_title'] or dr['source_url'][:80]}]: " + learning for learning in learnings
-                )
-            if isinstance(r, dict):
-                followups.extend(r.get("followups", []))
-                gaps.extend(r.get("gaps", []))
-
-        out_payload = DigestPayload(
-            parsed_sources_cache=parsed_sources,
-            learnings=all_learnings,
-            followups=followups,
-            gaps=gaps,
-            analyzed_sources_count=analyzed_count,
-        )
 
         if failed_count and not new_findings:
             summary = (
