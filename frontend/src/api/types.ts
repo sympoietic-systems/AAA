@@ -126,13 +126,16 @@ export interface PersonalityExpertise { id: string; domain: string; description?
 export interface PersonalityResponse { traits: Record<string, number> | null; aspirational_traits: Record<string, number>; aspirational_gap: number; anti_erosion_boost: number; source_metrics: Record<string, number>; commitments: { active: PersonalityCommitment[]; proto: PersonalityCommitment[]; spectral: PersonalityCommitment[] }; expertise: { active: PersonalityExpertise[]; proto: PersonalityExpertise[]; dormant: PersonalityExpertise[] } }
 
 export interface AdmissionReceipt {
+  agent_id?: string; encounter_id?: string; assessment_id?: string | null;
+  source_accounting?: { agent_id?: string; [key: string]: unknown } | null;
+  warrant_dimensions?: Record<string, unknown>[]; challenge?: string;
   id: string; status: string; statement: string; label: string;
   decision: string; reason: string; recommendation?: string;
   created_at: string; assessed_at?: string; policy_version: string; mode: string;
   consequence: string; scope: string; temporal_scope: string; trigger: string; evidence_quote: string;
   emission_sha256?: string;
   context_issues?: string[]; uncompared_count?: number;
-  source: { conversation_id: string; message_id: number; parent_message_id?: number; message_sha256: string; evidence_sha256: string };
+  source: { conversation_id: string | null; message_id: number | null; parent_message_id?: number; message_sha256: string; evidence_sha256: string };
   comparisons?: { id: string; kind: string; label: string; statement: string; statement_sha256: string; scope?: string; temporal_scope?: string }[];
   evaluation?: { status: string; model?: string; reason?: string; input_sha256?: string; latency_ms?: number; answers?: Record<string, { choice?: string; confidence?: number }> };
 }

@@ -32,6 +32,7 @@ async def test_v1_v12_chat_dream_checkpoint_and_receipt_projection(admission_db,
     receipt = await admit_candidate(
         path, message.conversation_id, message.id, candidate(), config=CONFIG, origin=origin, evaluator=triage
     )
+    assert receipt["agent_id"] == "symbia"  # V13: page/trace native reads bind actual agent.
     client.evaluate.assert_not_awaited()
     assert receipt["decision"] == "needs_review" and receipt["status"] == "complete"
     assert receipt["evaluation"]["status"] in {"abstained", "unavailable"}

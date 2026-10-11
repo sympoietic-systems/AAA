@@ -65,6 +65,7 @@ interface BeliefsSectionProps {
 }
 
 function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
+  const [agentId] = useState(() => new URLSearchParams(window.location.search).get("agent") || "symbia")
   const [data, setData] = useState<BeliefsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState<boolean>(false)
@@ -74,14 +75,14 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    getBeliefs(null as any)
+    getBeliefs(undefined, agentId)
       .then(setData)
       .catch(e => setError(e.message || "Failed to fetch beliefs"))
 
     getAgent()
       .then(info => setAgentFlux(!!info.agent_flux))
       .catch(() => setAgentFlux(false))
-  }, [])
+  }, [agentId])
 
   // Auto-select belief when initialSelectedId changes or data is loaded
   useEffect(() => {
@@ -223,7 +224,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
       <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-300px)]">
         {/* ── Left: Node list ── */}
         <div className="md:w-[450px] shrink-0 w-full flex flex-col min-h-0">
-          {agentFlux && (
+          {agentFlux && agentId === "symbia" && (
             <button
               onClick={() => {
                 setSelectedId(null)
@@ -284,11 +285,12 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
               onUpdate={handleUpdate}
               onDelete={handleDeleteSuccess}
               onReload={() => {
-                getBeliefs(null as any)
+                getBeliefs(undefined, agentId)
                   .then(setData)
                   .catch(e => setError(e.message || "Failed to fetch beliefs"))
               }}
               agentFlux={agentFlux}
+              agentId={agentId}
             />
           )}
         </div>

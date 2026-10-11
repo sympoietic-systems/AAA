@@ -27,8 +27,11 @@ export async function synthesizeMergeStatement(proposalId: string, targetBeliefI
   return res.json()
 }
 
-export async function getBeliefs(conversationId?: string): Promise<BeliefsResponse> {
-  const params = conversationId ? `?conversation_id=${conversationId}` : ""
+export async function getBeliefs(conversationId?: string, agentId = "symbia"): Promise<BeliefsResponse> {
+  const query = new URLSearchParams()
+  if (conversationId) query.set("conversation_id", conversationId)
+  if (agentId !== "symbia") query.set("agent_id", agentId)
+  const params = query.size ? `?${query}` : ""
   const res = await apiFetch(`${BASE}/beliefs${params}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()

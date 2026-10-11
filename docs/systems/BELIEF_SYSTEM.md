@@ -2,7 +2,7 @@
 
 This document describes the design, mathematical calculations, database representations, and operational roles of Symbia's belief system. It details the lifecycle stages of beliefs, the mathematical coefficients governing belief metabolism, the dynamic attractor window, the background dream engine, and critical implementation details discovered during a codebase audit.
 
-Beliefs v2 local status is owned by [BELIEF_SPEC](BELIEF_SPEC.md). T10 adds forward source-accounting sidecars for new v2 encounters, separating declared lineage, internal activity and recorded recurrence from verified warrant and legacy mass/confidence. Current resolvers verify no independent-source credit; historical encounters remain outside ledger coverage. [ADR-123](../decisions/ADR-123-belief-source-accounting.md) and the [operator guide](../guides/belief-source-accounting.md) define this boundary. Dedicated v2 UI and rollout remain later tasks.
+Beliefs v2 local status is owned by [BELIEF_SPEC](BELIEF_SPEC.md). T10 adds forward source-accounting sidecars for new v2 encounters, separating declared lineage, internal activity and recorded recurrence from verified warrant and legacy mass/confidence. Current resolvers verify no independent-source credit; historical encounters remain outside ledger coverage. [ADR-123](../decisions/ADR-123-belief-source-accounting.md) and the [operator guide](../guides/belief-source-accounting.md) define this boundary. T13 installs the [v2 review interface](../guides/belief-review-interface.md) locally; production rollout remains T18.
 
 ---
 

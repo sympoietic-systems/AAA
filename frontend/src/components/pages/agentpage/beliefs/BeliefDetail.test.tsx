@@ -4,6 +4,7 @@ import type { BeliefEventInfo, BeliefNodeInfo } from "../../../../api/types"
 import { BeliefDetail } from "./BeliefDetail"
 
 vi.mock("../../../../api/http", () => ({ apiFetch: vi.fn().mockResolvedValue({ json: async () => [] }) }))
+vi.mock("../../../../api/beliefReview", () => ({ getBeliefReview: vi.fn().mockRejectedValue(new Error("Review unavailable in legacy fixture")) }))
 vi.mock("../../../../api/client", () => ({ getBeliefTimeseries: vi.fn().mockResolvedValue({ points: [], span_days: 0, bucket_size: "none" }) }))
 vi.mock("../../../UI/StructuralAutopoieticGlyph", () => ({ StructuralAutopoieticGlyph: () => null }))
 vi.mock("../../../UI/BeliefTimelineChart", () => ({ BeliefTimelineChart: () => null }))

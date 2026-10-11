@@ -163,6 +163,8 @@ What becomes easier/harder?
 | [124](ADR-124-belief-workshop-review.md) | Authenticated Belief Workshop Review | accepted for local implementation | 2026-10-09 |
 | [125](ADR-125-belief-review-export.md) | Snapshot-bound Belief Review Exports | accepted for local implementation | 2026-10-11 |
 
+| [126](ADR-126-belief-review-interface.md) | Attributed Belief Review Interface | accepted for local implementation | 2026-10-11 |
+
 ## Creating a New ADR
 
 1. Copy an existing ADR as a template

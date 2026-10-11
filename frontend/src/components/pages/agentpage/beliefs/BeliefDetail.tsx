@@ -1,5 +1,5 @@
 import { apiFetch } from "../../../../api/http"
-import { useState, useEffect, useRef, memo } from "react"
+import { useState, useEffect, useRef, useCallback, memo } from "react"
 import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement, getBeliefTimeseries } from "../../../../api/client"
 import type { BeliefNodeInfo, BeliefTimeseriesPoint } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
@@ -9,6 +9,7 @@ import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "../s
 import { TerminalTabs } from "../../../UI"
 import { BeliefTimelineChart } from "../../../UI/BeliefTimelineChart"
 import { AdmissionReasoning } from "./AdmissionReasoning"
+import { BeliefWorkshop } from "./BeliefWorkshop"
 
 /* ── Module-level constants ── */
 
@@ -68,9 +69,10 @@ interface BeliefDetailProps {
   onDelete: (beliefId: string) => void
   onReload?: () => void
   agentFlux: boolean
+  agentId?: string
 }
 
-export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, onReload, agentFlux }: BeliefDetailProps) {
+export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs = [], onUpdate, onDelete, onReload, agentFlux, agentId = "symbia" }: BeliefDetailProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editLabel, setEditLabel] = useState("")
   const [editStatement, setEditStatement] = useState("")
@@ -98,6 +100,9 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
   const [isVetting, setIsVetting] = useState(false)
   const [isSynthesizing, setIsSynthesizing] = useState(false)
   const workshopRef = useRef<HTMLDivElement>(null)
+  const [legacyAccess, setLegacyAccess] = useState<{ id: string; allowed: boolean } | null>(null)
+  const onLegacyAvailability = useCallback((id: string, allowed: boolean) => setLegacyAccess({ id: `${agentId}/${id}`, allowed }), [agentId])
+  const legacyAllowed = legacyAccess?.id === `${agentId}/${belief?.id}` && legacyAccess?.allowed === true
 
   useEffect(() => {
     if (vetMode !== "none" && workshopRef.current) {
@@ -320,7 +325,8 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
           <span><span className="text-[#444]">Confidence:</span> <span className="text-[#aaa]">{(b.confidence * 100).toFixed(0)}%</span></span>
           <span><span className="text-[#444]">Created:</span> <span className="text-[#aaa]">{b.last_reinforced_at ? formatDateTimeFull(b.last_reinforced_at) : ""}</span></span>
         </div>
-        <AdmissionReasoning receipts={b.admission_history || []} statement={b.statement} />
+        <AdmissionReasoning receipts={b.admission_history || []} statement={b.statement} agent={agentId} />
+          <BeliefWorkshop key={`${agentId}/${b.id}`} agent={agentId} record={b.id} onReload={onReload} onLegacyAvailability={onLegacyAvailability} />
         {b.symbia_reflection && (
           <div>
             <div className="text-semantic-purple font-mono text-[9px] uppercase font-bold tracking-wider">[ Symbia's Reflection ]</div>
@@ -356,7 +362,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
             </div>
           </div>
         )}
-        {agentFlux && (status === "pending" || status === "refined") && (
+        {agentFlux && legacyAllowed && (status === "pending" || status === "refined") && (
           <div ref={workshopRef} className="flex flex-col gap-2">
             <div className="text-semantic-purple font-mono text-[10px] uppercase font-bold tracking-wider">[ Workshop Actions ]</div>
             {vetMode === "none" ? (
@@ -460,7 +466,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
-          {agentFlux && (
+          {agentFlux && legacyAllowed && (
             <>
               {isConfirmingDelete ? (
                 <span className="flex items-center gap-1.5 font-mono text-[10px]">
@@ -499,7 +505,8 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       {/* Details tab */}
       {activeTab === "details" && (
         <>
-          <AdmissionReasoning receipts={b.admission_history || []} statement={b.statement} />
+          <AdmissionReasoning receipts={b.admission_history || []} statement={b.statement} agent={agentId} />
+          <BeliefWorkshop key={`${agentId}/${b.id}`} agent={agentId} record={b.id} onReload={onReload} onLegacyAvailability={onLegacyAvailability} />
           <div>
             <div className="text-[#555] font-mono text-[10px] uppercase font-bold">[ Statement ]</div>
             <div className="text-[#ccc] text-[11px] italic font-serif leading-relaxed mt-0.5">"{b.statement}"</div>
@@ -603,7 +610,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
                     key={v.version} version={v.version}
                     label={v.created_at ? formatDateTimeFull(v.created_at) : ""}
                     timestamp="" changelog={v.change_reason || "No description"}
-                    isCurrent={v.version === b.version} agentFlux={agentFlux}
+                    isCurrent={v.version === b.version} agentFlux={agentFlux && legacyAllowed}
                     isExpanded={isExpanded} hasDiff={hasDiff}
                     onToggleDiff={() => setExpandedVersions(prevMap => ({ ...prevMap, [v.version]: !prevMap[v.version] }))}
                     onRevert={v.version !== b.version ? () => handleRevert(v.version) : undefined}

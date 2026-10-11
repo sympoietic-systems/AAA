@@ -3,8 +3,8 @@ import { getNotification, getNotifications, dismissNotification, markNotificatio
 import type { SedimentNotification } from "../../../api/client"
 import { syncNotifications } from "../../../stores/notificationStore"
 import { formatTimestamp } from "../../../utils/dateFormat"
-import { AdmissionReasoning } from "./beliefs/AdmissionReasoning"
-import { traceReceipt, traceSummary } from "../../../utils/beliefAdmission"
+import { TraceBeliefReasoning } from "./beliefs/TraceBeliefReasoning"
+import { traceSummary } from "../../../utils/beliefAdmission"
 
 interface Props {
   onNavigateToEntity?: (type: string, id: string) => void
@@ -281,7 +281,7 @@ export const TracesSection = memo(function TracesSection({ onNavigateToEntity }:
 
                 {/* Message — full text, no wrapper */}
                 <div className="text-[#ccc] leading-relaxed whitespace-pre-wrap break-words">{traceSummary(t.snippet)}</div>
-                {traceReceipt(t.snippet) && <AdmissionReasoning receipts={[traceReceipt(t.snippet)!]} />}
+                <TraceBeliefReasoning snippet={t.snippet} />
 
                 {/* Metadata + links — single inline line */}
                 <div className="text-[10px]">

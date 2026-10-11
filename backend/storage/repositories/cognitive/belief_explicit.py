@@ -231,6 +231,7 @@ class ExplicitBeliefRepository(BaseRepository):
                 }
         return {
             "id": row["assessment_id"],
+            "agent_id": agent_id,
             "encounter_id": e["id"],
             "assessment_id": row["assessment_id"],
             "event_key": e["id"],

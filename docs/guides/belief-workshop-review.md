@@ -1,6 +1,6 @@
 # Belief workshop review
 
-T11 installs authenticated backend review commands. The dedicated frontend workshop is T13; complete snapshot export is T12. Production activation remains T18.
+T11 installs authenticated backend review commands. T13 installs the [frontend workshop](belief-review-interface.md); T12 installs snapshot export. Production activation remains T18.
 
 Configure `AAA_PASSWORD`. Use the existing bearer credential, or a valid browser session with the existing same-origin and `x-aaa-csrf: 1` mutation requirements. Review remains unavailable when authentication is disabled. The server records `shared-operator`; that credential cannot establish the identity or assent of separate people.
 

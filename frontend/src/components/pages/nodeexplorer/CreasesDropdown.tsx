@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useMemo, memo } from "react"
 import { listConversations } from "../../../api/client"
 import type { ConversationInfo, SedimentNotification } from "../../../api/client"
 import { formatTime, formatTimeShort } from "../../../utils/dateFormat"
-import { AdmissionReasoning } from "../agentpage/beliefs/AdmissionReasoning"
-import { traceReceipt, traceSummary } from "../../../utils/beliefAdmission"
+import { TraceBeliefReasoning } from "../agentpage/beliefs/TraceBeliefReasoning"
+import { traceSummary } from "../../../utils/beliefAdmission"
 import {
   useNotifications,
   dismissNotification,
@@ -287,10 +287,7 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
                     <p className="text-[10px] text-[#93c5fd]/90 font-mono leading-normal break-words select-text">
                       {traceSummary(notif.snippet)}
                     </p>
-                    {traceReceipt(notif.snippet) && <details className="text-[10px] text-[#bbb] mt-1">
-                      <summary className="cursor-pointer">Admission reasoning</summary>
-                      <AdmissionReasoning receipts={[traceReceipt(notif.snippet)!]} />
-                    </details>}
+                    <TraceBeliefReasoning snippet={notif.snippet} />
                     <div className="flex justify-end gap-2 mt-1.5">
                       {notif.sourceType === "research" && notif.sourceId && (
                         <button onClick={() => handleResearchReview(notif)}
