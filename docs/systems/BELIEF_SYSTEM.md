@@ -8,6 +8,8 @@ Beliefs v2 local status is owned by [BELIEF_SPEC](BELIEF_SPEC.md). T10 adds forw
 
 T14 adds [scoped participation](../guides/belief-participation.md) to the shared chat/dream window. Selection carries review standing and records final assembly receipts in existing message activation provenance. Exploratory slots remain default-off; geometric attention and recalled dissent confer no independent warrant or tool authority. [ADR-127](../decisions/ADR-127-belief-participation-selection.md) defines the boundary; T15 owns replay calibration.
 
+T15's [offline evaluation](../guides/belief-v2-evaluation.md) audits frozen provisional reviews and replays exploratory selection at zero, one and two slots. [Report 062](../reports/062-belief-v2-evaluation/README.md) records limited held-out family coverage and repeated synthetic selection. Independent semantic targets, recorded prompt/dream ablations and downstream usefulness remain unresolved; T15 is in progress and participation stays disabled.
+
 ## 1. Ontological Foundation: Cognitive Autopoiesis
 
 Unlike traditional AI agent frameworks that rely on static database records or hardcoded logical constraints to manage memory, Symbia's belief system is designed as an **autopoietic, perception-driven cognitive membrane**.

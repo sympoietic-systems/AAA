@@ -24,3 +24,5 @@ The scan retains at most 100 active, 64 pending, 32 deferred and four historical
 Nomination scans use stable ID order for deterministic replay. Under sustained overflow, relevant records beyond the scan can remain omitted; their histories remain in storage and the workshop. T15 must evaluate this coverage limit before accepting or changing budgets. Prompt statements retain the existing bounded preview length, while receipt hashes identify the complete stored statement.
 
 See [ADR-127](../decisions/ADR-127-belief-participation-selection.md), [BELIEF_SPEC](../systems/BELIEF_SPEC.md) and [Report 061](../reports/061-belief-v2-participation/README.md).
+
+The [T15 evaluation guide](belief-v2-evaluation.md) describes the provisional audit and synthetic exploratory replay. Its current findings do not close semantic acceptance or authorize a nonzero production budget.

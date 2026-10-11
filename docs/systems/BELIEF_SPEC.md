@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1-T14 complete locally; T15-T18 pending. Date: 2026-10-11.
+Status: T1-T14 complete locally; T15 in progress; T16-T18 pending. Date: 2026-10-11.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -129,7 +129,7 @@ T11|x|authenticated bounded family review + scoped relations + teachback reconst
 T12|x|authenticated bounded encounter/completed-receipt/decision/event reads; UTC append-snapshot cursors + completion ordering; attributed five-part reasoning + T10 source accounting + unknown legacy fields; [Report 059](../reports/059-belief-v2-export/README.md): 1079 full + 85 focused tests, static/strict gates closed; UI T13, production T18|V12,V13,V17,V20,I.api,I.events
 T13|x|belief/workshop UI + traces/creases expose same receipt, five reasoning fields, lineage, status/uncertainty/dissent/family; legacy unknown + failed evaluator display|V8,V10,V13,V24,I.ui
 T14|x|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
-T15|.|evaluate held-out advisory relations + candidate retention/review burden; matched participation replay/ablation; freeze budgets/acceptance targets; publish failures + unresolved judgments|V6,V8,V9,V10,V14,V15,V22,I.eval,I.selection
+T15|~|evaluate held-out advisory relations + candidate retention/review burden; matched participation replay/ablation; freeze budgets/acceptance targets; publish failures + unresolved judgments; [Report 062](../reports/062-belief-v2-evaluation/README.md): source-bound provisional audit + synthetic exploratory 0/1/2 replay local; independent gold/semantic targets/recorded full ablation/usefulness unresolved, promotion blocked|V6,V8,V9,V10,V14,V15,V22,I.eval,I.selection
 T16|.|versioned revision/supersession/resurfacing; legacy mapping + rollback/restart rehearsal on isolated copies; no semantic bulk cleanup|V11,V12,V15,V16,V21,I.decision,I.state,I.config
 T17|.|integrated backend/frontend gates; documentation/ADR/schema/API/config updates; end-to-end receipt + source lineage + dissent parity evidence; review release readiness|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
 T18|.|authorized staged rollout only; pin server build/migrations/config, complete-window telemetry, origin-level outcomes + rollback criteria; verify real receipts; report limits|V1,V19,V21,V22,V23,I.config,I.eval
@@ -259,3 +259,5 @@ B49|2026-10-11|T14 review found second belief-mass skill-prior route in afferent
 B50|2026-10-11|T14 review found whole-JSON secret masking misses escaped credentials; decision binding lacked version check|scrub fields before JSON + quoted-secret oracle; bind state/decision versions; V20,V25 existing
 B51|2026-10-11|T14 review found low-confidence declined proposals could enter always-on legacy spectral path|legacy spectral requires node representation and excludes declined/superseded; default-off decline oracle; V14,I.config existing
 B52|2026-10-11|T14 full suite dream daemon doubles lack SQLite repository identity|retain identified nonpersistent adapter path capped100 + explicit unknown meta standing; real SQLite errors never fallback; existing compatibility/concurrency boundaries sufficient
+B53|2026-10-11|T15 fixture expected missing comparison to count as unavailable-pair abstention|assert no_comparison separately; V22 existing; provisional opinions remain nongold
+B54|2026-10-11|T15 identical-geometry synthetic replay: deterministic friction/resonance repeatedly reach only2 of12 eligible records across2 signatures; held-out44 cases share1 source family|retain coverage failure + family count; defaultoff/0; recorded coverage/generalization/usefulness unresolved; V22 existing
