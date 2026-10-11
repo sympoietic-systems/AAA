@@ -37,3 +37,14 @@ uv run python -m benchmarks.suites.belief_replay_report --packet benchmarks/runs
 Collection reads the production API; generation/review uses configured provider credentials and finite calls. This runner has no belief database writer. Resume validates sealed identity/prompt hashes and never reissues failed, uncertain or completed checkpoints. Review and generation have separate failure circuits. Optional NVIDIA model selection uses the explicit `nvidia_router/` prefix. The report retains invalid judgments and separately labels exact-source quote-envelope projections without rewriting receipts.
 
 Saved emissions and legacy previews lack canonical historical standing/geometry. This is a counterfactual response replay, not the full current intake pipeline. Identical scoped1/scoped2 inputs in candidate-poor cases expose model variability. Do not equate emitted tags with accepted candidates, reviewer preferences with gold, or successful-only timings with latency acceptance. The next gate needs isolated full intake replay, independent semantic references and downstream artistic usefulness.
+
+
+## Isolated intake replay
+
+[Report 064](../reports/064-belief-intake-replay/README.md) exercises the real v2 parser, source intake, assessment, exact-repeat linking and persisted receipt notifications in fresh migrated SQLite databases. It preserves missing recorded context and keeps authored contrasts separate/nongold. Six live Jev responses all abstained at the current confidence floor; unscoped recurrences grew the pending queue. No runtime fix or threshold change is inferred.
+
+```powershell
+uv run python -m benchmarks.suites.belief_intake_replay --source benchmarks/runs/belief-conversation-replay/2026-10-11-t15-v1 --output benchmarks/runs/belief-intake-replay/NEW-RUN
+```
+
+Add `--recorded-only` to skip authored live contrasts. The output must be new and inside benchmarks/runs; this is a source reconstruction, not a production backup. Contract and pre-call checkpoints persist before work. No resume/retry is provided: inspect failed/uncertain receipts before authorizing a new live condition. The defaults bound provider calls to seven with one worker and preserve current assessment policy. A blank TypeSafe key uses the configured LLM key, matching the documented configuration fallback. Source seals are checked before ingestion.
