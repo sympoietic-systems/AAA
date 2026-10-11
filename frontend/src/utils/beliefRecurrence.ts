@@ -13,4 +13,3 @@ export function recurrenceEntries(items: BeliefNodeInfo[]): BeliefNodeInfo[][] {
     return [visible]
   })
 }
-
