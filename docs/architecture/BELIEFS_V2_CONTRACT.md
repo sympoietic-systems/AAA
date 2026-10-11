@@ -1,6 +1,6 @@
 # Beliefs v2 intake and review contract
 
-Status: T3 frozen shapes, 2026-10-08; T5 persistence implemented locally, verification in [Report 052](../reports/052-belief-v2-persistence/README.md). Reserved routes and runtime origin enablement remain future work. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns implementation status. [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md) records the completed T2 repair.
+Status: T3 frozen shapes, 2026-10-08; T5 persistence implemented locally, verification in [Report 052](../reports/052-belief-v2-persistence/README.md). T11 workshop routes are implemented locally; T12 export and T18 production origin enablement remain future work. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns implementation status. [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md) records the completed T2 repair.
 
 ## Record ownership and authority
 
@@ -156,3 +156,7 @@ Consequence, empirical grounding, artistic grounding and tension remain separate
 ## T8 external representation boundary
 
 Document/shared-note/web creators use independent default-off flags and the same durable promotion/receipt contract. Ready first parsed chunks and shared-note quotations are owned local representations; document summaries and caller note text cannot replace them. Representation availability, upstream independence and claim referent resolution remain separate. Web excerpts retain ambiguous upstream context. Versioned snapshots bind retries; note/document changes are stale at completion. No semantic/adoption authority is introduced. [ADR-121](../decisions/ADR-121-external-belief-origin-intake.md), [operator guide](../guides/belief-external-intake.md), [Report 055](../reports/055-belief-v2-external-intake/README.md).
+
+## T11 authenticated workshop boundary
+
+Agent-scoped family reads and operator commands now enforce server actor/authority/time, expected statement/state/version and final comparison/source checks. Migration 067 links immutable command annotations to the existing decision ledger; trace failure rolls back state and adoption representation. Exact retries return historical receipts. Adoption preserves stable IDs and existing structural quantities without scoring. Decline retains the candidate and a counter-trace through later adoption. Teachback reconstruction grants no eligibility or warrant; shared credentials establish no separate participant identity. Other declared positions require a verified declaration channel. Legacy managed writes are guarded at API and transaction boundaries. Historical relations/assessments are labelled before reuse. T16 owns linked revision/merge/supersession/resurfacing; T12 export and T13 dedicated UI remain pending. [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [guide](../guides/belief-workshop-review.md), [Report 058](../reports/058-belief-v2-workshop-review/README.md).

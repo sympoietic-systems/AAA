@@ -338,6 +338,77 @@ class ReviewDecision(FrozenRecord):
         return self
 
 
+class WorkshopRelation(FrozenRecord):
+    record_id: Identifier
+    expected_review_version: int = Field(ge=0, strict=True)
+    expected_statement_sha256: Sha256
+    relation: Relation
+    scope: Scope
+    temporal_scope: TemporalScope
+    rationale: Reason
+    context: ClaimContext | None = None
+
+
+class TeachbackFork(FrozenRecord):
+    alternative_record_id: Identifier
+    expected_alternative_review_version: int = Field(ge=0, strict=True)
+    expected_alternative_statement_sha256: Sha256
+    candidate_reconstruction: str = Field(min_length=1, max_length=2000)
+    alternative_reconstruction: str = Field(min_length=1, max_length=2000)
+    scope: str = Field(min_length=1, max_length=500)
+    temporal_scope: str = Field(min_length=1, max_length=250)
+    discriminating_question: str = Field(min_length=1, max_length=1000)
+    unresolved_inquiry: str = Field(min_length=1, max_length=1000)
+
+    @model_validator(mode="after")
+    def nonempty(self) -> Self:
+        for name in (
+            "candidate_reconstruction",
+            "alternative_reconstruction",
+            "scope",
+            "temporal_scope",
+            "discriminating_question",
+            "unresolved_inquiry",
+        ):
+            if not getattr(self, name).strip():
+                raise ValueError("Teachback fields cannot be blank")
+        return self
+
+
+class WorkshopCommand(FrozenRecord):
+    action: Literal[
+        "adopt", "decline", "defer", "request_context", "request_review", "revise", "merge", "supersede", "resurface"
+    ]
+    expected_review_version: int = Field(ge=0, strict=True)
+    expected_statement_sha256: Sha256
+    expected_state: ReviewState | None
+    scope: str = Field(min_length=1, max_length=500)
+    temporal_scope: TemporalScope = ""
+    rationale: str = Field(min_length=1, max_length=2000)
+    consequence: str = Field(min_length=1, max_length=1000)
+    challenge: str = Field(min_length=1, max_length=1000)
+    dissent: tuple[Reason, ...] = Field(default=(), max_length=20)
+    positions: tuple[ParticipantPosition, ...] = Field(default=(), max_length=20)
+    assessment_ids: tuple[Identifier, ...] = Field(default=(), max_length=50)
+    relations: tuple[WorkshopRelation, ...] = Field(default=(), max_length=10)
+    teachback: TeachbackFork | None = None
+    context: ClaimContext | None = None
+    target_record_id: Identifier | None = None
+    expected_target_review_version: int | None = Field(default=None, ge=0, strict=True)
+    expected_target_statement_sha256: Sha256 | None = None
+    statement: Statement | None = None
+
+    @model_validator(mode="after")
+    def bounded_command(self) -> Self:
+        if any(not getattr(self, name).strip() for name in ("scope", "rationale", "consequence", "challenge")):
+            raise ValueError("Review fields cannot be blank")
+        if len({r.record_id for r in self.relations}) != len(self.relations):
+            raise ValueError("Duplicate scoped relation")
+        if len({p.participant_id for p in self.positions}) != len(self.positions):
+            raise ValueError("Duplicate participant position")
+        return self
+
+
 class SkillProjection(FrozenRecord):
     kind: Literal["skill_projection"] = "skill_projection"
     agent_id: AgentId

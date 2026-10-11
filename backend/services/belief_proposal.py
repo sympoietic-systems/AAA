@@ -1,5 +1,6 @@
 """Belief proposal use cases."""
 
+import asyncio
 import logging
 import uuid
 from typing import Any, cast
@@ -205,43 +206,47 @@ class BeliefProposalUseCases(BeliefUseCase):
             new_version = target_belief.version + 1
             new_v16d = await _score_statement_16d(state, merged_statement, fallback=target_belief.vector_16d)
 
-        with belief_repo.atomic():
-            belief_repo.update_proposal_status(proposal_id, "adopted")
-            if statement_updated and merged_statement is not None:
-                belief_repo.update_belief_statement(
+        def write_merge() -> None:
+            with belief_repo.atomic():
+                belief_repo.guard_legacy_mutation(target_belief.id)
+                belief_repo.update_proposal_status(proposal_id, "adopted")
+                if statement_updated and merged_statement is not None:
+                    belief_repo.update_belief_statement(
+                        belief_id=target_belief.id,
+                        statement=merged_statement.strip(),
+                        vector_16d=new_v16d,
+                        version=new_version,
+                    )
+                    belief_repo.create_statement_version(
+                        id=str(uuid.uuid4()),
+                        belief_id=target_belief.id,
+                        version=new_version,
+                        statement=merged_statement.strip(),
+                        vector_16d=new_v16d,
+                        change_reason=f"Synthesized merge of proposal: '{p.provisional_statement}'",
+                    )
+
+                belief_repo.update_belief(
                     belief_id=target_belief.id,
-                    statement=merged_statement.strip(),
+                    confidence=new_conf,
                     vector_16d=new_v16d,
-                    version=new_version,
+                    origin=target_belief.origin,
+                    lifecycle_stage=target_belief.lifecycle_stage,
                 )
-                belief_repo.create_statement_version(
-                    id=str(uuid.uuid4()),
+                belief_repo.update_belief_mass(target_belief.id, new_mass)
+                belief_repo.insert_belief_event(
+                    event_id=str(uuid.uuid4()),
                     belief_id=target_belief.id,
-                    version=new_version,
-                    statement=merged_statement.strip(),
-                    vector_16d=new_v16d,
-                    change_reason=f"Synthesized merge of proposal: '{p.provisional_statement}'",
+                    source_type="shared_note",
+                    source_id=p.id,
+                    alignment=1.0,
+                    perturbation=p.nucleation_mass,
+                    event_type="support",
+                    impact=0.1,
+                    rationale=f"Merged proposal: '{p.provisional_statement}' into existing belief.",
                 )
 
-            belief_repo.update_belief(
-                belief_id=target_belief.id,
-                confidence=new_conf,
-                vector_16d=new_v16d,
-                origin=target_belief.origin,
-                lifecycle_stage=target_belief.lifecycle_stage,
-            )
-            belief_repo.update_belief_mass(target_belief.id, new_mass)
-            belief_repo.insert_belief_event(
-                event_id=str(uuid.uuid4()),
-                belief_id=target_belief.id,
-                source_type="shared_note",
-                source_id=p.id,
-                alignment=1.0,
-                perturbation=p.nucleation_mass,
-                event_type="support",
-                impact=0.1,
-                rationale=f"Merged proposal: '{p.provisional_statement}' into existing belief.",
-            )
+        await asyncio.to_thread(write_merge)
 
         notif_repo = getattr(state, "notification_repo", None)
         if notif_repo:

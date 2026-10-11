@@ -2,6 +2,9 @@
 
 import os
 import sys
+from copy import deepcopy
+from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +12,9 @@ from fastapi.testclient import TestClient
 # Ensure backend package can be imported
 sys.path.insert(0, ".")
 
-from backend.main import app
+from backend.bootstrap.lifecycle import create_app
+from backend.config import load_config
+from backend.services.file import FileService
 from backend.utils.security import (
     safe_resolve_path,
     sanitize_filename,
@@ -20,7 +25,20 @@ from backend.utils.security import (
 
 
 @pytest.fixture
-def client():
+def client(tmp_path, monkeypatch):
+    # Upload boundary tests exercise real routes/storage, never digest subprocesses
+    # or a shared application/database left behind by another integration test.
+    config = load_config()
+    config["database"]["path"] = str(tmp_path / "endpoint-security.db")
+    monkeypatch.setenv("AAA_RUN_MIGRATIONS", "true")
+    monkeypatch.setattr("backend.bootstrap.lifecycle.load_config", lambda: deepcopy(config))
+    monkeypatch.setattr("backend.bootstrap.lifecycle._start_background_services", lambda services: None)
+    monkeypatch.setattr("backend.services.research.task_manager.ResearchTaskManager.start_branch_watch", AsyncMock())
+    monkeypatch.setattr("backend.utils.filesystem.UPLOAD_DIR", str(tmp_path / "uploads"))
+    digest = AsyncMock()
+    monkeypatch.setattr(FileService, "process_and_summarize", digest)
+    app = create_app()
+    app.state.security_digest_mock = digest
     with TestClient(app) as test_client:
         password = os.environ.get("AAA_PASSWORD", "").strip()
         if password:
@@ -160,6 +178,17 @@ def test_api_upload_path_traversal_filename(client):
     data = response.json()
     # The filename must be sanitized to escape.txt without any traversal tokens
     assert data["files"][0]["file_name"] == "escape.txt"
+    conv_id = data["conversation_id"]
+    persisted = client.app.state.perception_repo.get_files_by_conversation(conv_id)
+    assert [row["file_name"] for row in persisted] == ["escape.txt"]
+    from backend.utils.filesystem import get_upload_path
+
+    cached = Path(get_upload_path(conv_id, "escape.txt"))
+    assert cached.read_bytes() == content
+    assert cached.parent.name == conv_id
+    digest = client.app.state.security_digest_mock
+    digest.assert_awaited_once()
+    assert digest.await_args.args[1:4] == (conv_id, "escape.txt", "txt")
 
 
 def test_api_upload_invalid_conversation_id(client):

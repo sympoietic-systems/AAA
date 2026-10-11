@@ -866,3 +866,8 @@ As enacted in [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-
 
 3. **Active Post-Baseline Migrations**:
    - **`m051_add_pole_vacancy_rupture_skill.py`** ([ADR-098](../decisions/ADR-098-paskian-teachback-and-operational-accommodation.md)): Injects the canonical `pole-vacancy-rupture` procedural skill into `skill_nodes`, records the initial version in `skill_versions`, and creates the `skill:pole-vacancy-rupture` belief bridge in `belief_nodes`.
+
+
+### Belief workshop command annotations (067)
+
+`belief_workshop_commands`: `agent_id`, `id`, `record_id`, `input_hash`, `decision_id`, `action`, `timestamp`, `receipt_json` (all TEXT NOT NULL). Composite primary key `(agent_id,id)`; composite foreign key `(agent_id,decision_id)` references the existing immutable `belief_review_decisions` ledger. Index `(agent_id,record_id,timestamp,id)`. Update/delete triggers preserve command, teachback and decline history. No historical backfill or duplicate authoritative decision store. Adoption representation and trace persist in the existing command transaction. [ADR-124](../decisions/ADR-124-belief-workshop-review.md).

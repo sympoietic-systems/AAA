@@ -25,6 +25,7 @@ System architecture, technical specification, and the record of architectural de
 - [DATABASE_SCHEMA.md](architecture/DATABASE_SCHEMA.md) — Live database schema and table reference.
 - [BELIEFS_V2_PLAN.md](architecture/BELIEFS_V2_PLAN.md) — Proposed situated commitments, exploratory candidate participation, and staged evaluation gates.
 - [decisions/](decisions/) — Architecture Decision Records documenting significant choices with context, options, and consequences. ADR-097 and ADR-098 define the causal dialogue feedback control loop, Paskian teachback, operational accommodation, and the Pole Vacancy escalation ladder; [ADR-099](decisions/ADR-099-chat-response-quality-diagnostics.md) records production response-quality diagnostics; [ADR-103](decisions/ADR-103-disable-metric-triggered-thinking-escalation.md) disables metric-triggered thinking escalation in chat.
+- [Belief workshop review](guides/belief-workshop-review.md) — Authenticated commands, version conflicts, attributed positions and retained decline traces; [ADR-124](decisions/ADR-124-belief-workshop-review.md).
 - [ADR-115](decisions/ADR-115-shadow-belief-admission.md) records source-bound explicit belief candidates, shadow-only evaluation, exact-repeat handling, and human-controlled adoption.
 
 ### systems/

@@ -409,3 +409,8 @@ The following files represent the physical substrate of the belief metabolism sy
 
 ### Initial Seed State
 *   [initialize_agent.py](../../backend/scripts/initialize_agent.py): Administrative agent initialization, authored baseline beliefs, and skill bridge provisioning.
+
+
+### T11 workshop review
+
+The authenticated backend workshop exposes bounded agent-scoped family reads and version-bound operator commands. Adoption carries existing structural mass/confidence under the stable record ID; decline retains a pending candidate and an immutable scoped counter-trace. Teachback records reconstruction and an unresolved discriminating question without adoption eligibility. Participant declarations remain attributed; the shared credential cannot establish bilateral assent. Managed records reject legacy semantic/destructive writes at the route and storage boundaries. See [ADR-124](../decisions/ADR-124-belief-workshop-review.md) and the [operator guide](../guides/belief-workshop-review.md). Dedicated workshop UI, export and linked revision remain later tasks.

@@ -25,15 +25,15 @@ class BeliefReviewRepository(BaseRepository):
         rows = (
             self._conn()
             .execute(
-                "SELECT COALESCE(suggested_statement,provisional_statement) FROM belief_proposals "
-                "WHERE LOWER(agent_id)=? AND id=? UNION ALL SELECT statement FROM belief_nodes WHERE LOWER(agent_id)=? AND id=?",
+                "SELECT COALESCE(suggested_statement,provisional_statement),'proposal',NULL FROM belief_proposals "
+                "WHERE LOWER(agent_id)=? AND id=? UNION ALL SELECT statement,'belief',evolved_from_proposal FROM belief_nodes WHERE LOWER(agent_id)=? AND id=?",
                 (agent_id, record_id, agent_id, record_id),
             )
             .fetchall()
         )
         if not rows:
             raise ResourceNotFound("Belief review record not found", entity="belief_review")
-        if len(rows) != 1:
+        if len(rows) != 1 and not (len(rows) == 2 and rows[0][0] == rows[1][0] and rows[1][2] == record_id):
             raise ConstraintViolation("Ambiguous belief review record identity", entity="belief_review")
         return str(rows[0][0])
 

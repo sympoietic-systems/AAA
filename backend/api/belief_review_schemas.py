@@ -1,9 +1,10 @@
-"""Reserved v2 request contracts. No routes installed by this module."""
+"""V2 request contracts; workshop installs scoped decisions, export remains T12."""
 
 from typing import Literal, Self
 
 from pydantic import AwareDatetime, Field, model_validator
 
+from backend.modules.sensory.belief_context import ClaimContext
 from backend.services.belief_review_contracts import (
     FrozenRecord,
     Identifier,
@@ -11,6 +12,8 @@ from backend.services.belief_review_contracts import (
     Reason,
     ReviewState,
     Sha256,
+    TeachbackFork,
+    WorkshopRelation,
 )
 
 
@@ -31,6 +34,11 @@ class ReviewDecisionRequest(FrozenRecord):
     expected_target_review_version: int | None = Field(default=None, ge=0, strict=True)
     expected_target_statement_sha256: Sha256 | None = None
     statement: str | None = Field(default=None, min_length=1, max_length=4000)
+    temporal_scope: str = Field(default="", max_length=250)
+    assessment_ids: tuple[Identifier, ...] = Field(default=(), max_length=50)
+    relations: tuple[WorkshopRelation, ...] = Field(default=(), max_length=10)
+    teachback: TeachbackFork | None = None
+    context: ClaimContext | None = None
 
     @model_validator(mode="after")
     def target(self) -> Self:

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from backend.api.deps import get_belief_repo, get_belief_service, require_agent_flux
 from backend.api.exceptions import raise_if_error
+from backend.api.routes.belief_workshop import guard_legacy, guard_target
 
 router = APIRouter()
 
@@ -68,18 +69,20 @@ async def get_proposal(proposal_id: str, request: Request, service=Depends(get_b
     return p
 
 
-@router.post("/beliefs/proposals/{proposal_id}/refine")
+@router.post("/beliefs/proposals/{proposal_id}/refine", dependencies=[Depends(guard_legacy)])
 async def refine_proposal(proposal_id: str, request: Request, service=Depends(get_belief_service)):
     return await service.refine_proposal_sync(proposal_id)
 
 
-@router.post("/beliefs/proposals/{proposal_id}/synthesize-merge")
+@router.post("/beliefs/proposals/{proposal_id}/synthesize-merge", dependencies=[Depends(guard_legacy)])
 async def synthesize_merge(
     proposal_id: str,
     payload: SynthesizeMergeRequest,
     request: Request,
     service=Depends(get_belief_service),
+    belief_repo=Depends(get_belief_repo),
 ):
+    await guard_target(payload.target_belief_id, belief_repo)
     return raise_if_error(
         await service.synthesize_merge_statement(
             proposal_id=proposal_id,
@@ -88,13 +91,15 @@ async def synthesize_merge(
     )
 
 
-@router.post("/beliefs/proposals/{proposal_id}/vet")
+@router.post("/beliefs/proposals/{proposal_id}/vet", dependencies=[Depends(guard_legacy)])
 async def vet_proposal(
     proposal_id: str,
     payload: VetProposalRequest,
     request: Request,
     service=Depends(get_belief_service),
+    belief_repo=Depends(get_belief_repo),
 ):
+    await guard_target(payload.target_belief_id, belief_repo)
     action = payload.action.lower()
     if action == "adopt":
         res = await service.adopt_proposal(
@@ -121,7 +126,7 @@ async def vet_proposal(
     return raise_if_error(res)
 
 
-@router.put("/beliefs/{belief_id}/statement")
+@router.put("/beliefs/{belief_id}/statement", dependencies=[Depends(guard_legacy)])
 async def edit_belief_statement(
     belief_id: str,
     payload: EditStatementRequest,
@@ -156,7 +161,7 @@ async def create_belief(payload: BeliefCreateRequest, request: Request, service=
     )
 
 
-@router.put("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux)])
+@router.put("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux), Depends(guard_legacy)])
 async def update_belief(
     belief_id: str,
     payload: BeliefUpdateRequest,
@@ -175,12 +180,12 @@ async def update_belief(
     )
 
 
-@router.delete("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux)])
+@router.delete("/beliefs/{belief_id}", dependencies=[Depends(require_agent_flux), Depends(guard_legacy)])
 async def delete_belief(belief_id: str, request: Request, service=Depends(get_belief_service)):
     return raise_if_error(await service.delete_belief(belief_id))
 
 
-@router.post("/beliefs/{belief_id}/revert/{version}", dependencies=[Depends(require_agent_flux)])
+@router.post("/beliefs/{belief_id}/revert/{version}", dependencies=[Depends(require_agent_flux), Depends(guard_legacy)])
 async def revert_belief_version(belief_id: str, version: int, request: Request, service=Depends(get_belief_service)):
     return raise_if_error(await service.revert_belief_version(belief_id, version))
 

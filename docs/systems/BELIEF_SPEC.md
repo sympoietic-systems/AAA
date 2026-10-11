@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1–T10 complete locally; T11–T18 pending. Date: 2026-10-09.
+Status: T1-T11 complete locally; T12-T18 pending. Date: 2026-10-11.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -72,6 +72,8 @@ I.config: proposed independent origin-intake and exploratory-participation flags
 
 I.eval: source-bound corpus + frozen provisional model reviews or independent gold + held-out partitions + replay artifacts in `docs/reports/` or `benchmarks/runs/`. Unit/regression tests deterministic/offline; live provider evaluation separately declared with exact model/settings/source hashes. Model agreement/Jev self-labels ≠ gold; accuracy/promotion require independent evidence.
 
+T11 local workshop: authenticated server-owned actor/authority/time; CAS statement/state/version + final source/peer checks; migration 067 annotations linked to decision ledger; immutable idempotent commands + atomic traces. Adoption stable ID + existing quantities; decline pending candidate + retained counter-trace; teachback reconstruction gives no eligibility/warrant. Own declared position only; shared credential cannot identify distinct people or bilateral assent. Scoped relations preserve both records; historical family receipts labelled. Managed legacy semantic/destructive writes guarded under write lock. T16 linked revision/merge/supersession/resurfacing; T12 export/T13 UI pending. [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [guide](../guides/belief-workshop-review.md), [Report 058](../reports/058-belief-v2-workshop-review/README.md).
+
 ## §V
 
 V1: ∀ promoted origin → source-bound encounter + visible assessed/deferred/failed outcome; no direct proposal bypass.
@@ -116,7 +118,7 @@ T7|x|passive chat/pattern/scar source-bound intake; durable pause + preserved un
 T8|x|adapt document/shared-note/web creators; lineage/context unavailable visible; bounded failure paths + parity tests|V1,V2,V3,V7,V19,V20,I.intake,I.lineage
 T9|x|advisory Jev use case + explicit runtime flag; validated referents + bounded pending/adopted/deferred nomination; versioned relation adapter; immutable replay/outage/stale handling; [Report 056](../reports/056-belief-v2-advisory-assessment/README.md): focused/full/static/frontend gates closed; calibration T15, rollout T18|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
 T10|x|migration 066 forward source-lineage observations + typed events atomic with encounter; separate internal activity/recorded recurrence; unknown/declared independence ⊥ verified credit; immutable bounded reads + projection; no historical backfill; [Report 057](../reports/057-belief-v2-source-accounting/README.md): focused/full/static/frontend gates closed|V7,V8,V16,V17,I.lineage,I.events
-T11|.|workshop family review + scoped relations + teachback fork + shared-commitment decision + decline counter-trace; version conflict tests; human mutation boundary|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
+T11|x|authenticated bounded family review + scoped relations + teachback reconstruction + attributed operator decision + retained decline counter-trace; CAS/idempotency/source checks + atomic traces + legacy write guards; [Report 058](../reports/058-belief-v2-workshop-review/README.md): isolated full/static/frontend gates closed; UI T13, linked revision T16, rollout T18|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
 T12|.|bounded complete-interval event/receipt/decision API reads; UTC cursor/snapshot semantics; agent auth/input bounds; five-part reasoning projection|V12,V13,V17,V20,I.api,I.events
 T13|.|belief/workshop UI + traces/creases expose same receipt, five reasoning fields, lineage, status/uncertainty/dissent/family; legacy unknown + failed evaluator display|V8,V10,V13,V24,I.ui
 T14|.|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
@@ -200,6 +202,18 @@ B26|2026-10-09|TypeSafe legacy model fallback could appear as reported provider 
 Entries distinguish observed cause from planned repair; B1 resolved locally in T7, no production claim. Admission incidents remain in root `SPEC.md::B110,B111`. B2,B3 ! local full gates in report 047. Nullable legacy telemetry stays unknown; migration checkpoint starts now, no reconstructed charge history.
 
 B27|2026-10-09|T10 draft used unsupported float Literal annotations; fixture mismatched source/lineage, missing legacy FK target, reused initial segment identity|exact bounded numeric fields + schema-bound fixtures + distinct segment IDs; existing V2,V7,V16,V17 + strict/event/retry oracles; no new invariant
+
+B28|2026-10-09|legacy adoption aliases proposal/belief IDs; naive review read rejects legitimate linked representation; draft SQL guessed version timestamp; transition Literal/cast/lint typing|accept only same-agent exact-statement evolved_from_proposal alias; schema-bound created_at + typed transitions; V11,V12,V25 + alias/conflicting-alias/adoption oracles; no new invariant
+
+B29|2026-10-09|new test filename collided with existing legacy workshop tests; restored existing module + separate v2 module; workshop test fixture reused source/segment event identity for different claim; lint imported fixture shadowing; route-only write guard admits provider-await race|distinct peer segment + local fixture wrapper; atomic storage writer guards; V11,V12,V25 regression assertions; no new invariant
+
+B30|2026-10-09|legacy merge without statement change can bypass target statement guards; target may become managed during scorer await|guard target inside merge write transaction, run writer in to_thread; V11,V16,V25 direct/no-statement + provider-await race oracles; no new invariant
+
+B31|2026-10-09|PowerShell stdin + Python locale default introduced a CP1252 em-dash into UTF8 docs index|explicit UTF8 reads/writes; owned-doc decode and local-link oracle; existing documentation/quality protocol, no new belief invariant
+
+B32|2026-10-11|full suite: upload path-traversal fixture launched real digest subprocess against shared test state; missing perception tables; 1020 passed, 1 failed|fresh app + migrated temporary DB/upload dir, mock digest/daemon work; keep real sanitization/persistence and safe worker-argument assertions; quality isolation oracle, no new belief invariant
+
+B33|2026-10-11|snapshot lint inherited scratch Gitignore and reported zero files; shared-checkout research work changed verification context|Ruff no-respect-gitignore + explicit file-count proof; archive baseline plus owned-file hashes, independent snapshot DB; existing quality/isolation protocol, no new belief invariant
 
 ## References
 
