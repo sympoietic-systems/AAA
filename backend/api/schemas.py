@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend import contracts as _contracts
 
@@ -42,6 +42,47 @@ class GenerateRequest(BaseModel):
     max_tokens: int | None = Field(default=None, ge=1, le=131_072, description="Override max_tokens for this request")
     include_structural_scoring: bool | None = None
     force_regenerate: bool = False
+
+
+class DatabaseFilter(BaseModel):
+    column: str = Field(..., min_length=1, max_length=128)
+    operator: Literal["eq", "ne", "gt", "gte", "lt", "lte", "contains", "is_null", "not_null"]
+    value: str | int | float | bool | None = None
+
+    @field_validator("value")
+    @classmethod
+    def bound_filter_text(cls, value: str | int | float | bool | None) -> str | int | float | bool | None:
+        if isinstance(value, str) and len(value) > 2000:
+            raise ValueError("Filter text must be 2000 characters or fewer")
+        return value
+
+
+class DatabaseRowsRequest(BaseModel):
+    table_name: str = Field(..., min_length=1, max_length=128)
+    columns: list[str] = Field(default_factory=list, max_length=30)
+    filters: list[DatabaseFilter] = Field(default_factory=list, max_length=20)
+    order_by: str | None = Field(default=None, max_length=128)
+    descending: bool = False
+    limit: int = Field(default=20, ge=1, le=25)
+    offset: int = Field(default=0, ge=0, le=10_000)
+
+
+class DatabaseTableInfo(BaseModel):
+    table_name: str
+    columns: list[str]
+
+
+class DatabaseSchemaResponse(BaseModel):
+    tables: list[DatabaseTableInfo]
+
+
+class DatabaseRowsResponse(BaseModel):
+    table_name: str
+    columns: list[str]
+    rows: list[dict[str, object]]
+    limit: int
+    offset: int
+    has_more: bool
 
 
 class HealthResponse(BaseModel):

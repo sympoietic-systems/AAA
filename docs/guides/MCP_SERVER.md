@@ -8,6 +8,7 @@ The **Model Context Protocol (MCP) Server** exposes the autopoietic agent (the A
 - Query the system identity (`aaa://identity`).
 - Pull live metrics (`aaa://metrics`).
 - Retrieve bounded, secret-scrubbed tails of `error.log` and `server.log` (`get_backend_logs`).
+- Inspect database tables and bounded row pages (`inspect_database_schema`, `read_database_table`).
 - Consult the agent via the `consult_aaa` tool, with persistent per‑agent conversations titled `Consultation: <agent_name>`.
 
 This guide walks you through installing, running, and registering the MCP server for seamless integration with your development environment.
@@ -68,11 +69,15 @@ After saving the config, most editors (VS Code, Cursor, Cline, Gemini) will au
 - `consult_aaa(message: str, agent_name: str, max_tokens: int | None = None)`
 - `get_consultation_history(agent_name: str, limit: int = 50)`
 - `get_messages_by_conversation_id(conversation_id: str, limit: int = 50)`
+- `inspect_database_schema()`
+- `read_database_table(table_name, columns, filters, order_by, descending, limit, offset)`
 - `get_backend_logs(log_type: "error" | "server" = "error", lines: int = 100)`
 - `clear_backend_logs(log_type: "error" | "server" | "all")`
 - Resources: `aaa://philosophy`, `aaa://identity`, `aaa://metrics`, `aaa://skills`, `aaa://skills/agent/{skill_name}`
 
 `get_backend_logs` calls the authenticated `/api/errors/logs` endpoint. The backend limits reads to the two named log files, caps the tail at 500 lines, and scrubs secrets before returning it. `clear_backend_logs` calls `DELETE /api/errors/logs` and requires an explicit target; `all` clears both active files. Clearing requires `AAA_PASSWORD` to be configured on the backend, holds active file-handler locks, and preserves rotated archives. Set the same `AAA_PASSWORD` in the MCP server environment.
+
+Database inspection requires `AAA_PASSWORD` to be configured on the backend and MCP server. Call `inspect_database_schema` first; then use exact table and column names with `read_database_table`. Reads are limited to 25 rows, 30 selected columns, 20 parameterized filters, and 10,000 offset rows. Secret-like columns are redacted, binary values return their byte count, and long text cells are clipped. The tools expose structured row inspection only; they do not accept SQL statements or modify data.
 
 ---
 
@@ -116,7 +121,31 @@ If an agent times out waiting for a response, or needs to check the transcript o
 ```
 Both tools return a structured JSON string containing conversation metadata and the chronological message log.
 
-### 3. Accessing Resources
+### 3. Inspecting Database Rows
+```json
+{
+  "tool": "inspect_database_schema",
+  "args": {}
+}
+```
+Then read a bounded page, for example the recent messages and their persisted quality/provider receipts:
+```json
+{
+  "tool": "read_database_table",
+  "args": {
+    "table_name": "conversation_log",
+    "columns": ["id", "timestamp", "speaker", "parent_message_id", "quality_status", "quality_receipt", "generation_receipt"],
+    "filters": [{"column": "conversation_id", "operator": "eq", "value": "906c6688-30d6-479b-89bd-dbc92d818b90"}],
+    "order_by": "id",
+    "descending": true,
+    "limit": 20,
+    "offset": 0
+  }
+}
+```
+Supported filter operators are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`, `is_null`, and `not_null`. Filters combine with `AND`. Use later `offset` values to read additional bounded pages.
+
+### 4. Accessing Resources
 
 **Philosophy & Identity:**
 ```bash

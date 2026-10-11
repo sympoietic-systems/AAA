@@ -63,6 +63,7 @@ if TYPE_CHECKING:
         SemanticKnotRepository,
         SkillRepository,
     )
+    from backend.storage.repositories.database_inspection import DatabaseInspectionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -351,6 +352,14 @@ def get_history_service(message_repo: MessageRepository = Depends(get_message_re
     from backend.services.history import HistoryService
 
     return HistoryService(message_repo)
+
+
+def get_database_inspection_repo(
+    message_repo: MessageRepository = Depends(get_message_repo),
+) -> DatabaseInspectionRepository:
+    from backend.storage.repositories.database_inspection import DatabaseInspectionRepository
+
+    return DatabaseInspectionRepository(message_repo.db_path)
 
 
 def get_note_use_cases(note_repo: NoteRepository = Depends(get_note_repo)) -> NoteUseCases:

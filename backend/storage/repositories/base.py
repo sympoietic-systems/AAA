@@ -9,6 +9,11 @@ class BaseRepository:
     def __init__(self, db_path: str | object):
         self._db_path = str(db_path)
 
+    @property
+    def db_path(self) -> str:
+        """Return the configured database path for read-only diagnostic collaborators."""
+        return self._db_path
+
     def _conn(self) -> sqlite3.Connection:
         return _get_tracked_connection(self._db_path)
 
