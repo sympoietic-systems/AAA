@@ -415,34 +415,19 @@ class BeliefDynamicsEngine(ProcessingModule):
 
         # 4. Extract Attractor Window (delegated to shared prompt_builder utility)
         # Lazy import to avoid circular dependency (prompt_builder imports from belief_engine)
-        from backend.utils.prompt_builder import build_attractor_window
+        from backend.utils.prompt_builder import build_attractor_window, build_spectral_margin
 
         sig_bytes = payload.get("structural_signature")
         sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
-        attractor_window = build_attractor_window(
+        attractor_window = await asyncio.to_thread(
+            build_attractor_window,
             self._belief_repo,
             agent_id,
             sig_16d,
         )
 
         # Spectral Margin (up to 2 collapsed beliefs)
-        all_beliefs = self._belief_repo.list_beliefs(agent_id)
-        collapsed_beliefs = [
-            b for b in all_beliefs if b.lifecycle_stage in ("collapsed", "faded") or b.confidence < 0.20
-        ]
-
-        # Spectral Margin (up to 2 collapsed beliefs)
-        spectral_margin = []
-        # Sort collapsed by updating time or just list up to 2
-        for cb in collapsed_beliefs[:2]:
-            spectral_margin.append(
-                {
-                    "id": cb.id,
-                    "label": cb.label,
-                    "statement": cb.statement,
-                    "confidence": cb.confidence,
-                }
-            )
+        spectral_margin = await asyncio.to_thread(build_spectral_margin, self._belief_repo, agent_id)
 
         # Place in payload
         payload["attractor_window"] = attractor_window

@@ -252,6 +252,8 @@ class AfferentSensoryRouter:
         mass_priors = {}
         if attractor_window:
             for item in attractor_window:
+                if item.get("selection_receipt"):
+                    continue  # Recorded belief participation supplies no procedural prior.
                 lbl = item.get("label", "")
                 if lbl.startswith("skill:"):
                     name = lbl.removeprefix("skill:")

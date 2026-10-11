@@ -1,5 +1,6 @@
 """Dream context building and evaluation mixin for the Dream Daemon."""
 
+import asyncio
 import json
 import logging
 import math
@@ -73,7 +74,9 @@ class DreamContextMixin:
         return max(0.0, min(1.0, 1.0 - mean_autocorr))
 
     async def _evaluate_tension_hotspot(self) -> tuple[BeliefNode | None, float]:
-        beliefs = self.belief_repo.list_beliefs("symbia")
+        from backend.utils.prompt_builder import build_dream_active_beliefs
+
+        beliefs = await asyncio.to_thread(build_dream_active_beliefs, self.belief_repo, "symbia")
         active_beliefs = [
             b for b in beliefs if b.lifecycle_stage not in ("collapsed", "faded") and b.confidence >= 0.20
         ]
@@ -234,6 +237,19 @@ class DreamContextMixin:
             "belief_stage": belief.lifecycle_stage,
             "action": action,
         }
+
+        from backend.utils.prompt_builder import build_dream_selection
+
+        selected = await asyncio.to_thread(build_dream_selection, self.belief_repo, belief.id)
+        ctx["belief_review_selection"] = (
+            selected["selection_receipt"]
+            if selected
+            else {"standing": "unknown", "reason": "outside_bounded_snapshot", "tool_authority": "none"}
+        )
+        if selected:
+            from backend.modules.belief_selection import frame_selection
+
+            ctx["belief_statement"] = frame_selection(selected, max_statement=4000)
 
         # Get last dream response for this belief
         last_response = await self._get_last_dream_response_for_belief(belief.label)

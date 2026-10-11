@@ -16,6 +16,34 @@ class DummySkill:
         self.always_active = False
 
 
+@pytest.mark.asyncio
+async def test_v9_selection_receipt_cannot_increase_skill_prior():
+    client = TypeSafeDecisionClient(api_key="mock-key")
+    client.evaluate = AsyncMock(
+        return_value={
+            "success": True,
+            "results": {
+                "gate_apparatus": {"probability": 0.9, "confidence": 0.9},
+                "gate_contemplation": {"probability": 0.1, "confidence": 0.9},
+                "organ_resonance": {
+                    "decision": "first",
+                    "confidence": 0.9,
+                    "probabilities": {"first": 0.6, "second": 0.3},
+                },
+            },
+        }
+    )
+    router = AfferentSensoryRouter(client=client, max_injected_skills=1, hard_max_injected_skills=1)
+    skills = [DummySkill("one", "first"), DummySkill("two", "second")]
+    baseline = await router.route("Work", skills)
+    selected = await router.route(
+        "Work",
+        skills,
+        attractor_window=[{"label": "skill:second", "mass": 100, "selection_receipt": {"tool_authority": "none"}}],
+    )
+    assert [s.id for s in baseline["injected_skills"]] == [s.id for s in selected["injected_skills"]] == ["one"]
+
+
 @pytest.fixture
 def sample_skills():
     return [

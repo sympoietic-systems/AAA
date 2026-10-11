@@ -13,7 +13,9 @@ from backend.services.chat import ChatService
 from backend.storage.activation import serialize_activation_trace
 from backend.storage.migrations import run_all_migrations
 from backend.storage.repositories import MessageRepository
+from backend.storage.repositories.cognitive.belief import BeliefRepository
 from backend.utils.activation_provenance import build_activation_trace
+from backend.utils.prompt_builder import build_attractor_window
 from benchmarks.suites.activation_usage import audit
 
 
@@ -91,7 +93,9 @@ async def test_v106_chat_and_dream_persist_same_assembly_trace(tmp_path):
         run_all_migrations(conn)
     repo = MessageRepository(str(path))
     user = repo.insert("human", "question", b"", "fixture", 0, conversation_id="c")
-    trace = build_activation_trace(payload(), [])
+    window = build_attractor_window(BeliefRepository(str(path)), "symbia", None)
+    trace = build_activation_trace({**payload(), "attractor_window": window}, [])
+    assert trace["selection_receipts"]
     result = SimpleNamespace(status="ok", payload={"response": "answer", "activation_provenance": trace})
     pipeline = SimpleNamespace(run=AsyncMock(return_value=result))
     state = SimpleNamespace(

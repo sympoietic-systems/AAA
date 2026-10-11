@@ -276,6 +276,9 @@ vision_llm:
   api_base: "https://openrouter.ai/api/v1"
 
 belief_review:
+  participation:
+    enabled: false  # T14 implementation only; T15 evaluation + T18 rollout required before opt-in.
+    slots: 0  # Hard maximum 2 exploratory slots; disabled requires zero.
   assessment:
     enabled: false  # T9 advisory only; rollout requires T18 approval.
     confidence_floor: 0.85

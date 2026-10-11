@@ -520,6 +520,11 @@ def _build_system_content(
             )
             for ghost in deduped_ghosts:
                 if isinstance(ghost, dict):
+                    if ghost.get("selection_receipt"):
+                        from backend.modules.belief_selection import frame_selection
+
+                        ghost_text += "  - " + frame_selection(ghost) + "\n"
+                        continue
                     ghost_text += (
                         f"  - [{ghost.get('confidence', 0.0):.2f}] {ghost.get('statement', ghost.get('label', ''))}\n"
                     )

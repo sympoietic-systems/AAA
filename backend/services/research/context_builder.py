@@ -6,6 +6,7 @@ The builder is a thin wrapper that resolves repos from app_state and delegates.
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.4.
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -102,7 +103,7 @@ class ResearchContextBuilder:
 
         # ── 5. Beliefs — attractor window ──
         belief_repo = getattr(self._state, "belief_repo", None)
-        window = build_attractor_window(belief_repo, "symbia", sig_16d)
+        window = await asyncio.to_thread(build_attractor_window, belief_repo, "symbia", sig_16d)
         beliefs_block = format_beliefs_block(window)
         if beliefs_block:
             sections.append(beliefs_block)
@@ -187,7 +188,7 @@ class ResearchContextBuilder:
 
         # 5. Beliefs
         belief_repo = getattr(self._state, "belief_repo", None)
-        window = build_attractor_window(belief_repo, "symbia", sig)
+        window = await asyncio.to_thread(build_attractor_window, belief_repo, "symbia", sig)
         beliefs_block = format_beliefs_block(
             window,
             header_label="--- BEGIN BELIEFS (Attractor Window) ---",

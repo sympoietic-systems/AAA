@@ -51,6 +51,9 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/modules/belief_selection.py",
+    "backend/storage/repositories/cognitive/belief_selection.py",
+    "backend/storage/activation.py",
     "backend/services/belief_passive_intake.py",
     "backend/services/belief_assessment.py",
     "backend/services/belief_lineage.py",

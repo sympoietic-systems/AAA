@@ -31,6 +31,7 @@ What becomes easier/harder?
 
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
+| [ADR-127](ADR-127-belief-participation-selection.md) | Scoped belief participation and assembly receipts | accepted locally | 2026-10-11 |
 | [001](ADR-001-personality-storage.md) | Personality Storage Strategy | accepted | 2026-05-20 |
 | [002](ADR-002-skill-system.md) | Skill System Architecture | accepted | 2026-05-20 |
 | [003](ADR-003-homeostatic-metrics.md) | Homeostatic Metrics | accepted | 2026-05-20 |

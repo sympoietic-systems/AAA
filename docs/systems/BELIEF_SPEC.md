@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1-T13 complete locally; T14-T18 pending. Date: 2026-10-11.
+Status: T1-T14 complete locally; T15-T18 pending. Date: 2026-10-11.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -79,6 +79,8 @@ T12 local export: reserved authenticated agent-scoped list/native detail routes;
 
 T13 local UI: original native T12 receipt identity/time + five recorded fields across page/workshop/traces/creases; actual agent added to native history projection; legacy unknown, inert quotation, separate warrants/uncertainty; bounded lexical family + persistent attributed counter-traces; T11 CAS/idempotency actions, stale refresh invalidates old form; legacy controls require authenticated unmanaged snapshot. Shared credential ⊥ personal/bilateral identity; historical assessment ⊥ automatic command binding. T16 linked changes; T18 rollout. [ADR-126](../decisions/ADR-126-belief-review-interface.md), [guide](../guides/belief-review-interface.md), [Report 060](../reports/060-belief-v2-interface/README.md).
 
+T14 local selection: bounded agent snapshot → 100 active/64 pending/32 deferred/4 history + overflow probes; 3s SQLite read budget. Preserve six-slot geometry + four-slot signature fallback; legacy unknown/native provisional/current receipt-bound commitment separate. New exploratory off/0; max2, T15 evaluation before enablement. Existing spectral nodes max2; declined/superseded/proposal-only ⊥ default-off bypass. Scope/challenges/dissent + inert quoted framing; heuristic/afferent belief skill priors disabled. Final assembly → optional max10 selection receipts in existing message activation trace; actual chat/dream writers persist, no new ledger/migration. Dream hotspot scoped separately; research framing shared, no new research receipt store. [ADR-127](../decisions/ADR-127-belief-participation-selection.md), [guide](../guides/belief-participation.md), [Report 061](../reports/061-belief-v2-participation/README.md).
+
 ## §V
 
 V1: ∀ promoted origin → source-bound encounter + visible assessed/deferred/failed outcome; no direct proposal bypass.
@@ -126,7 +128,7 @@ T10|x|migration 066 forward source-lineage observations + typed events atomic wi
 T11|x|authenticated bounded family review + scoped relations + teachback reconstruction + attributed operator decision + retained decline counter-trace; CAS/idempotency/source checks + atomic traces + legacy write guards; [Report 058](../reports/058-belief-v2-workshop-review/README.md): isolated full/static/frontend gates closed; UI T13, linked revision T16, rollout T18|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
 T12|x|authenticated bounded encounter/completed-receipt/decision/event reads; UTC append-snapshot cursors + completion ordering; attributed five-part reasoning + T10 source accounting + unknown legacy fields; [Report 059](../reports/059-belief-v2-export/README.md): 1079 full + 85 focused tests, static/strict gates closed; UI T13, production T18|V12,V13,V17,V20,I.api,I.events
 T13|x|belief/workshop UI + traces/creases expose same receipt, five reasoning fields, lineage, status/uncertainty/dissent/family; legacy unknown + failed evaluator display|V8,V10,V13,V24,I.ui
-T14|.|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
+T14|x|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
 T15|.|evaluate held-out advisory relations + candidate retention/review burden; matched participation replay/ablation; freeze budgets/acceptance targets; publish failures + unresolved judgments|V6,V8,V9,V10,V14,V15,V22,I.eval,I.selection
 T16|.|versioned revision/supersession/resurfacing; legacy mapping + rollback/restart rehearsal on isolated copies; no semantic bulk cleanup|V11,V12,V15,V16,V21,I.decision,I.state,I.config
 T17|.|integrated backend/frontend gates; documentation/ADR/schema/API/config updates; end-to-end receipt + source lineage + dissent parity evidence; review release readiness|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
@@ -250,3 +252,10 @@ B43|2026-10-11|T13 final review found agent-bound native receipts linked to defa
 
 B44|2026-10-11|T13 real belief-list component test lacked jsdom matchMedia browser capability|scoped desktop media-query double + real read/decision/reload assertions; harness-only, existing quality protocol sufficient
 B45|2026-10-11|T13 removed two belief-list any casts; lint debt gate detected stale baseline|remove only resolved entry; existing quality ratchet sufficient
+B46|2026-10-11|T14 first static pass detected local import order; review found query placeholder count and missing skill-router asyncio import|fix mechanical errors before runtime oracle; existing quality/concurrency invariants sufficient
+B47|2026-10-11|T14 focused run found invalid test origin enum, seed-dependent first-item assertion, native encounter candidate labelled legacy without a decision row|authored fixture + identity lookup; derive provisional candidacy from recorded encounter, never adoption; V14,V25 existing
+B48|2026-10-11|T14 isolated fixture inherited migration-seeded skill bridge, breaking exact geometry/count assertions|remove seed only inside fresh selection fixture; transport test retains real seeded receipt; harness-only
+B49|2026-10-11|T14 review found second belief-mass skill-prior route in afferent router|exclude selection-receipt items in heuristic + afferent routes; paired ranking oracle; V9 existing
+B50|2026-10-11|T14 review found whole-JSON secret masking misses escaped credentials; decision binding lacked version check|scrub fields before JSON + quoted-secret oracle; bind state/decision versions; V20,V25 existing
+B51|2026-10-11|T14 review found low-confidence declined proposals could enter always-on legacy spectral path|legacy spectral requires node representation and excludes declined/superseded; default-off decline oracle; V14,I.config existing
+B52|2026-10-11|T14 full suite dream daemon doubles lack SQLite repository identity|retain identified nonpersistent adapter path capped100 + explicit unknown meta standing; real SQLite errors never fallback; existing compatibility/concurrency boundaries sufficient

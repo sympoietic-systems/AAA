@@ -5,13 +5,18 @@ import json
 from typing import Any
 
 from backend.core.logging_config import mask_secrets
-from backend.storage.activation import ActivationEntry, ActivationTrace
+from backend.storage.activation import ActivationEntry, ActivationTrace, BeliefSelectionReceipt
 from backend.utils.prompt_builder import format_skills_always_active
 
 
 def build_activation_trace(payload: dict[str, Any], assembled: list[dict[str, Any]]) -> dict[str, Any]:
     """Called at prompt assembly, replacing any input-supplied provenance."""
     entries: list[ActivationEntry] = []
+    selections: list[BeliefSelectionReceipt] = []
+    active = payload.get("attractor_window") or []
+    active_statements = {str(item.get("statement", "")).lower() for item in active if item.get("statement")}
+    active_labels = {str(item.get("label", "")).lower() for item in active if item.get("label")}
+    spectral_seen: set[tuple[str, str]] = set()
     truncated = any(
         payload.get(field) is None for field in ("attractor_window", "loaded_skills", "always_active_skills")
     )
@@ -42,7 +47,26 @@ def build_activation_trace(payload: dict[str, Any], assembled: list[dict[str, An
                     brief = format_skills_always_active(items)
                     injected = injected or f"[{item.get('name')}]:" in brief
             elif kind == "belief":
-                injected = True  # Every selected attractor/spectral entry is formatted.
+                injected = True
+                if origin == "spectral":
+                    statement, label = str(item.get("statement", "")).lower(), str(item.get("label", "")).lower()
+                    spectral_key = (statement.strip(), label.strip())
+                    injected = (
+                        statement not in active_statements
+                        and label not in active_labels
+                        and spectral_key not in spectral_seen
+                    )
+                    spectral_seen.add(spectral_key)
+                if injected and item.get("selection_receipt"):
+                    from backend.modules.belief_selection import safe_selection_data
+
+                    # Use only assembly-owned structured selection; historical XML is never parsed.
+                    raw = json.dumps(safe_selection_data(item["selection_receipt"]))
+                    receipt = BeliefSelectionReceipt.model_validate_json(raw)
+                    if len(selections) < 10:
+                        selections.append(receipt)
+                    else:
+                        truncated = True
             else:
                 injected = origin != "diffractive" or payload.get("diffractive_state", "FLOWING") == "STAGNANT"
             entries.append(
@@ -61,5 +85,6 @@ def build_activation_trace(payload: dict[str, Any], assembled: list[dict[str, An
         coverage="partial" if truncated or any(e.id is None for e in entries) else "complete",
         prompt_sha256=digest,
         entries=entries,
+        selection_receipts=selections,
     )
-    return trace.model_dump()
+    return trace.model_dump(mode="json")

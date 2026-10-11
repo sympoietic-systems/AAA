@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -127,7 +128,8 @@ class SkillActivatorModule(ProcessingModule):
                         sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
                         from backend.utils.prompt_builder import build_attractor_window
 
-                        updated_window = build_attractor_window(
+                        updated_window = await asyncio.to_thread(
+                            build_attractor_window,
                             self._belief_repo,
                             agent_id,
                             sig_16d,
@@ -212,6 +214,8 @@ class SkillActivatorModule(ProcessingModule):
 
     def _match_attractor_window(self, attractor_window, on_demand_skills, candidates):
         for item in attractor_window:
+            if item.get("selection_receipt"):
+                continue  # Belief recall cannot acquire a skill/action capability.
             label = item.get("label", "")
             if not label.startswith("skill:"):
                 continue
