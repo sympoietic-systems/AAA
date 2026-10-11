@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1-T11 complete locally; T12-T18 pending. Date: 2026-10-11.
+Status: T1-T12 complete locally; T13-T18 pending. Date: 2026-10-11.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -72,7 +72,10 @@ I.config: proposed independent origin-intake and exploratory-participation flags
 
 I.eval: source-bound corpus + frozen provisional model reviews or independent gold + held-out partitions + replay artifacts in `docs/reports/` or `benchmarks/runs/`. Unit/regression tests deterministic/offline; live provider evaluation separately declared with exact model/settings/source hashes. Model agreement/Jev self-labels ≠ gold; accuracy/promotion require independent evidence.
 
-T11 local workshop: authenticated server-owned actor/authority/time; CAS statement/state/version + final source/peer checks; migration 067 annotations linked to decision ledger; immutable idempotent commands + atomic traces. Adoption stable ID + existing quantities; decline pending candidate + retained counter-trace; teachback reconstruction gives no eligibility/warrant. Own declared position only; shared credential cannot identify distinct people or bilateral assent. Scoped relations preserve both records; historical family receipts labelled. Managed legacy semantic/destructive writes guarded under write lock. T16 linked revision/merge/supersession/resurfacing; T12 export/T13 UI pending. [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [guide](../guides/belief-workshop-review.md), [Report 058](../reports/058-belief-v2-workshop-review/README.md).
+T11 local workshop: authenticated server-owned actor/authority/time; CAS statement/state/version + final source/peer checks; migration 067 annotations linked to decision ledger; immutable idempotent commands + atomic traces. Adoption stable ID + existing quantities; decline pending candidate + retained counter-trace; teachback reconstruction gives no eligibility/warrant. Own declared position only; shared credential cannot identify distinct people or bilateral assent. Scoped relations preserve both records; historical family receipts labelled. Managed legacy semantic/destructive writes guarded under write lock. T16 linked revision/merge/supersession/resurfacing; T12 export installed locally; T13 UI pending. [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [guide](../guides/belief-workshop-review.md), [Report 058](../reports/058-belief-v2-workshop-review/README.md).
+
+
+T12 local export: reserved authenticated agent-scoped list/native detail routes; half-open normalized UTC, microsecond keysets + signed request/append-snapshot binding; migration 068 completion references + explicit existing-receipt indexing, no payload duplication. Later backdated append/completion excluded; mutable legacy changes 409 restart. Pending detail separate from completed export; undated coverage explicit/incomplete. Five reasoning fields + original receipt IDs/times/attribution + bounded T10 observations; missing legacy reasoning unknown; no mutation/evaluator/adoption authority. Read/projection/size budgets visible 503; effective configured secrets masked without storage rewrite. [ADR-125](../decisions/ADR-125-belief-review-export.md), [guide](../guides/belief-review-export.md), [Report 059](../reports/059-belief-v2-export/README.md).
 
 ## §V
 
@@ -119,7 +122,7 @@ T8|x|adapt document/shared-note/web creators; lineage/context unavailable visibl
 T9|x|advisory Jev use case + explicit runtime flag; validated referents + bounded pending/adopted/deferred nomination; versioned relation adapter; immutable replay/outage/stale handling; [Report 056](../reports/056-belief-v2-advisory-assessment/README.md): focused/full/static/frontend gates closed; calibration T15, rollout T18|V3,V4,V5,V6,V8,V10,I.assessment,I.relations
 T10|x|migration 066 forward source-lineage observations + typed events atomic with encounter; separate internal activity/recorded recurrence; unknown/declared independence ⊥ verified credit; immutable bounded reads + projection; no historical backfill; [Report 057](../reports/057-belief-v2-source-accounting/README.md): focused/full/static/frontend gates closed|V7,V8,V16,V17,I.lineage,I.events
 T11|x|authenticated bounded family review + scoped relations + teachback reconstruction + attributed operator decision + retained decline counter-trace; CAS/idempotency/source checks + atomic traces + legacy write guards; [Report 058](../reports/058-belief-v2-workshop-review/README.md): isolated full/static/frontend gates closed; UI T13, linked revision T16, rollout T18|V4,V9,V10,V11,V12,V24,I.decision,I.state,I.relations
-T12|.|bounded complete-interval event/receipt/decision API reads; UTC cursor/snapshot semantics; agent auth/input bounds; five-part reasoning projection|V12,V13,V17,V20,I.api,I.events
+T12|x|authenticated bounded encounter/completed-receipt/decision/event reads; UTC append-snapshot cursors + completion ordering; attributed five-part reasoning + T10 source accounting + unknown legacy fields; [Report 059](../reports/059-belief-v2-export/README.md): 1079 full + 85 focused tests, static/strict gates closed; UI T13, production T18|V12,V13,V17,V20,I.api,I.events
 T13|.|belief/workshop UI + traces/creases expose same receipt, five reasoning fields, lineage, status/uncertainty/dissent/family; legacy unknown + failed evaluator display|V8,V10,V13,V24,I.ui
 T14|.|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
 T15|.|evaluate held-out advisory relations + candidate retention/review burden; matched participation replay/ablation; freeze budgets/acceptance targets; publish failures + unresolved judgments|V6,V8,V9,V10,V14,V15,V22,I.eval,I.selection
@@ -214,6 +217,12 @@ B31|2026-10-09|PowerShell stdin + Python locale default introduced a CP1252 em-d
 B32|2026-10-11|full suite: upload path-traversal fixture launched real digest subprocess against shared test state; missing perception tables; 1020 passed, 1 failed|fresh app + migrated temporary DB/upload dir, mock digest/daemon work; keep real sanitization/persistence and safe worker-argument assertions; quality isolation oracle, no new belief invariant
 
 B33|2026-10-11|snapshot lint inherited scratch Gitignore and reported zero files; shared-checkout research work changed verification context|Ruff no-respect-gitignore + explicit file-count proof; archive baseline plus owned-file hashes, independent snapshot DB; existing quality/isolation protocol, no new belief invariant
+
+B34|2026-10-11|T12 harness omitted parent basetemp directory; reassessment fixture started before predecessor completion; reasoning comparison union inferred too narrowly; tiny budget fixture never reached SQLite progress callback|create scoped test-run parent; ordered fixture times; explicit projection union; sufficient real WAL scan + aggregate budget oracle; existing V12,V19 and quality isolation, no new invariant
+
+B35|2026-10-11|T12 final review exposed original lineage declarations without T10 recorded observation in export projection|bounded owned immutable source-accounting read + native event/legacy unknown parity assertions; existing V7,V8,V13,V20, no new invariant
+
+B36|2026-10-11|T12 response redaction compared raw configured secrets while authentication trims surrounding whitespace|trim configured secret components at response membrane; padded/unpadded secret projection regression; existing V20, no new invariant
 
 ## References
 

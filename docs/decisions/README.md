@@ -161,6 +161,7 @@ What becomes easier/harder?
 | [119](ADR-119-explicit-belief-origin-intake.md) | Explicit Belief Origin Intake | accepted for local implementation | 2026-10-09 |
 
 | [124](ADR-124-belief-workshop-review.md) | Authenticated Belief Workshop Review | accepted for local implementation | 2026-10-09 |
+| [125](ADR-125-belief-review-export.md) | Snapshot-bound Belief Review Exports | accepted for local implementation | 2026-10-11 |
 
 ## Creating a New ADR
 

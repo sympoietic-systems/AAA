@@ -1,11 +1,12 @@
-"""V2 request contracts; workshop installs scoped decisions, export remains T12."""
+"""Frozen v2 request contracts and bounded export response projections."""
 
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from backend.modules.sensory.belief_context import ClaimContext
 from backend.services.belief_review_contracts import (
+    AgentId,
     FrozenRecord,
     Identifier,
     ParticipantPosition,
@@ -66,3 +67,46 @@ class ReviewExportQuery(FrozenRecord):
         if self.to_time <= self.from_time:
             raise ValueError("Export requires a nonempty half-open interval")
         return self
+
+
+class ExportReasoning(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    encounter: dict[str, Any] | None
+    claim_or_tension: dict[str, Any] | None
+    comparison: dict[str, Any] | list[dict[str, Any]] | None
+    consequence_or_challenge: dict[str, Any] | None
+    decision_or_uncertainty: dict[str, Any] | None
+
+
+class ExportItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    export_id: str
+    id: str
+    timestamp: AwareDatetime | None
+    kind: Literal["encounter", "assessment", "legacy_assessment", "decision", "event", "legacy_event"]
+    record: dict[str, Any]
+    source_accounting: dict[str, Any] | None
+    reasoning: ExportReasoning
+    reasoning_sources: list[dict[str, Any]] = Field(max_length=11)
+    unknown_reasoning_fields: list[str] = Field(max_length=5)
+    comparison_truncated: bool
+    tool_authority: Literal["none"]
+    content_redacted: bool
+    completion_index_origin: Literal["existing_receipt", "forward_completion"] | None = None
+
+
+class ExportPage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    agent_id: AgentId
+    resource: Literal["encounters", "assessments", "decisions", "events"]
+    from_time: AwareDatetime = Field(alias="from")
+    to_time: AwareDatetime = Field(alias="to")
+    limit: int = Field(ge=1, le=50)
+    items: list[ExportItem] = Field(max_length=50)
+    next_cursor: str | None = Field(max_length=2048)
+    snapshot: dict[str, str | int]
+    interval_complete: bool
+    coverage: Literal["stored_dated_rows_at_snapshot"]
+    undated_rows: int = Field(ge=0)
+    assessment_coverage: Literal["completed_receipts_only"]
+    tool_authority: Literal["none"]

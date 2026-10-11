@@ -4,6 +4,7 @@ from backend.api.deps import verify_password
 from backend.api.routes.agent import router as agent_router
 from backend.api.routes.auth import router as auth_router
 from backend.api.routes.background import router as background_router
+from backend.api.routes.belief_export import router as belief_export_router
 from backend.api.routes.belief_workshop import router as belief_workshop_router
 from backend.api.routes.beliefs import router as beliefs_router
 from backend.api.routes.chat import router as chat_router
@@ -35,6 +36,7 @@ router.include_router(auth_router)
 router.include_router(agent_router)
 router.include_router(chat_router)
 router.include_router(belief_workshop_router)
+router.include_router(belief_export_router)
 router.include_router(beliefs_router)
 router.include_router(history_router)
 router.include_router(response_quality_router)

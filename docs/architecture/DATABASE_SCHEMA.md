@@ -871,3 +871,10 @@ As enacted in [ADR-092](../decisions/ADR-092-backend-architecture-decomposition-
 ### Belief workshop command annotations (067)
 
 `belief_workshop_commands`: `agent_id`, `id`, `record_id`, `input_hash`, `decision_id`, `action`, `timestamp`, `receipt_json` (all TEXT NOT NULL). Composite primary key `(agent_id,id)`; composite foreign key `(agent_id,decision_id)` references the existing immutable `belief_review_decisions` ledger. Index `(agent_id,record_id,timestamp,id)`. Update/delete triggers preserve command, teachback and decline history. No historical backfill or duplicate authoritative decision store. Adoption representation and trace persist in the existing command transaction. [ADR-124](../decisions/ADR-124-belief-workshop-review.md).
+
+
+### Belief export ordering metadata (068)
+
+`belief_assessment_completions`: `sequence INTEGER PRIMARY KEY AUTOINCREMENT`, `ledger_id TEXT UNIQUE NOT NULL`, `index_origin TEXT NOT NULL` (`existing_receipt` or `forward_completion`). Immutable update/delete triggers. Existing admission JSON remains authoritative; references avoid a deleting foreign key so legacy deletion remains compatible and invalidates snapshots. Indexes existing complete receipts by original row order; completion triggers add references atomically with admission completion.
+
+`belief_export_meta`: singleton `id=1`, `database_id TEXT NOT NULL`, `legacy_generation INTEGER NOT NULL DEFAULT 0`. Legacy event/completed-receipt update/delete and record ownership/delete triggers increment generation; event/assessment cursors detect changes. Composite agent/time/ID indexes supplement native encounter/decision/event readers. No historical quantity/statement/event/decision backfill. [ADR-125](../decisions/ADR-125-belief-review-export.md).

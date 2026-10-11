@@ -1,6 +1,6 @@
 # Beliefs v2 intake and review contract
 
-Status: T3 frozen shapes, 2026-10-08; T5 persistence implemented locally, verification in [Report 052](../reports/052-belief-v2-persistence/README.md). T11 workshop routes are implemented locally; T12 export and T18 production origin enablement remain future work. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns implementation status. [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md) records the completed T2 repair.
+Status: T3 frozen shapes, 2026-10-08; T5 persistence implemented locally, verification in [Report 052](../reports/052-belief-v2-persistence/README.md). T11 workshop and T12 export routes are implemented locally; T18 production origin enablement remains future work. [BELIEF_SPEC.md](../systems/BELIEF_SPEC.md) owns implementation status. [Report 047](../reports/047-belief-v2-quantities-and-decay/README.md) records the completed T2 repair.
 
 ## Record ownership and authority
 
@@ -91,9 +91,9 @@ Version: `belief-relation-adapter-v1`. Retain raw contract, label, context statu
 
 Contradiction persists as a reviewable split. Pair relation and candidate consequence are separate fields. Statement/scope/time hashes bind active observations; changed inputs make the old observation historical. Prior evaluator verdicts remain provenance outside classifier context.
 
-## Future API boundary
+## Installed API boundary
 
-The routes below are reserved contract paths for T11/T12, not installed endpoints. Existing `/api/beliefs` and workshop routes remain compatible. The `/api/beliefs/v2/agents/{agent_id}` namespace is registered before generic belief-ID routes when implemented.
+The T3 paths below are installed by T11/T12. Existing `/api/beliefs` and workshop routes remain compatible. The `/api/beliefs/v2/agents/{agent_id}` namespace is registered before generic belief-ID routes when implemented.
 
 | Route under `/api/beliefs/v2/agents/{agent_id}` | Method | Contract |
 | --- | --- | --- |
@@ -159,4 +159,11 @@ Document/shared-note/web creators use independent default-off flags and the same
 
 ## T11 authenticated workshop boundary
 
-Agent-scoped family reads and operator commands now enforce server actor/authority/time, expected statement/state/version and final comparison/source checks. Migration 067 links immutable command annotations to the existing decision ledger; trace failure rolls back state and adoption representation. Exact retries return historical receipts. Adoption preserves stable IDs and existing structural quantities without scoring. Decline retains the candidate and a counter-trace through later adoption. Teachback reconstruction grants no eligibility or warrant; shared credentials establish no separate participant identity. Other declared positions require a verified declaration channel. Legacy managed writes are guarded at API and transaction boundaries. Historical relations/assessments are labelled before reuse. T16 owns linked revision/merge/supersession/resurfacing; T12 export and T13 dedicated UI remain pending. [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [guide](../guides/belief-workshop-review.md), [Report 058](../reports/058-belief-v2-workshop-review/README.md).
+Agent-scoped family reads and operator commands now enforce server actor/authority/time, expected statement/state/version and final comparison/source checks. Migration 067 links immutable command annotations to the existing decision ledger; trace failure rolls back state and adoption representation. Exact retries return historical receipts. Adoption preserves stable IDs and existing structural quantities without scoring. Decline retains the candidate and a counter-trace through later adoption. Teachback reconstruction grants no eligibility or warrant; shared credentials establish no separate participant identity. Other declared positions require a verified declaration channel. Legacy managed writes are guarded at API and transaction boundaries. Historical relations/assessments are labelled before reuse. T16 owns linked revision/merge/supersession/resurfacing; T12 export is installed locally; T13 dedicated UI remains pending. [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [guide](../guides/belief-workshop-review.md), [Report 058](../reports/058-belief-v2-workshop-review/README.md).
+
+
+## T12 installed export boundary
+
+Migration 068 adds a completion sequence referencing existing admission receipts and export identity/generation metadata. Existing completed receipts carry `existing_receipt` indexing provenance; forward completion indexes in the existing transaction. No second payload ledger or historical reasoning is created. Snapshot cursors bind agent/resource/UTC interval/limit/database/append watermarks and last normalized timestamp/namespaced ID through a purpose-specific HMAC derived from operator authentication. Later backdated inserts and later completion cannot enter frozen pages. Restart preserves cursors; rotation invalidates them. Legacy edits/deletes/ownership changes cause explicit 409 restart, conservatively across agents.
+
+List exports cover dated, agent-attributable rows at snapshot; assessments cover completed receipts only, with pending native detail reads available. Unknown dates count explicitly and prevent `interval_complete`. Reasoning retains native/legacy distinctions, actual receipt attribution and unknown fields. Decision comparison projection caps ten links with explicit truncation; original bounded link lists remain intact. No evaluator/adoption/mutation ports. Reads: three-second SQLite budget, ten-second aggregate projection checks, 256 KB stored payload cap, 2 MB response cap, visible 503 on exhaustion. Source date normalization may scan histories; production capacity is unverified. See [ADR-125](../decisions/ADR-125-belief-review-export.md), [guide](../guides/belief-review-export.md), [Report 059](../reports/059-belief-v2-export/README.md).
