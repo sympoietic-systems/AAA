@@ -15,6 +15,37 @@ from backend.utils.research_logger import now_utc_str
 logger = logging.getLogger("aaa.research_orchestrator")
 
 
+def _parse_synthesis_json(text: str) -> tuple[object, int]:
+    """Preserve literal invalid escapes; never invent missing JSON structure."""
+    try:
+        return json.loads(text), 0
+    except json.JSONDecodeError as exc:
+        if exc.msg != "Invalid \\escape":
+            raise
+
+    chars: list[str] = []
+    in_string = False
+    repairs = 0
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == '"':
+            in_string = not in_string
+        if in_string and char == "\\" and index + 1 < len(text):
+            following = text[index + 1]
+            if following not in '\\"/bfnrtu':
+                chars.append("\\")
+                repairs += 1
+                if repairs > 2048:
+                    raise ValueError("Research synthesis escape repair limit reached")
+            chars.extend((char, following))
+            index += 2
+            continue
+        chars.append(char)
+        index += 1
+    return json.loads("".join(chars)), repairs
+
+
 async def run_synthesis(
     orch, task_id: str, objective: str, goal: str, all_findings: list[str], sources_count: int, step_id: str = ""
 ) -> str:
@@ -124,7 +155,15 @@ async def run_synthesis(
                 orch._save_llm_response_to_step_data(step_id, resp)
             result = resp.get("json_data") or resp.get("content") or {}
             if isinstance(result, str):
-                result = json.loads(result)
+                result, repairs = _parse_synthesis_json(result)
+                if repairs:
+                    orch._get_state(task_id)["delivery_degraded"] = True
+                    orch._log_meta(
+                        task_id,
+                        "synthesis_json_escape_repaired",
+                        {"invalid_escapes_preserved": repairs},
+                        step_id=step_id or None,
+                    )
             if isinstance(result, dict):
                 report = result.get("report_markdown")
                 if report is not None:

@@ -70,3 +70,8 @@ Digest now projects recognized model-authored objects and scalar text into text 
 ## Pipeline contract review (T82)
 
 The review covers phase output contracts, transition gating, typed retained-state recovery, deadlines, persisted action guards and child research. Validation now precedes completion, invalid synthesis fails visibly, and failed outputs cannot advance or mark documents digested. Replay and prerequisite guards remain intact. Operator behavior is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#phase-validation-and-visible-failures-t82); reproduction and verification evidence belong to local [Report 059](../reports/059-research-pipeline-contract-review/README.md). Repository verification does not replace deployment or research-quality review.
+
+
+## Synthesis JSON escape recovery (T83)
+
+Synthesis now preserves literal invalid JSON escapes such as escaped citation brackets, while leaving valid escapes intact and rejecting broken structure. Repaired reports retain the original response and record partial delivery with a counted metadata event. Operator recovery is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#synthesis-recovery-after-invalid-json-escapes-t83). Live inspection and verification evidence belong to local [Report 065](../reports/065-research-synthesis-json-escapes/README.md).

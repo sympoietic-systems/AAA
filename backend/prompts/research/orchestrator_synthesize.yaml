@@ -17,6 +17,7 @@ system: |
   - Do not invent sources. Use only the [S##] identifiers provided in the Sources Legend.
 
   Return ONLY a JSON object:
+  Escape every literal backslash in report text as \\ in JSON, including Markdown escapes and LaTeX delimiters.
   {
     "report_markdown": "# Title...\n\n## 1. Executive Summary...",
     "confidence": 0.0-1.0,
