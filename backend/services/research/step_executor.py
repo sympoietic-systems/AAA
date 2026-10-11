@@ -10,7 +10,7 @@ from typing import Any, cast
 
 from backend.modules.provider_attempts import AttemptBudgetExceeded, bounded_call
 from backend.services.research import action_scheduler
-from backend.services.research.action_journal import ResearchActionJournal
+from backend.services.research.action_journal import InterruptedResearchActionError, ResearchActionJournal
 from backend.services.research.provider_observation import ProviderObservations, observe_provider_calls
 from backend.services.research.steps.base import ResearchStepRegistry
 from backend.services.research.task_state import StepOutput
@@ -177,9 +177,6 @@ class ResearchStepExecutor:
                     logger.warning("Failed to force-complete stuck task %s: %s", task_id[:8], e)
                 return {"task_id": task_id, "phase": phase, "message": "already complete", "next_phase": "complete"}
 
-            # 1. Reconstruct clean typed StepEnvelope
-            envelope = orchestrator.reconstruct_step_input(task_id, s, phase)
-
             result: dict[str, Any] = {
                 "task_id": task_id,
                 "phase": phase,
@@ -189,21 +186,6 @@ class ResearchStepExecutor:
 
             journal = cast(ResearchActionJournal | None, getattr(orchestrator, "_action_journal", None))
             receipt: ResearchActionReceipt | None = None
-            journal_enabled = bool((s.get("action_journal_policy") or {}).get("enabled", False))
-            if journal_enabled:
-                if journal is None:
-                    raise RuntimeError("Receipt-enabled task requires a durable action journal")
-                # Validate capability before recording or executing any action.
-                ResearchStepRegistry.get_step(phase)
-                if action_scheduler.enabled(s):
-                    from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
-
-                    afferent = await asyncio.to_thread(
-                        ResearchEvidenceRepository(journal.repo._db_path).afferent_snapshot, task_id
-                    )
-                    action_scheduler.admit(phase, s, afferent)
-                receipt = await asyncio.to_thread(journal.begin, task_id, s, phase, envelope.model_dump(mode="json"))
-                result["action_id"] = receipt.action_id
             phase_started = time.perf_counter()
             output_refs: tuple[str, ...] = ()
             action_status: ActionStatus = "failed"
@@ -212,6 +194,25 @@ class ResearchStepExecutor:
             evidence_packets: tuple[EvidencePacket, ...] = ()
 
             try:
+                # 1. Validate retained state and admit the action inside the failure boundary.
+                envelope = orchestrator.reconstruct_step_input(task_id, s, phase)
+                journal_enabled = bool((s.get("action_journal_policy") or {}).get("enabled", False))
+                if journal_enabled:
+                    if journal is None:
+                        raise RuntimeError("Receipt-enabled task requires a durable action journal")
+                    # Validate capability before recording or executing any action.
+                    ResearchStepRegistry.get_step(phase)
+                    if action_scheduler.enabled(s):
+                        from backend.storage.repositories.research.evidence import ResearchEvidenceRepository
+
+                        afferent = await asyncio.to_thread(
+                            ResearchEvidenceRepository(journal.repo._db_path).afferent_snapshot, task_id
+                        )
+                        action_scheduler.admit(phase, s, afferent)
+                    receipt = await asyncio.to_thread(
+                        journal.begin, task_id, s, phase, envelope.model_dump(mode="json")
+                    )
+                    result["action_id"] = receipt.action_id
                 # 2. Retrieve step from ResearchStepRegistry and execute
                 step_processor = ResearchStepRegistry.get_step(phase)
                 logger.info("Executing modular step: %s", phase)
@@ -229,6 +230,8 @@ class ResearchStepExecutor:
                         output = await step_processor.execute(orchestrator, envelope)
                 output_refs = tuple(output.step_ids)
                 evidence_packets = output.evidence_packets
+                if output.status not in {"completed", "partial"}:
+                    raise RuntimeError(output.message or f"Research phase returned {output.status}")
                 action_status = (
                     "complete"
                     if output.status == "completed"
@@ -458,6 +461,11 @@ class ResearchStepExecutor:
                     )
                 raise
             except Exception as e:
+                if receipt is None and isinstance(
+                    e, (InterruptedResearchActionError, action_scheduler.ActionPrerequisiteError)
+                ):
+                    # Admission rejections preserve the existing action and recovery contract.
+                    raise
                 action_status = "failed"
                 logger.exception("Step %s failed for task %s", phase, task_id)
 

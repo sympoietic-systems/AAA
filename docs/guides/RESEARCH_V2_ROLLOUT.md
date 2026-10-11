@@ -39,6 +39,19 @@ When a phase fails before its processor creates a step, the backend now records 
 
 ## Recovery after structured Digest output
 
+See also [phase validation and visible failures](#phase-validation-and-visible-failures-t82) for later phases.
+
 Digest accepts text lists, individual text fields, and recognized objects such as `{"learning": "...", "relevance": "..."}`. It projects the primary text into the pipeline and retains the original analysis in `raw_analysis`. Relevance, impact and connection metadata do not become findings. Unknown objects or numeric items produce an explicit source-analysis failure. Normalization applies to both new model responses and saved analyses; it preserves their existing unreviewed evidence status.
 
 If the task fails with `can only concatenate str (not "dict") to str`, update the checkout and restart the backend, then use **rerun on a Digest row in the latest cycle**. Individual Digest rows may show completed even though combining their results failed. Rerunning Digest recovers the same task, retains parsed source text and reuses valid saved analyses. It renews the execution limits and continues to Consolidate automatically in automatic mode; manual mode waits for the next step. Search and parsing do not need to be repeated for this failure. Merely refreshing or restarting the server does not replay the failed phase.
+
+
+## Phase validation and visible failures (T82)
+
+Planning validates model-authored queries before saving its plan; invalid output uses the existing objective-based plan. Consolidation and reflection validate their text lists and numerical scores before marking their rows complete. Completeness, confidence and fidelity must be finite fractions between zero and one. Numeric score strings can be converted by the typed contract; invalid objects, lists and non-finite scores fail visibly. Source entropy is finite and nonnegative, and can exceed one.
+
+Synthesis requires a nonempty textual report or answer. Invalid JSON, a structured object in the report field, an invalid answer confidence, a missing provider or a provider exception leaves synthesis failed and available for rerun. The backend no longer substitutes a generic completion sentence for an unusable report. Evaluation retains its conservative continue fallback when its model decision or reason is invalid.
+
+A phase returning failed or error stops before findings are merged or the pipeline advances. Saved-state validation failures create a visible failed phase row when a plan exists. Interrupted-action and missing-prerequisite guards retain their existing recovery behavior; validation cannot authorize replay of an interrupted provider action.
+
+After updating main and restarting the backend, rerun the failed phase on the existing research. If a document is still indexing, wait for indexing to finish before retrying document digestion. Malformed saved input must be corrected or regenerated through its preceding phase before retrying. These checks contain delivery errors; they do not establish the accuracy of model-authored claims. Scanned-PDF accuracy and live VPS acceptance remain separate work.

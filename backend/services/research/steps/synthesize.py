@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import math
 import re
 
 from backend.services.research.provider_observation import generate_unified
@@ -88,7 +89,6 @@ async def run_synthesis(
     if prompt_data.get("anti_mastery"):
         user_text = apply_anti_mastery_filter(user_text)
 
-    fallback = f"Research complete. {sources_count} sources analyzed, {len(all_findings)} findings."
     try:
         llm = getattr(orch._state, "llm_provider", None)
         if llm:
@@ -110,7 +110,7 @@ async def run_synthesis(
                 system_prompt=system_text,
                 user_prompt=user_text,
                 expect_json=True,
-                fallback_value={"answer": fallback},
+                fallback_value={},
                 temperature=prompt_data.get("temperature", 0.4),
                 **(
                     {"max_tokens": prompt_data["max_tokens"]}
@@ -124,18 +124,29 @@ async def run_synthesis(
                 orch._save_llm_response_to_step_data(step_id, resp)
             result = resp.get("json_data") or resp.get("content") or {}
             if isinstance(result, str):
-                with contextlib.suppress(Exception):
-                    result = json.loads(result)
+                result = json.loads(result)
             if isinstance(result, dict):
                 report = result.get("report_markdown")
-                if report:
+                if report is not None:
+                    if not isinstance(report, str) or not report.strip():
+                        raise ValueError("Research report_markdown must be text")
                     return report
-                answer = result.get("answer", fallback)
+                answer = result.get("answer")
                 confidence = result.get("confidence", 0)
+                if not isinstance(answer, str) or not answer.strip():
+                    raise ValueError("Research synthesis answer must be nonempty text")
+                if (
+                    isinstance(confidence, bool)
+                    or not isinstance(confidence, (int, float))
+                    or not math.isfinite(confidence)
+                    or not 0 <= confidence <= 1
+                ):
+                    raise ValueError("Research synthesis confidence must be a finite fraction")
                 return f"{answer}\n\n[confidence: {confidence:.0%}, sources: {sources_count}]"
     except Exception as e:
-        logger.warning("Synthesis failed: %s", e)
-    return fallback
+        logger.exception("Synthesis failed: %s", e)
+        raise
+    raise ValueError("Research synthesis did not produce a structured report")
 
 
 class SynthesizeStep(BaseResearchStep):

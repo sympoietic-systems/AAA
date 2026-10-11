@@ -104,9 +104,13 @@ async def run_evaluation(
         if isinstance(result, str):
             result = json.loads(result)
         if isinstance(result, dict):
-            decision = result.get("decision", "continue").lower()
+            decision = result.get("decision", "continue")
             reason = result.get("reason", f"LLM completeness at {completeness:.2f}")
-            return decision == "stop", reason
+            if not isinstance(decision, str) or decision.lower() not in {"stop", "continue"}:
+                raise ValueError("Invalid research evaluation decision")
+            if not isinstance(reason, str):
+                raise ValueError("Invalid research evaluation reason")
+            return decision.lower() == "stop", reason
 
     except Exception as exc:
         logger.warning("LLM evaluate failed, defaulting to continue: %s", exc)
@@ -210,11 +214,6 @@ class EvaluateStep(BaseResearchStep):
             step_id=step_id,
         )
 
-        if orch.step_repo:
-            orch.step_repo.update(
-                step_id, status="completed", result_summary=f"{'STOP' if should_stop else 'CONTINUE'}: {stop_reason}"
-            )
-
         out_payload = EvaluatePayload(
             stagnation_counter=payload.stagnation_counter,
             sources_analyzed=payload.sources_analyzed,
@@ -227,15 +226,16 @@ class EvaluateStep(BaseResearchStep):
         refl_flags = payload.reflection.get("signal_flags", [])
         if isinstance(refl_flags, list):
             for flag in refl_flags:
-                signal_flags[flag] = True
+                if isinstance(flag, str):
+                    signal_flags[flag] = True
         elif isinstance(refl_flags, dict):
             for flag, val in refl_flags.items():
-                if val:
+                if val and isinstance(flag, str):
                     signal_flags[flag] = True
 
         rationale = f"Evaluated research progress at depth {current_depth}: {'Synthesizing final findings' if should_stop else 'Proceeding to next depth level'} because: {stop_reason}."
 
-        return StepOutput(
+        output = StepOutput(
             status="completed",
             message=f"eval decision: {'stop' if should_stop else 'continue'} - {stop_reason}",
             payload=out_payload,
@@ -243,3 +243,9 @@ class EvaluateStep(BaseResearchStep):
             step_ids=[step_id],
             transition_rationale=rationale,
         )
+
+        if orch.step_repo:
+            orch.step_repo.update(
+                step_id, status="completed", result_summary=f"{'STOP' if should_stop else 'CONTINUE'}: {stop_reason}"
+            )
+        return output

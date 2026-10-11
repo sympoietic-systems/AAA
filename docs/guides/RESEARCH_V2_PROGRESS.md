@@ -65,3 +65,8 @@ Optional belief processing now has a short bound and records partial delivery wh
 ## Structured Digest results and retained-analysis recovery (T81)
 
 Digest now projects recognized model-authored objects and scalar text into text lists before evidence recording, storage and aggregation. Original structured metadata remains retained; unsupported shapes fail explicitly. Saved analyses use the same boundary during recovery. Group completion follows successful construction of the combined payload. Operator recovery is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#recovery-after-structured-digest-output); production receipts and replay results remain in local [Report 050](../reports/050-research-digestion-provider-failure/README.md).
+
+
+## Pipeline contract review (T82)
+
+The review covers phase output contracts, transition gating, typed retained-state recovery, deadlines, persisted action guards and child research. Validation now precedes completion, invalid synthesis fails visibly, and failed outputs cannot advance or mark documents digested. Replay and prerequisite guards remain intact. Operator behavior is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#phase-validation-and-visible-failures-t82); reproduction and verification evidence belong to local [Report 059](../reports/059-research-pipeline-contract-review/README.md). Repository verification does not replace deployment or research-quality review.

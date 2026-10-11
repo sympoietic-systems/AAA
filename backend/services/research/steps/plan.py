@@ -297,6 +297,8 @@ async def run_plan_generation(
             if isinstance(result, str):
                 result = json.loads(result)
             if isinstance(result, dict) and result.get("search_queries"):
+                validated_plan = PlanPayload.model_validate(result)
+                result = {**result, **validated_plan.model_dump(exclude={"previous_context", "inject_file_id"})}
                 config_orchestrator = orch._state.config.get("research_orchestrator") or {}
                 max_queries = query_limit(config_orchestrator, orch._get_state(task_id))
                 if len(result["search_queries"]) > max_queries:

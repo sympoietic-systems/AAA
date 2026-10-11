@@ -65,7 +65,7 @@ class DigestPayload(BaseModel):
 
 class ConsolidatePayload(BaseModel):
     last_reflection: dict[str, Any] = Field(default_factory=dict)
-    completeness_score: float = 0.0
+    completeness_score: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
     key_insights: list[str] = Field(default_factory=list)
     remaining_gaps: list[str] = Field(default_factory=list)
     next_queries: list[str] = Field(default_factory=list)
@@ -79,12 +79,12 @@ class ReflectionPayload(BaseModel):
     reflection_notes: str = ""
     detected_biases: list[str] = Field(default_factory=list)
     knowledge_gaps: list[str] = Field(default_factory=list)
-    glitch_fidelity: float = 1.0
-    contradiction_density: float = 0.0
-    source_entropy: float = 0.0
+    glitch_fidelity: float = Field(default=1.0, ge=0, le=1, allow_inf_nan=False)
+    contradiction_density: float = Field(default=0.0, ge=0, le=1, allow_inf_nan=False)
+    source_entropy: float = Field(default=0.0, ge=0, allow_inf_nan=False)
     signal_flags: list[str] = Field(default_factory=list)
     refined_queries: list[str] = Field(default_factory=list)
-    revised_confidence: float = 0.5
+    revised_confidence: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
     monologue_trace: list[dict[str, Any]] = Field(default_factory=list)
     critique_log: list[dict[str, Any]] = Field(default_factory=list)
     diffractive_audit: str = "CEREMONIAL"

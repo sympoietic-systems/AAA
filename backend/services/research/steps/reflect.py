@@ -517,26 +517,6 @@ class ReflectionStep(BaseResearchStep):
         entropy = reflection.get("source_entropy", 0.0)
         confidence = reflection.get("revised_confidence", 0.5)
 
-        if orch.step_repo:
-            orch.step_repo.update(
-                step_id,
-                status="completed",
-                result_summary=f"Fidelity: {fidelity:.2f} | Contradictions: {density:.2f} | Entropy: {entropy:.2f}",
-            )
-
-        orch._log_meta(
-            task_id,
-            "orchestrator_reflection",
-            {
-                "depth": current_depth,
-                "glitch_fidelity": fidelity,
-                "contradiction_density": density,
-                "source_entropy": entropy,
-                "revised_confidence": confidence,
-            },
-            step_id=step_id,
-        )
-
         out_payload = ReflectionPayload(
             reflection_notes=reflection.get("reflection_notes", ""),
             detected_biases=reflection.get("detected_biases", []),
@@ -551,6 +531,24 @@ class ReflectionStep(BaseResearchStep):
             critique_log=reflection.get("critique_log", []),
             diffractive_audit=reflection.get("diffractive_audit", "CEREMONIAL"),
             diffractive_audit_description=reflection.get("diffractive_audit_description", ""),
+        )
+
+        fidelity = out_payload.glitch_fidelity
+        density = out_payload.contradiction_density
+        entropy = out_payload.source_entropy
+        confidence = out_payload.revised_confidence
+
+        orch._log_meta(
+            task_id,
+            "orchestrator_reflection",
+            {
+                "depth": current_depth,
+                "glitch_fidelity": fidelity,
+                "contradiction_density": density,
+                "source_entropy": entropy,
+                "revised_confidence": confidence,
+            },
+            step_id=step_id,
         )
 
         # Merge refined queries and signal flags into state for subsequent steps
@@ -590,7 +588,7 @@ class ReflectionStep(BaseResearchStep):
             f"Generated {len(out_payload.refined_queries)} refined critical query probes."
         )
 
-        return StepOutput(
+        output = StepOutput(
             status="completed",
             message=f"Deep reflection completed (Fidelity: {fidelity:.2f})",
             payload=out_payload,
@@ -601,3 +599,11 @@ class ReflectionStep(BaseResearchStep):
             if (s.get("action_journal_policy") or {}).get("subresearch_policy", "off") in {"propose", "bounded_auto"}
             else None,
         )
+
+        if orch.step_repo:
+            orch.step_repo.update(
+                step_id,
+                status="completed",
+                result_summary=f"Fidelity: {fidelity:.2f} | Contradictions: {density:.2f} | Entropy: {entropy:.2f}",
+            )
+        return output

@@ -201,6 +201,11 @@ async def analyze_source_content(
         result = resp.get("json_data") or resp.get("content") or {}
         if isinstance(result, str):
             result = json.loads(result)
+        normalized = (
+            normalize_analysis({**result, "analysis_status": "complete"})
+            if isinstance(result, dict)
+            else failed_analysis("invalid_structured_response")
+        )
         # Log response
         orch._log_llm_response(
             task_id,
@@ -208,15 +213,11 @@ async def analyze_source_content(
             resp,
             extra={
                 "source_url": url,
-                "learnings_count": len(result.get("learnings", [])) if isinstance(result, dict) else 0,
+                "learnings_count": len(normalized["learnings"]),
             },
             step_id=step_id or None,
         )
-        return (
-            normalize_analysis({**result, "analysis_status": "complete"})
-            if isinstance(result, dict)
-            else failed_analysis("invalid_structured_response")
-        )
+        return normalized
     except Exception as e:
         logger.exception("Source analysis failed for task %s", task_id)
         orch._log_meta(

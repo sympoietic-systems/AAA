@@ -422,10 +422,18 @@ class ConsolidateStep(BaseResearchStep):
             step_id=step_id,
         )
 
-        completeness = reflection.get("completeness_score", 0.0)
+        out_payload = ConsolidatePayload(
+            last_reflection=reflection,
+            completeness_score=reflection.get("completeness_score", 0.0),
+            key_insights=reflection.get("key_insights", []),
+            remaining_gaps=reflection.get("remaining_gaps", []),
+            next_queries=reflection.get("next_queries", []),
+            next_direct_urls=reflection.get("next_direct_urls", []),
+        )
 
-        if orch.step_repo:
-            orch.step_repo.update(step_id, status="completed", result_summary=f"completeness: {completeness:.2f}")
+        reflection = {**reflection, **out_payload.model_dump(exclude={"last_reflection"})}
+        out_payload.last_reflection = reflection
+        completeness = out_payload.completeness_score
 
         orch._log_meta(
             task_id,
@@ -451,21 +459,16 @@ class ConsolidateStep(BaseResearchStep):
                 confidence=completeness,
             )
 
-        out_payload = ConsolidatePayload(
-            last_reflection=reflection,
-            completeness_score=completeness,
-            key_insights=reflection.get("key_insights", []),
-            remaining_gaps=reflection.get("remaining_gaps", []),
-            next_queries=reflection.get("next_queries", []),
-            next_direct_urls=reflection.get("next_direct_urls", []),
-        )
-
         rationale = f"Evaluated research completeness ({completeness * 100:.1f}%). Identified {len(reflection.get('remaining_gaps', []))} remaining gaps and planned {len(reflection.get('next_queries', []))} follow-up queries."
 
-        return StepOutput(
+        output = StepOutput(
             status="completed",
             message=f"completeness score: {completeness:.2f}",
             payload=out_payload,
             step_ids=[step_id],
             transition_rationale=rationale,
         )
+
+        if orch.step_repo:
+            orch.step_repo.update(step_id, status="completed", result_summary=f"completeness: {completeness:.2f}")
+        return output
