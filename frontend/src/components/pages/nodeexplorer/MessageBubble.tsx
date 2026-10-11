@@ -31,6 +31,7 @@ export const MessageBubble = memo(function MessageBubble({
   onUpdateNote,
   onBranch,
   onRegenerate,
+  regenerationDisabled = false,
   onDeleteMessage,
   siblingIds = []
 }: {
@@ -42,6 +43,7 @@ export const MessageBubble = memo(function MessageBubble({
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onBranch?: (messageId: number) => void
   onRegenerate?: (userMsgId?: number) => void
+  regenerationDisabled?: boolean
   onDeleteMessage?: (messageId: number) => void
   siblingIds?: number[]
 }) {
@@ -494,8 +496,9 @@ export const MessageBubble = memo(function MessageBubble({
           {isHuman && msg.id && onRegenerate && (
             <button
               onClick={() => onRegenerate(msg.id)}
-              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap"
-              title="Regenerate response"
+              disabled={regenerationDisabled}
+              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              title={regenerationDisabled ? "Generation in progress" : "Regenerate response"}
             >
               #regen
             </button>
@@ -503,8 +506,9 @@ export const MessageBubble = memo(function MessageBubble({
           {!isHuman && msg.parent_message_id && onRegenerate && (
             <button
               onClick={() => onRegenerate(msg.parent_message_id!)}
-              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap"
-              title="Regenerate another response"
+              disabled={regenerationDisabled}
+              className="text-[#555] hover:text-[#4ade80] transition-colors font-mono text-[9px] cursor-pointer whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              title={regenerationDisabled ? "Generation in progress" : "Regenerate another response"}
             >
               #regen
             </button>
@@ -680,6 +684,7 @@ export const MessageBubble = memo(function MessageBubble({
   )
 }, (prevProps, nextProps) => {
   return prevProps.msg.id === nextProps.msg.id &&
+         prevProps.msg.parent_message_id === nextProps.msg.parent_message_id &&
          prevProps.msg.speaker === nextProps.msg.speaker &&
          prevProps.msg.content === nextProps.msg.content &&
          prevProps.msg.thinking === nextProps.msg.thinking &&
@@ -696,6 +701,8 @@ export const MessageBubble = memo(function MessageBubble({
          areNumberArraysEqual(prevProps.previousSignature, nextProps.previousSignature) &&
          areNumberArraysEqual(prevProps.siblingIds, nextProps.siblingIds) &&
          areNotesEqual(prevProps.notes, nextProps.notes) &&
-         prevProps.onDeleteMessage === nextProps.onDeleteMessage;
+         prevProps.onDeleteMessage === nextProps.onDeleteMessage &&
+         prevProps.onRegenerate === nextProps.onRegenerate &&
+         prevProps.regenerationDisabled === nextProps.regenerationDisabled;
 })
 

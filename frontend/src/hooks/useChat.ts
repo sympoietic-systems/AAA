@@ -26,6 +26,7 @@ export function useChat(conversationId: string) {
   const [treeNodes, setTreeNodes] = useState<ConversationTreeNode[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [generatingUserMessageIds, setGeneratingUserMessageIds] = useState<Set<number>>(new Set())
+  const regenerationInFlightRef = useRef(false)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
 
@@ -432,7 +433,7 @@ export function useChat(conversationId: string) {
 
   const regenerate = useCallback(async (userMsgId?: number) => {
     const owner = lifecycle.current
-    if (loading) return
+    if (loading || regenerationInFlightRef.current) return
     setError(null)
     const targetConvId = conversationId
 
@@ -446,6 +447,7 @@ export function useChat(conversationId: string) {
       targetMsgId = lastUserMsg.id
     }
 
+    regenerationInFlightRef.current = true
     setGeneratingUserMessageIds((prev) => new Set([...prev, targetMsgId!]))
 
     try {
@@ -502,6 +504,7 @@ export function useChat(conversationId: string) {
       })
       return null
     } finally {
+      regenerationInFlightRef.current = false
       if (owner === lifecycle.current) setGeneratingUserMessageIds((prev) => {
         const next = new Set(prev)
         if (targetMsgId) {

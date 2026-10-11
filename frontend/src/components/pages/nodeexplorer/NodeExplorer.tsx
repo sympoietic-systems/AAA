@@ -322,6 +322,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   onDeleteNote,
   onUpdateNote,
   onRegenerate,
+  regenerationDisabled,
   siblingIds = [],
   onBranch,
   onDeleteMessage,
@@ -333,6 +334,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
   onDeleteNote?: (noteId: string) => void
   onUpdateNote?: (noteId: string, comment?: string, visibility?: "personal" | "shared" | "agent") => void
   onRegenerate?: (userMsgId?: number) => void
+  regenerationDisabled: boolean
   siblingIds?: number[]
   onBranch?: (messageId: number) => void
   onDeleteMessage?: (messageId: number) => void
@@ -363,6 +365,7 @@ const SelectedNodeCard = memo(function SelectedNodeCard({
         onUpdateNote={onUpdateNote}
         onBranch={onBranch}
         onRegenerate={onRegenerate}
+        regenerationDisabled={regenerationDisabled}
         onDeleteMessage={onDeleteMessage}
         siblingIds={siblingIds}
       />
@@ -511,6 +514,7 @@ export const NodeExplorer = memo(function NodeExplorer({
                 onDeleteNote={onDeleteNote}
                 onUpdateNote={onUpdateNote}
                 onRegenerate={onRegenerate}
+                regenerationDisabled={loading}
                 onDeleteMessage={onDeleteMessage}
                 siblingIds={selectedNodeSiblings}
                 onBranch={onNavigateToMessage}
@@ -541,7 +545,7 @@ export const NodeExplorer = memo(function NodeExplorer({
         <div className="mx-4 mb-2 flex items-center gap-2 px-4 py-2 text-xs text-[#ef4444]">
           <span className="flex-1 truncate uppercase font-mono">{error}</span>
           {onRegenerate && (
-            <TerminalButton onClick={() => onRegenerate()} intent="save">retry</TerminalButton>
+            <TerminalButton onClick={() => onRegenerate()} intent="save" disabled={loading}>retry</TerminalButton>
           )}
           <TerminalButton onClick={onClearError} intent="delete">dismiss</TerminalButton>
         </div>
