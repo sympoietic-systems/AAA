@@ -6,6 +6,7 @@ from typing import cast
 
 from backend.services.belief_common import BeliefResult, BeliefUseCase
 from backend.services.belief_ports import BeliefQueryRepository
+from backend.services.belief_recurrence import recurrence_projection
 from backend.services.belief_serializer import (
     _parse_event_rationale,
     serialize_belief_event,
@@ -76,6 +77,7 @@ class BeliefQueryUseCases(BeliefUseCase):
             elif p.status == "rejected":
                 ghosts_list.append(proposal_data)
 
+        proto_beliefs_list = await recurrence_projection(proto_beliefs_list, belief_repo, agent_id)
         somatic_state = None
         attractor_window = []
         spectral_margin = []

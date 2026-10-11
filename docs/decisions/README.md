@@ -173,3 +173,5 @@ What becomes easier/harder?
 3. Set status to `proposed` while under discussion
 4. Change to `accepted` once decided
 5. If a decision is later reversed, mark it `superseded` and link to its replacement
+
+- [ADR-128: Incomplete belief recurrence display](ADR-128-incomplete-belief-recurrence-display.md) — Branch-bound read-only grouping preserves every record and adds no warrant.

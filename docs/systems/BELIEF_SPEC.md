@@ -81,6 +81,8 @@ T13 local UI: original native T12 receipt identity/time + five recorded fields a
 
 T14 local selection: bounded agent snapshot → 100 active/64 pending/32 deferred/4 history + overflow probes; 3s SQLite read budget. Preserve six-slot geometry + four-slot signature fallback; legacy unknown/native provisional/current receipt-bound commitment separate. New exploratory off/0; max2, T15 evaluation before enablement. Existing spectral nodes max2; declined/superseded/proposal-only ⊥ default-off bypass. Scope/challenges/dissent + inert quoted framing; heuristic/afferent belief skill priors disabled. Final assembly → optional max10 selection receipts in existing message activation trace; actual chat/dream writers persist, no new ledger/migration. Dream hotspot scoped separately; research framing shared, no new research receipt store. [ADR-127](../decisions/ADR-127-belief-participation-selection.md), [guide](../guides/belief-participation.md), [Report 061](../reports/061-belief-v2-participation/README.md).
 
+I.recurrence: additive read-only proposal recurrence_group; ≤50 eligible entries +128 ancestry steps; same agent/conversation, exact statement + absent scope/time/quote/consequence; current awaiting_context and immutable receipt/source binding; all member sources mutually ancestral. Group count=visible queue entries; no semantic equivalence/support/merge. Unknown/cyclic/truncated ancestry → singleton; siblings/enrichment/reviewed records separate. All original records/receipts retained.
+
 ## §V
 
 V1: ∀ promoted origin → source-bound encounter + visible assessed/deferred/failed outcome; no direct proposal bypass.
@@ -110,6 +112,8 @@ V24: adoption declined → attributable counter-trace; exploratory dissent remai
 V25: reviewed standing ! attributable adoption receipt bound to agent, record, current statement hash + scope; legacy lifecycle/skill application ⊥ semantic adoption; supersession retains adoption provenance; no belief standing grants tool authority.
 V26: automated corpus review uses two blind distinct returned model families; no historical status/prior verdict/peer answer in review metadata; source text inert; finite call/token/time/worker bounds; source/prompt bindings rechecked on freeze; missing/one-sided context → insufficient_context; disagreement/failure retained; checkpoint before call; no automatic replay of completed/failed/unknown outcomes; rate limit or three failed/uncertain attempts opens reviewer circuit, restored on resume/reuse; replacement reviewer explicit, exact peer receipts reused without replay; frozen model review provisional, non-gold, no adoption/promotion authority.
 
+V27: exact incomplete recurrence display groups only verified mutually ancestral same-agent/conversation sources; reviewed/enriched/stale records excluded; bounded scan explicit; every member/detail/deep link preserved; count adds zero warrant/mass/authority. Tests test_v27_branch_context_and_readonly_grouping + RecurrenceList.test.tsx.
+
 ## §T
 
 `id` local to `BELIEF_SPEC.md`; references to root tasks qualified. Status: `.` todo; `~` partial; `x` done. Each task owns cited surfaces; dependencies below.
@@ -130,6 +134,7 @@ T12|x|authenticated bounded encounter/completed-receipt/decision/event reads; UT
 T13|x|belief/workshop UI + traces/creases expose same receipt, five reasoning fields, lineage, status/uncertainty/dissent/family; legacy unknown + failed evaluator display|V8,V10,V13,V24,I.ui
 T14|x|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
 T15|~|evaluate held-out advisory relations + candidate retention/review burden; matched participation replay/ablation; freeze budgets/acceptance targets; publish failures + unresolved judgments; [Report 062](../reports/062-belief-v2-evaluation/README.md): source-bound provisional audit + synthetic exploratory 0/1/2 replay local; [Report 063](../reports/063-belief-conversation-replay/README.md): five saved-turn counterfactuals + generator/protocol replication, 28 generation attempts/25 complete, 5 provisional source-bound judgment projections; [Report 064](../reports/064-belief-intake-replay/README.md): real isolated intake +6 live Jev calls; unscoped recurrence backlog and all-confidence abstention retained; independent gold/semantic targets/dream/usefulness unresolved, promotion blocked|V6,V8,V9,V10,V14,V15,V22,I.eval,I.selection
+T15a|x|read-only exact incomplete recurrence queue grouping + expandable original entries; bounded source ancestry; [Report 065](../reports/065-belief-recurrence/README.md): 3 stored proposals →1 expandable verified branch group; 1123 full tests + browser keyboard/detail checks; ADR-128; no admission/threshold change|V2,V3,V13,V20,V22,V27,I.recurrence,I.ui
 T16|.|versioned revision/supersession/resurfacing; legacy mapping + rollback/restart rehearsal on isolated copies; no semantic bulk cleanup|V11,V12,V15,V16,V21,I.decision,I.state,I.config
 T17|.|integrated backend/frontend gates; documentation/ADR/schema/API/config updates; end-to-end receipt + source lineage + dissent parity evidence; review release readiness|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
 T18|.|authorized staged rollout only; pin server build/migrations/config, complete-window telemetry, origin-level outcomes + rollback criteria; verify real receipts; report limits|V1,V19,V21,V22,V23,I.config,I.eval
@@ -269,3 +274,7 @@ B58|2026-10-11|live replay: three bounded generation truncations and malformed/u
 
 B59|2026-10-11|intake replay harness relied on init_db migration env and initially misnamed encounter table|explicit isolated migrations + absolute run path + real repository regression; V20 existing
 B60|2026-10-11|unscoped exact recurrence produces new pending proposal; six live Jev contrasts all abstain at existing confidence floor|retain backlog + raw uncertain choices; scoped V2 unchanged; no threshold tuning/adoption; T15 acceptance unresolved, V22 existing
+
+B61|2026-10-12|recurrence draft read oldest receipt from newest-first native history|latest index0 + enrichment regression; V27 existing
+B62|2026-10-12|recurrence component exported helper and failed React refresh lint contract; import ordering failed Python gate|separate pure helper module + sorted imports; existing quality protocol sufficient
+B63|2026-10-12|first full verification workshop concurrent same-key test returned4/6 results; grouping paths absent from that test; cause unconfirmed|retain failed log; isolated2 + final1123 pass; no workshop rewrite or new invariant; existing V11 concurrency contract

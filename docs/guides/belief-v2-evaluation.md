@@ -48,3 +48,12 @@ uv run python -m benchmarks.suites.belief_intake_replay --source benchmarks/runs
 ```
 
 Add `--recorded-only` to skip authored live contrasts. The output must be new and inside benchmarks/runs; this is a source reconstruction, not a production backup. Contract and pre-call checkpoints persist before work. No resume/retry is provided: inspect failed/uncertain receipts before authorizing a new live condition. The defaults bound provider calls to seven with one worker and preserve current assessment policy. A blank TypeSafe key uses the configured LLM key, matching the documented configuration fallback. Source seals are checked before ingestion.
+
+
+## Incomplete recurrence review display
+
+[ADR-128](../decisions/ADR-128-incomplete-belief-recurrence-display.md) and [Report 065](../reports/065-belief-recurrence/README.md) add read-only grouping to the candidate queue. Exact repeated text with absent scope, time, evidence quote and consequence can share one expandable entry when the same agent/conversation and every member's ancestor relationship are verified. Sibling branches, enriched context, changed sources and reviewed records remain separate.
+
+Counts describe visible queue entries. Each underlying proposal, source, assessment and detail remains available. Occurrences add no independent support, mass or confidence. The API preserves its proposal arrays and adds optional recurrence_group metadata. The reader considers at most 50 eligible entries and 128 ancestry steps; incomplete/cyclic ancestry leaves entries separate. Group metadata exposes scan truncation and unavailable ancestry. A deep-linked member opens its group, and keyboard controls expand/select the original entries. No schema migration or rollout flag is introduced; this behavior takes effect only when the new build is deployed.
+
+This addresses queue clutter. It does not reduce stored proposal counts, perform semantic merging, tune Jev or close T15 semantic acceptance.

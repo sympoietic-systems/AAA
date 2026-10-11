@@ -8,6 +8,7 @@ from typing import Any, cast
 from backend.modules.llm_protocol import BaseLLMProvider
 from backend.services.belief_common import BeliefResult, BeliefUseCase, _score_statement_16d
 from backend.services.belief_ports import BeliefProposalRepository
+from backend.services.belief_recurrence import recurrence_projection
 from backend.services.belief_serializer import serialize_proposal
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class BeliefProposalUseCases(BeliefUseCase):
         if not belief_repo:
             return []
         proposals = belief_repo.list_proposals(agent_id)
-        return [serialize_proposal(p) for p in proposals]
+        return await recurrence_projection([serialize_proposal(p) for p in proposals], belief_repo, agent_id)
 
     async def get_proposal(self, proposal_id: str) -> BeliefResult | None:
         state = self._state

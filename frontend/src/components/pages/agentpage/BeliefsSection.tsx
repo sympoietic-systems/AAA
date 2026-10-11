@@ -6,6 +6,8 @@ import { BeliefDetail } from "./beliefs/BeliefDetail"
 import { getCategoryColor, getBeliefStageColor, getBeliefStageLabel } from "./shared/helpers"
 import { CollapsibleSection } from "./shared/CollapsibleSection"
 import { RefusalsSection } from "./RefusalsSection"
+import { RecurrenceList } from "./beliefs/RecurrenceList"
+import { recurrenceEntries } from "../../../utils/beliefRecurrence"
 
 /* ── Compact Node List Item ── */
 const NodeListItem = memo(function NodeListItem({
@@ -115,6 +117,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const candidates = (rawProtos || []).filter(b => b.lifecycle_stage === "candidate")
   const proto_beliefs = (rawProtos || []).filter(b => b.lifecycle_stage !== "candidate")
   const ghosts = rawGhosts || []
+  const candidateEntries = recurrenceEntries(candidates)
 
   const sortFunc = (a: BeliefNodeInfo, b: BeliefNodeInfo) => {
     if (sortBy === "mass") {
@@ -240,8 +243,9 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
             className="flex-1 space-y-0.5 overflow-y-auto pr-1 select-none"
           >
             {candidates.length > 0 && (
-              <CollapsibleSection label="Candidates awaiting review" count={candidates.length} icon="◇" iconColor="#bbb">
-                {candidates.map(b => <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge="needs review" stageBadgeColor="#bbb" />)}
+              <CollapsibleSection label="Candidates awaiting review" count={candidateEntries.length} icon="◇" iconColor="#bbb">
+                <RecurrenceList entries={candidateEntries} selectedId={selectedId}
+                  renderItem={b => <NodeListItem key={b.id} b={b} isSelected={selectedId === b.id} stageBadge="needs review" stageBadgeColor="#bbb" />} />
               </CollapsibleSection>
             )}
             {sortedProtos.length > 0 && (
