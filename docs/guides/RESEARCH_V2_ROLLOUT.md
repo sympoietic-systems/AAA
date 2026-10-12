@@ -73,8 +73,13 @@ An empty response with a provider error now fails with an execution-boundary or 
 
 ## Synthesis timeout and stale-step recovery (T85)
 
-The normal provider-attempt limit remains 60 seconds. Synthesis gets a separate 300-second attempt limit by default, configurable with `AAA_RESEARCH_SYNTHESIS_TIMEOUT_SECONDS` up to 300 seconds. The configured HTTP request timeout and the frozen research execution deadline still cap the attempt. An older task keeps its frozen 60-second policy; explicitly rerun Synthesize to create a recovery revision with the current limit.
+Synthesis has a 300-second attempt limit by default, configurable with `AAA_RESEARCH_SYNTHESIS_TIMEOUT_SECONDS` up to 300 seconds. Other provider attempts now also default to 300 seconds, configurable with `AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS`. The configured HTTP request timeout and the frozen research execution deadline still cap each attempt. Existing tasks keep their frozen policy; explicitly rerun the affected step to create a recovery revision with the current limits.
 
 When several persisted rows share one logical query group, recovery now reuses the exact step selected in the UI. Reusing that failed row clears its old failure summary and completion timestamp before execution, so stale error text does not survive a new attempt. Successful findings remain available to synthesis; Search and Digest are not repeated. A running phase lock is process-local and protects live work; a stale database label after process restart does not itself mean a worker is active. Persisted unfinished-action guards still prevent unsafe replay.
 
-If rerun reports that a phase is already running, inspect the active action and wait for it to finish before retrying. Three prior synthesis requests timed out at the general 60-second attempt boundary; this confirmed the attempt cap as the cause of that live failure. The code change must be pulled and the backend restarted before it affects a server.
+If rerun reports that a phase is already running, inspect the active action and wait for it to finish before retrying. Three prior synthesis requests timed out at the 60-second attempt boundary; this confirmed the attempt cap as the cause of that live failure. The code change must be pulled and the backend restarted before it affects a server.
+
+
+## Longer provider attempts (T86)
+
+All provider attempts now have a 300-second default, with a maximum of 300 seconds. Set `AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS` to choose a lower value or retain the default. Synthesis retains its separate override. Provider HTTP timeout and the remaining research deadline may shorten the allowed attempt; neither setting can extend the frozen task deadline. Existing tasks continue using their saved attempt policy until explicitly rerun or restarted as a new task.

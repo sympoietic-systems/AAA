@@ -170,6 +170,13 @@ ENV_OVERRIDES: list[EnvOverride] = [
         sub_key="task_timeout_seconds",
     ),
     EnvOverride(
+        "AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS",
+        "research_orchestrator",
+        "provider_limits",
+        _parse_float,
+        sub_key="attempt_timeout_seconds",
+    ),
+    EnvOverride(
         "AAA_RESEARCH_MAX_ATTEMPTS", "research_orchestrator", "provider_limits", _parse_int, sub_key="max_task_attempts"
     ),
     EnvOverride(

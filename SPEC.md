@@ -206,6 +206,7 @@ V135: research outputs validate before completion; scores finite fractions; inva
 V136: synthesis invalid JSON escapes -> bounded linear literal-backslash preservation + strict final parse; valid escapes unchanged; broken/truncated structure & malformed Unicode fail; raw response retained; repaired delivery partial + counted meta event
 V137: synthesis pool -> explicit configured primary model, no sticky/fallback model on main failure; direct providers unchanged; empty provider error -> visible execution-boundary/provider failure, raw wrapper retained, no fake answer-shape error
 V138: explicit recovery targets the selected persisted step when logical groups duplicate; reused failed step clears prior result_summary/completed_at; synthesis attempt budget defaults300s (max300) separate from general60s; request timeout + frozen parent deadline remain upper bounds; legacy frozen revisions retain60s until explicit recovery/new task
+V139: provider attempt timeout defaults300s (max300), configurable via AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS; effective attempt ≤ configured attempt, provider HTTP timeout, remaining frozen task deadline; old frozen policies unchanged until explicit recovery/new task
 
 ## §T
 
@@ -298,6 +299,7 @@ T82|x|review research phase contracts + transitions/recovery; fix false completi
 T83|x|recover invalid Markdown/LaTeX escapes in synthesis; retain raw response + observable partial delivery; prompt guidance + regression/gates + recovery docs|V136,V135,V110,V30,I.api
 T84|x|pin research synthesis to configured main model; preserve provider-boundary reason on empty failure; actual-pool regressions + gates + operator docs|V137,V136,V135,V30,I.api
 T85|x|repair stale synthesis recovery target/old failure state; separate bounded synthesis attempt timeout from general attempts; tests + backend/static gates + operator docs|V138,V137,V135,V30,I.api
+T86|x|raise general provider attempt default to300s; add env override; preserve request/task deadline caps + old frozen policies; regression/full gates + docs|V139,V138,V30,I.env,I.api
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -464,3 +466,5 @@ B130|2026-10-11|synthesis model escaped citations as \[S13\] inside JSON; shared
 B131|2026-10-12|prefer_primary still allowed Nemotron fallback; provider boundary exception became empty JSON fallback then answer-shape failure|explicit main model override; classify empty provider failure before report validation; raw wrapper retained; actual pool main-success/main-failure tests; V137
 
 B132|2026-10-12|synthesis recovery selected last duplicate query-group row and reused failure retained stale summary; global60s attempt limit cut off main synthesis despite300s provider HTTP timeout|honor clicked step ID; explicitly clear nullable failure/completion fields; synthesis-specific300s limit remains capped by request timeout and frozen phase deadline; retain legacy policy until explicit recovery; V138
+
+B133|2026-10-12|slow general provider calls still capped at60s after synthesis-only timeout fix|set configurable general attempt default300s; retain provider HTTP and frozen task deadline as upper bounds; old task policy changes only after explicit recovery; V139

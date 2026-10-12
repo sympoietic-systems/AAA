@@ -85,3 +85,8 @@ Synthesis now explicitly selects the main pool model and retains an upstream bou
 ## Synthesis timeout and stale-step recovery (T85)
 
 Explicit Synthesize recovery now targets the row selected by the operator, clears its prior failure state, and gives each synthesis attempt up to 300 seconds by default. The request timeout and frozen phase deadline remain in force; old task policies change only through explicit recovery. Operator steps are in the [rollout guide](RESEARCH_V2_ROLLOUT.md#synthesis-timeout-and-stale-step-recovery-t85); verification evidence belongs to local [Report 068](../reports/068-research-synthesis-recovery-timeout/README.md).
+
+
+## Longer provider attempts (T86)
+
+General provider attempts now default to 300 seconds, matching the synthesis budget. `AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS` configures the general limit; request and research deadlines remain caps. Existing frozen tasks keep their saved policy until recovery. See the [rollout guide](RESEARCH_V2_ROLLOUT.md#longer-provider-attempts-t86); verification results are in local [Report 070](../reports/070-research-provider-attempt-timeout/README.md).
