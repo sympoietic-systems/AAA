@@ -151,3 +151,4 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 046: Beliefs v2 baseline and creation-path inventory](reports/046-belief-v2-baseline/README.md)
 - [Report 047: Beliefs v2 measured quantities and decay accounting](reports/047-belief-v2-quantities-and-decay/README.md)
 - [Report 067: Beliefs v2 semantic challenge](reports/067-belief-challenge/README.md)
+- [Report 068: Belief assessment dimension shadow comparison](reports/068-belief-shadow-gate/README.md)
