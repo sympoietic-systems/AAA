@@ -1,0 +1,19 @@
+{
+  "focused_benchmark": {
+    "passed": 22,
+    "warnings": [
+      "pytest cache permission"
+    ]
+  },
+  "focused_workshop": {
+    "passed": 30
+  },
+  "earlier_full_snapshot": {
+    "passed": 1154,
+    "failed": 1,
+    "unresolved": "same-key workshop concurrency"
+  },
+  "ruff": "passed",
+  "format": "passed",
+  "production_changed": false
+}

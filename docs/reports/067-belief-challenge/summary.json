@@ -1,0 +1,347 @@
+{
+  "cases": [
+    {
+      "id": "01",
+      "family": "memory",
+      "partition": "tuning",
+      "dual_reference_consensus": "equivalent",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {},
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "unavailable",
+      "disposition": "repetition",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "02",
+      "family": "memory",
+      "partition": "tuning",
+      "dual_reference_consensus": "equivalent",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {},
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "unavailable",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "03",
+      "family": "exposure",
+      "partition": "tuning",
+      "dual_reference_consensus": "extension",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {},
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "unavailable",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "04",
+      "family": "exposure",
+      "partition": "tuning",
+      "dual_reference_consensus": "contradiction",
+      "valid_references": 2,
+      "raw_jev_relation": "contradiction",
+      "raw_relation_confidence": 0.85,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "within_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "below_threshold",
+        "relation_0": "within_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": true
+    },
+    {
+      "id": "05",
+      "family": "attention",
+      "partition": "validation",
+      "dual_reference_consensus": "distinct",
+      "valid_references": 2,
+      "raw_jev_relation": "distinct",
+      "raw_relation_confidence": 0.57,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "within_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "within_threshold",
+        "relation_0": "below_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": true
+    },
+    {
+      "id": "06",
+      "family": "attention",
+      "partition": "validation",
+      "dual_reference_consensus": "extension",
+      "valid_references": 2,
+      "raw_jev_relation": "extension",
+      "raw_relation_confidence": 0.95,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "below_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "within_threshold",
+        "relation_0": "within_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": true
+    },
+    {
+      "id": "07",
+      "family": "review",
+      "partition": "validation",
+      "dual_reference_consensus": null,
+      "valid_references": 1,
+      "raw_jev_relation": "contradiction",
+      "raw_relation_confidence": 0.84,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "below_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "below_threshold",
+        "relation_0": "below_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "08",
+      "family": "review",
+      "partition": "validation",
+      "dual_reference_consensus": null,
+      "valid_references": 1,
+      "raw_jev_relation": "equivalent",
+      "raw_relation_confidence": 0.46,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "below_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "within_threshold",
+        "relation_0": "below_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "09",
+      "family": "art",
+      "partition": "heldout",
+      "dual_reference_consensus": null,
+      "valid_references": 1,
+      "raw_jev_relation": "distinct",
+      "raw_relation_confidence": 0.5,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "below_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "below_threshold",
+        "relation_0": "below_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "10",
+      "family": "art",
+      "partition": "heldout",
+      "dual_reference_consensus": null,
+      "valid_references": 2,
+      "raw_jev_relation": "contradiction",
+      "raw_relation_confidence": 0.26,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "within_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "below_threshold",
+        "relation_0": "below_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "11",
+      "family": "context",
+      "partition": "heldout",
+      "dual_reference_consensus": "equivalent",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {},
+      "reference_context_warnings": [
+        "candidate_scope_missing"
+      ],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "12",
+      "family": "context",
+      "partition": "heldout",
+      "dual_reference_consensus": "equivalent",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {},
+      "reference_context_warnings": [
+        "candidate_quote_unbound"
+      ],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "repetition",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "13",
+      "family": "time",
+      "partition": "heldout",
+      "dual_reference_consensus": "equivalent",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {},
+      "reference_context_warnings": [
+        "candidate_time_missing",
+        "different_time_conditions"
+      ],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "14",
+      "family": "time",
+      "partition": "heldout",
+      "dual_reference_consensus": null,
+      "valid_references": 2,
+      "raw_jev_relation": "insufficient_context",
+      "raw_relation_confidence": 0.42,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "within_threshold",
+        "artistic_grounding": "within_threshold",
+        "tension": "below_threshold",
+        "relation_0": "below_threshold"
+      },
+      "reference_context_warnings": [
+        "different_time_conditions"
+      ],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": null
+    },
+    {
+      "id": "15",
+      "family": "permission",
+      "partition": "heldout",
+      "dual_reference_consensus": "contradiction",
+      "valid_references": 2,
+      "raw_jev_relation": "contradiction",
+      "raw_relation_confidence": 0.86,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "within_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "below_threshold",
+        "relation_0": "within_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "needs_review",
+      "raw_agrees_with_provisional_consensus": true
+    },
+    {
+      "id": "16",
+      "family": "permission",
+      "partition": "heldout",
+      "dual_reference_consensus": "equivalent",
+      "valid_references": 2,
+      "raw_jev_relation": null,
+      "raw_relation_confidence": null,
+      "dimension_checks": {
+        "consequence": "below_threshold",
+        "factual_grounding": "below_threshold",
+        "artistic_grounding": "below_threshold",
+        "tension": "below_threshold"
+      },
+      "reference_context_warnings": [],
+      "policy_relation": null,
+      "assessment": "abstained",
+      "disposition": "repetition",
+      "raw_agrees_with_provisional_consensus": null
+    }
+  ],
+  "partitions": {
+    "tuning": {
+      "cases": 4,
+      "dual_reference_consensus_cases": 4,
+      "raw_reference_agreements": 1,
+      "raw_reference_comparable": 1
+    },
+    "validation": {
+      "cases": 4,
+      "dual_reference_consensus_cases": 2,
+      "raw_reference_agreements": 2,
+      "raw_reference_comparable": 2
+    },
+    "heldout": {
+      "cases": 8,
+      "dual_reference_consensus_cases": 5,
+      "raw_reference_agreements": 1,
+      "raw_reference_comparable": 1
+    }
+  },
+  "reference_status": {
+    "complete": 29,
+    "failed": 3,
+    "invalid_reference": 3
+  },
+  "assessment_status": {
+    "unavailable": 3,
+    "abstained": 13
+  },
+  "jev_calls": 13,
+  "adoption_decisions": 0,
+  "independent_gold": false,
+  "accuracy": null,
+  "production_slots": 0,
+  "promotion": "BLOCKED"
+}

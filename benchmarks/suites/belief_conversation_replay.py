@@ -266,7 +266,9 @@ def write_checkpoint(path: Path, row: dict) -> None:
     write_receipt(path, row)
 
 
-async def checkpoint_call(provider, messages, path: Path, identity: dict, *, judgment: bool = False) -> dict:
+async def checkpoint_call(
+    provider, messages, path: Path, identity: dict, *, judgment: bool = False, response_json: bool = False
+) -> dict:
     if await asyncio.to_thread(path.exists):
         row = await asyncio.to_thread(lambda: json.loads(path.read_text(encoding="utf-8")))
         sealed = dict(row)
@@ -293,7 +295,7 @@ async def checkpoint_call(provider, messages, path: Path, identity: dict, *, jud
                 temperature=0.1,
                 max_tokens=2400,
                 thinking_override=False,
-                **({"response_format": {"type": "json_object"}} if judgment else {}),
+                **({"response_format": {"type": "json_object"}} if judgment or response_json else {}),
             ),
             timeout=90,
         )

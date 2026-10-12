@@ -7,6 +7,7 @@ import os
 import sqlite3
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 from dotenv import dotenv_values
 
@@ -122,10 +123,16 @@ def source_ancestry(capture):
 
 
 def setup(path):
-    connection = init_db(str(path))
-    run_all_migrations(connection)
-    connection.commit()
-    connection.close()
+    # Migration 051 otherwise resolves the ambient live structural provider.
+    # Its existing unavailable-scorer fallback seeds zeros; geometry is not measured here.
+    with patch(
+        "backend.modules.structural_engine.CompositeStructuralScorer",
+        side_effect=RuntimeError("Benchmark migration has no structural network port"),
+    ):
+        connection = init_db(str(path))
+        run_all_migrations(connection)
+        connection.commit()
+        connection.close()
     ConversationRepository(str(path)).create("isolated-replay", agent_id="symbia")
 
 
