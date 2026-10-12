@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "rubric_id": "belief-disagreement-adjudication-v1",
+  "status": "post_hoc_adjudication_not_gold",
+  "dimensions": {
+    "relation": {
+      "contradiction": "Opposing propositions under the same relevant conditions and temporal scope.",
+      "extension": "Candidate preserves the comparison proposition and adds a compatible proposition or constraint.",
+      "distinct": "The propositions address different predicates, questions, or temporal conditions and neither entails nor negates the other.",
+      "insufficient_context": "Supplied scope or wording does not permit a stable relation judgment."
+    },
+    "contribution": {
+      "artistic_question": "Candidate offers an open artistic or interpretive inquiry without asserting its outcome.",
+      "useful_distinction": "Candidate preserves a materially relevant difference in scope, time, or conditions.",
+      "useful_conflict": "Candidate exposes a consequential incompatibility under matched conditions.",
+      "unclear": "No concrete inquiry, distinction, or conflict is supported by supplied fields."
+    },
+    "empirical_status": {
+      "supported": "A supplied observation or measurement supports the empirical proposition.",
+      "stipulated_only": "The scenario explicitly stipulates the proposition as true, without presenting it as an observation.",
+      "unsupported": "The text asserts an empirical proposition but supplies no observation or explicit true stipulation.",
+      "not_empirical_claim": "The text is an open question, proposal, or normative statement rather than an empirical assertion."
+    },
+    "consequence_assessment": {
+      "concrete_inquiry": "A supplied consequence names a concrete comparison or investigation.",
+      "specific_action": "A supplied consequence names a specific operational action.",
+      "generic_review": "The consequence only calls for later inspection or review.",
+      "none": "No consequence is supplied."
+    }
+  },
+  "decision_rules": [
+    "Judge each dimension separately; relation does not establish truth or warrant.",
+    "Different temporal scopes cannot be contradictions unless the claims overlap in time or explicitly assert incompatible transitions.",
+    "A question about an effect does not assert that the effect occurred.",
+    "Source text that merely records a claim is not empirical support.",
+    "Bind each cited quote to its exact source field."
+  ]
+}

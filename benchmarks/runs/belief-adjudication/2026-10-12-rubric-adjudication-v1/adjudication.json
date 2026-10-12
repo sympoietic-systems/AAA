@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "run_id": "belief-disagreement-adjudication-2026-10-12-v1",
+  "created_at": "2026-10-12T06:28:02.426949+00:00",
+  "rubric_path": "benchmarks/data/belief-adjudication-rubric-v1.json",
+  "rubric_sha256": "17f4942db11d02045f0e108d6c0fe669e8cd9210ad6ddb41a15aece65ac9bb15",
+  "source_run": "benchmarks/runs/belief-adjudication/2026-10-12-v2",
+  "source_run_summary_sha256": "cd005c134cd2fd2b4be9a0b6e33486f87c05b66e04304b0ab5ab73ab41d0553a",
+  "adjudicator": "Codex",
+  "method": "protocol-based desk adjudication using case source fields only",
+  "blinding": "not_blind; v2 model labels were already known to the adjudicator",
+  "independent_gold": false,
+  "adoption_authority": "none",
+  "production_policy_changed": false,
+  "decisions": [
+    {
+      "case_id": "09",
+      "case_sha256": "8f842038ec846b6d0551538c8876d983a40d26551d50f2d1c0a3c71fe095f9d6",
+      "relation": "distinct",
+      "contribution": "artistic_question",
+      "empirical_status": "not_empirical_claim",
+      "consequence_assessment": "concrete_inquiry",
+      "rationale": "The candidate asks whether repeated exposures change attention; it does not assert that attention changes. The comparison asserts a denser exposure sequence at increased cadence. Density and the open question about attention are related artistically, but neither proposition entails or negates the other.",
+      "uncertainty": "A broader project context could connect cadence density to attention, but that link is not established by this case.",
+      "citations": [
+        {
+          "field_path": "candidate.statement",
+          "quote": "A fixed shutter cadence can frame a question about whether repeated exposures change attention."
+        },
+        {
+          "field_path": "comparison.statement",
+          "quote": "Increased shutter cadence creates a denser sequence of exposures."
+        },
+        {
+          "field_path": "candidate.consequence",
+          "quote": "Compare fixed and increased cadence as different modes of attention without asserting a measured improvement."
+        }
+      ]
+    },
+    {
+      "case_id": "14",
+      "case_sha256": "4a0342a5d50bea49a1d51a2e2adb5ba3c53c5c4ce1057ca35910c7266fe81903",
+      "relation": "distinct",
+      "contribution": "useful_distinction",
+      "empirical_status": "unsupported",
+      "consequence_assessment": "generic_review",
+      "rationale": "The comparison describes an open shutter before repair and the candidate a closed shutter after repair. Because their temporal scopes differ, the propositions are compatible as descriptions of separate states; neither text specifies that repair caused the change. Both are empirical assertions without observational support in the supplied source fields.",
+      "uncertainty": "The case gives no repair mechanism or observation, so it cannot establish whether the two states occurred or whether a transition connected them.",
+      "citations": [
+        {
+          "field_path": "candidate.statement",
+          "quote": "The shutter stays closed during exposure."
+        },
+        {
+          "field_path": "candidate.temporal_scope",
+          "quote": "After the hypothetical repair"
+        },
+        {
+          "field_path": "comparison.statement",
+          "quote": "The shutter stays open during exposure."
+        },
+        {
+          "field_path": "comparison.temporal_scope",
+          "quote": "Before the hypothetical repair"
+        },
+        {
+          "field_path": "candidate.consequence",
+          "quote": "Inspect the stipulated condition in a later review."
+        }
+      ]
+    }
+  ],
+  "receipt_sha256": "dead50aa045792cb3eb667d9bbb50325d5906276a50243fc4ebf02a8a5bda1ad"
+}

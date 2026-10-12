@@ -69,7 +69,16 @@ The v2 runner exposed only each candidate/comparison statement, scope, temporal 
 
 Coverage is four full agreements and two disagreements; no call was incomplete or invalid. Case 09 keeps a useful artistic question visible while the models differ on whether it extends or is distinct from the comparison. Case 14 remains sensitive to how the differing temporal scopes are interpreted. The empirical-warrant labels now agree on every case, and none treats a source quote that only records a statement as empirical support. That is evidence that the revised contract makes this distinction clearer to these reviewers, not proof the rubric is correct or generalizes beyond this six-case packet.
 
-The run remains **advisory and blocked from promotion**: it has no independent gold labels, no adoption authority, and made no production-policy change. Preserve the two semantic disagreements for human review or a separately designed adjudication set. Do not tune Jev thresholds from this sample. The failed v1 Qwen/DeepSeek attempts remain preserved in their own run directory and were not replayed in v2.
+## Protocol-based adjudication of cases 09 and 14
+
+A separate rubric was then applied to the case source fields. The rubric requires matched time and conditions for contradiction; an open question is not an assertion of its outcome; a recorded statement is not empirical warrant; and each dimension is judged separately. The rubric and receipt are versioned in [the adjudication rubric](../../../benchmarks/data/belief-adjudication-rubric-v1.json) and [the adjudication run](../../../benchmarks/runs/belief-adjudication/2026-10-12-rubric-adjudication-v1/adjudication.json).
+
+| Case | Adjudicated relation | Contribution | Empirical status | Consequence | Basis |
+|---|---|---|---|---|---|
+| 09 | distinct | artistic_question | not_empirical_claim | concrete_inquiry | It asks whether repeated exposures change attention; it does not claim they do. The comparison asserts only increased cadence makes a denser exposure sequence. Neither entails or negates the other. |
+| 14 | distinct | useful_distinction | unsupported | generic_review | The open-shutter claim is scoped before repair and the closed-shutter claim after repair. They can describe separate states. Neither case text establishes the repair caused a change or that either state was observed. |
+
+The adjudicator had already seen the v2 model labels, so these rulings are **post hoc and not blind or independent gold**. They resolve the pair under this explicit rubric; a later independent human review could disagree, especially on the contribution label for case 14. The result does not validate model accuracy or support production threshold changes. The failed v1 Qwen/DeepSeek attempts remain preserved in their own run directory and were not replayed in v2.
 
 ## Provenance
 
