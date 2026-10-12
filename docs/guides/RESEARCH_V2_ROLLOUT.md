@@ -80,6 +80,6 @@ When several persisted rows share one logical query group, recovery now reuses t
 If rerun reports that a phase is already running, inspect the active action and wait for it to finish before retrying. Three prior synthesis requests timed out at the 60-second attempt boundary; this confirmed the attempt cap as the cause of that live failure. The code change must be pulled and the backend restarted before it affects a server.
 
 
-## Longer provider attempts (T86)
+## Longer provider attempts (T86/T87)
 
-All provider attempts now have a 300-second default, with a maximum of 300 seconds. Set `AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS` to choose a lower value or retain the default. Synthesis retains its separate override. Provider HTTP timeout and the remaining research deadline may shorten the allowed attempt; neither setting can extend the frozen task deadline. Existing tasks continue using their saved attempt policy until explicitly rerun or restarted as a new task.
+All provider attempts now have a 600-second default, with a maximum of 600 seconds. Set `AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS` to choose a lower value or retain the default. Synthesis retains its separate override, also capped at 600 seconds. The HTTP timeout defaults to 600 seconds via `AAA_LLM_TIMEOUT`; a lower HTTP timeout or the remaining research deadline shortens the allowed attempt. Neither attempt setting can extend the frozen task deadline. Existing tasks continue using their saved attempt policy until explicitly rerun or restarted as a new task. The instant 400 seen when setting the attempt timeout to 600 was caused by an outdated 300-second policy cap; current policy accepts 600.

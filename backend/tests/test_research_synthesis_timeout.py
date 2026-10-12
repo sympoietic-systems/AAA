@@ -15,7 +15,7 @@ from backend.storage.research_receipts import ResearchActionReceipt
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "phase,legacy,expected", [("synthesizing", False, 300), ("planning", False, 300), ("synthesizing", True, 60)]
+    "phase,legacy,expected", [("synthesizing", False, 600), ("planning", False, 600), ("synthesizing", True, 60)]
 )
 async def test_v138_timeout_applies_to_direct_calls_and_nested_request_factory(phase, legacy, expected):
     policy = ProviderPolicy().freeze()
@@ -79,10 +79,12 @@ async def test_v138_parent_deadline_still_caps_long_attempt_budget(phase):
         await generate_unified(Provider(), user_prompt="test")
 
 
-def test_v139_general_attempt_timeout_defaults_to_300_and_has_an_environment_override(monkeypatch):
-    assert ProviderPolicy().attempt_timeout_seconds == 300
+def test_v140_timeout_600_is_valid_and_general_timeout_has_an_environment_override(monkeypatch):
+    assert ProviderPolicy().attempt_timeout_seconds == 600
+    assert ProviderPolicy(synthesis_attempt_timeout_seconds=600).freeze()["synthesis_attempt_timeout_seconds"] == 600
     override = next(item for item in ENV_OVERRIDES if item.env_var == "AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS")
     config = {}
-    monkeypatch.setenv("AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS", "240")
+    monkeypatch.setenv("AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS", "600")
     override.apply(config)
-    assert config["research_orchestrator"]["provider_limits"]["attempt_timeout_seconds"] == 240.0
+    assert config["research_orchestrator"]["provider_limits"]["attempt_timeout_seconds"] == 600.0
+    assert ProviderPolicy(**config["research_orchestrator"]["provider_limits"]).attempt_timeout_seconds == 600
