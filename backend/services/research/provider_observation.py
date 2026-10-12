@@ -43,7 +43,9 @@ def observe_provider_calls(
         return AttemptScope(
             DurableAttemptSink(repo, receipt, records, policy["max_task_attempts"]),
             datetime.fromisoformat(policy["deadline"]),
-            policy["attempt_timeout_seconds"],
+            policy.get("synthesis_attempt_timeout_seconds", policy["attempt_timeout_seconds"])
+            if receipt.kind == "synthesizing"
+            else policy["attempt_timeout_seconds"],
             policy["max_request_attempts"],
             on_failure=lambda: setattr(records, "delivery_failed", True),
         )
@@ -75,7 +77,9 @@ class _ObservedProvider:
             scope = AttemptScope(
                 sink,
                 datetime.fromisoformat(policy["deadline"]),
-                policy["attempt_timeout_seconds"],
+                policy.get("synthesis_attempt_timeout_seconds", policy["attempt_timeout_seconds"])
+                if self._receipt.kind == "synthesizing"
+                else policy["attempt_timeout_seconds"],
                 policy["max_request_attempts"],
             )
             try:

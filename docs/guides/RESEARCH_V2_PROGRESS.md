@@ -80,3 +80,8 @@ Synthesis now preserves literal invalid JSON escapes such as escaped citation br
 ## Main-model synthesis and provider failure visibility (T84)
 
 Synthesis now explicitly selects the main pool model and retains an upstream boundary/provider failure when its response is empty. Actual-pool regression tests cover sticky NVIDIA history and main failure without fallback. Operator behavior is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#main-model-synthesis-and-provider-execution-failures-t84); live evidence and gates belong to local [Report 066](../reports/066-research-synthesis-main-model/README.md).
+
+
+## Synthesis timeout and stale-step recovery (T85)
+
+Explicit Synthesize recovery now targets the row selected by the operator, clears its prior failure state, and gives each synthesis attempt up to 300 seconds by default. The request timeout and frozen phase deadline remain in force; old task policies change only through explicit recovery. Operator steps are in the [rollout guide](RESEARCH_V2_ROLLOUT.md#synthesis-timeout-and-stale-step-recovery-t85); verification evidence belongs to local [Report 068](../reports/068-research-synthesis-recovery-timeout/README.md).

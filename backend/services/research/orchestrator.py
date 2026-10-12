@@ -704,7 +704,14 @@ class SomaticResearchOrchestrator:
             ):
                 step_data = json.dumps({"depth": s.get("current_depth", 0)})
                 self.step_repo.update(
-                    rerun_id, status="running", started_at=now_utc_str(), query_text=query_text, step_data=step_data
+                    rerun_id,
+                    clear_fields=("result_summary", "completed_at"),
+                    status="running",
+                    started_at=now_utc_str(),
+                    completed_at=None,
+                    result_summary=None,
+                    query_text=query_text,
+                    step_data=step_data,
                 )
                 return str(rerun_id)
         pg = s.get("phase_group", 0)

@@ -385,6 +385,7 @@ research_orchestrator:
   provider_limits:
     task_timeout_seconds: 1800
     attempt_timeout_seconds: 60
+    synthesis_attempt_timeout_seconds: 300
     max_request_attempts: 4
     max_task_attempts: 128
   enabled: true                                    # Use orchestrator instead of legacy engine

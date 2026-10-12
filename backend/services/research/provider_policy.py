@@ -10,6 +10,7 @@ class ProviderPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     task_timeout_seconds: float = Field(default=1800, gt=0, le=3600)
     attempt_timeout_seconds: float = Field(default=60, gt=0, le=300)
+    synthesis_attempt_timeout_seconds: float = Field(default=300, gt=0, le=300)
     max_request_attempts: int = Field(default=4, ge=1, le=16)
     max_task_attempts: int = Field(default=128, ge=1, le=256)
 

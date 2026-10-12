@@ -161,6 +161,35 @@ def test_recovery_rejects_foreign_step_without_changes(recovery):
     assert manager.task_repo.get("task") == before
 
 
+def test_v138_recovery_honors_selected_step_among_duplicate_groups_and_clears_failure(recovery):
+    manager, *_ = recovery
+    steps = manager.orchestrator.step_repo
+    steps.update("digest1", result_summary="old failure", completed_at="2020-01-01 00:00:00")
+    steps.create(
+        {
+            "id": "duplicate",
+            "task_id": "task",
+            "plan_id": "plan",
+            "step_number": 6,
+            "phase_group": 6,
+            "query_group": 1,
+            "sub_sequence": 2,
+            "step_type": "digest",
+            "status": "failed",
+            "step_data": json.dumps({"depth": 1}),
+        }
+    )
+    prepare_step_recovery(manager, "task", "digesting", "digest", "digest1")
+    state = manager.orchestrator._get_state("task")
+    selected = SomaticResearchOrchestrator._create_or_update_step(
+        manager.orchestrator, state, "task", "digest", query_group=1
+    )
+    assert selected == "digest1"
+    row = steps.get("digest1")
+    assert row["status"] == "running" and row["result_summary"] is None and row["completed_at"] is None
+    assert steps.get("duplicate")["status"] == "failed"
+
+
 def test_recovery_attempt_allowance_is_new_but_old_receipts_remain(recovery):
     manager, journal, parsed, failed, results, receipts = recovery
     repo = ResearchProviderAttemptRepository(manager.task_repo._db_path)

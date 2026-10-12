@@ -62,7 +62,7 @@ class ResearchStepRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     @with_connection
-    def update(self, step_id: str, **kwargs) -> None:
+    def update(self, step_id: str, *, clear_fields: tuple[str, ...] = (), **kwargs) -> None:
         allowed = {
             "status",
             "result_summary",
@@ -76,6 +76,10 @@ class ResearchStepRepository(BaseRepository):
             "sub_sequence",
         }
         updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
+        for field in clear_fields:
+            if field not in {"result_summary", "completed_at"}:
+                raise ValueError("Unsupported research step field clearance")
+            updates[field] = None
         if not updates:
             return
         conn = self._conn()

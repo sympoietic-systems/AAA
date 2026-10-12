@@ -69,3 +69,12 @@ A recovered report records synthesis_json_escape_repaired with the repair count 
 Research synthesis uses the configured main provider. For a model pool, it explicitly selects primary_model (the first configured pool model), so a sticky last-working Nemotron model or failure of the main model cannot silently change the synthesis model. A direct provider continues to use its configured model. Earlier prefer_primary behavior tried the main model first but permitted fallback.
 
 An empty response with a provider error now fails with an execution-boundary or provider-request message before validating report fields. The raw wrapper remains available for diagnosis. A retry-boundary failure can reflect request attempts or remaining execution time; it is not evidence of a particular upstream rate limit. Existing attempt and deadline limits remain enforced. Explicitly rerun Synthesize on the same research after pulling main and restarting to renew the execution revision and use saved findings. If the main provider remains unavailable, synthesis remains failed instead of switching to another model.
+
+
+## Synthesis timeout and stale-step recovery (T85)
+
+The normal provider-attempt limit remains 60 seconds. Synthesis gets a separate 300-second attempt limit by default, configurable with `AAA_RESEARCH_SYNTHESIS_TIMEOUT_SECONDS` up to 300 seconds. The configured HTTP request timeout and the frozen research execution deadline still cap the attempt. An older task keeps its frozen 60-second policy; explicitly rerun Synthesize to create a recovery revision with the current limit.
+
+When several persisted rows share one logical query group, recovery now reuses the exact step selected in the UI. Reusing that failed row clears its old failure summary and completion timestamp before execution, so stale error text does not survive a new attempt. Successful findings remain available to synthesis; Search and Digest are not repeated. A running phase lock is process-local and protects live work; a stale database label after process restart does not itself mean a worker is active. Persisted unfinished-action guards still prevent unsafe replay.
+
+If rerun reports that a phase is already running, inspect the active action and wait for it to finish before retrying. Three prior synthesis requests timed out at the general 60-second attempt boundary; this confirmed the attempt cap as the cause of that live failure. The code change must be pulled and the backend restarted before it affects a server.

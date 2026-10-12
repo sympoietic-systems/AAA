@@ -137,7 +137,8 @@ def prepare_step_recovery(manager: Any, task_id: str, phase: str, step_type: str
         and orch._get_step_depth(step) == depth
         and step["phase_group"] == selected["phase_group"]
     ]
-    state["_rerun_group_ids"] = {str(step.get("query_group", 0)): step["id"] for step in groups}
+    state["_rerun_group_ids"] = {str(step.get("query_group") or 0): step["id"] for step in groups}
+    state["_rerun_group_ids"][str(selected.get("query_group") or 0)] = selected["id"]
     if phase == "digesting":
         sources = []
         retained = {
