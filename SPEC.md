@@ -204,6 +204,7 @@ V133: optional research belief processing <= min(15s, remaining watchdog); empty
 V134: fresh + retained Digest analyses -> canonical text lists before evidence/persistence/aggregation; recognized text objects + scalar text project without metadata claims or character iteration; originals retained; unsupported shapes -> explicit source failure; group completion follows valid combined payload
 V135: research outputs validate before completion; scores finite fractions; invalid plan fallback before persistence; unusable synthesis fails visibly; failed phase cannot merge/advance; retained-state validation inside failure boundary; replay/admission guards preserved
 V136: synthesis invalid JSON escapes -> bounded linear literal-backslash preservation + strict final parse; valid escapes unchanged; broken/truncated structure & malformed Unicode fail; raw response retained; repaired delivery partial + counted meta event
+V137: synthesis pool -> explicit configured primary model, no sticky/fallback model on main failure; direct providers unchanged; empty provider error -> visible execution-boundary/provider failure, raw wrapper retained, no fake answer-shape error
 
 ## §T
 
@@ -294,6 +295,7 @@ T80|x|bound optional research belief processing; persist pre-execution phase fai
 T81|x|normalize structured Digest output + retained-analysis recovery; preserve raw metadata; defer group completion until combined payload valid; regression/full gates + operator docs|V134,V132,V30,I.api
 T82|x|review research phase contracts + transitions/recovery; fix false completion, malformed scores/text, failed-output advance, retained-state error visibility; regression/full gates + docs|V135,V134,V133,V110,V30,I.api
 T83|x|recover invalid Markdown/LaTeX escapes in synthesis; retain raw response + observable partial delivery; prompt guidance + regression/gates + recovery docs|V136,V135,V110,V30,I.api
+T84|x|pin research synthesis to configured main model; preserve provider-boundary reason on empty failure; actual-pool regressions + gates + operator docs|V137,V136,V135,V30,I.api
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -456,3 +458,5 @@ B128|2026-10-11|model learning/gap/followup objects reached string aggregation; 
 B129|2026-10-11|unvalidated model scores/lists reached completion; invalid synthesis hidden; failed document phase advanced; state validation escaped handler|validate before completion; finite scores; visible synthesis failure; stop failed output before merge; capture state errors; preserve replay/admission guards; V135
 
 B130|2026-10-11|synthesis model escaped citations as \[S13\] inside JSON; shared parser fallback retried strict loads and failed Invalid \escape|literal-backslash preservation only after exact invalid-escape error; linear bounded repair + strict final parse; raw response/partial delivery/meta retained; V136
+
+B131|2026-10-12|prefer_primary still allowed Nemotron fallback; provider boundary exception became empty JSON fallback then answer-shape failure|explicit main model override; classify empty provider failure before report validation; raw wrapper retained; actual pool main-success/main-failure tests; V137

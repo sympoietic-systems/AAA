@@ -430,6 +430,7 @@ async def test_synthesize_prefers_primary_and_uses_adequate_tokens():
     """
     state = MockAppState()
     state.llm_provider.supports_prefer_primary = True
+    state.llm_provider.primary_model = "openrouter_router/main-primary-model"
     orchestrator = SomaticResearchOrchestrator(state)
 
     task_id = "test_primary_pref"
@@ -468,5 +469,5 @@ async def test_synthesize_prefers_primary_and_uses_adequate_tokens():
         assert report == "# Done"
         mock_gen.assert_called_once()
         args, kwargs = mock_gen.call_args
-        assert kwargs.get("prefer_primary") is True
+        assert kwargs.get("model") == "openrouter_router/main-primary-model"
         assert kwargs.get("max_tokens", 0) >= 8192

@@ -133,8 +133,13 @@ async def run_synthesis(
                 step_id=step_id or None,
             )
             extra_kwargs = {}
-            if getattr(llm, "supports_prefer_primary", False):
-                extra_kwargs["prefer_primary"] = True
+            if getattr(llm, "supports_prefer_primary", False) is True:
+                primary = getattr(llm, "primary_model", None)
+                if isinstance(primary, str) and primary.strip():
+                    # An explicit pool model selects only the configured main model.
+                    extra_kwargs["model"] = primary
+                else:
+                    raise RuntimeError("Research synthesis main model is not configured")
 
             resp = await generate_unified(
                 llm,
@@ -153,6 +158,17 @@ async def run_synthesis(
             orch._log_llm_response(task_id, "orchestrator_synthesize_response", resp, step_id=step_id or None)
             if step_id:
                 orch._save_llm_response_to_step_data(step_id, resp)
+            if resp.get("error") and not resp.get("content") and not resp.get("json_data"):
+                if resp["error"] in {
+                    "Retry would exceed the provider execution boundary",
+                    "Provider deadline, attempt limit, or outstanding-call limit reached",
+                    "Research phase deadline exceeded",
+                }:
+                    raise RuntimeError(
+                        "Research synthesis provider execution boundary exhausted; "
+                        "rerun Synthesize to renew execution limits"
+                    )
+                raise RuntimeError("Research synthesis provider request failed; inspect its saved response")
             result = resp.get("json_data") or resp.get("content") or {}
             if isinstance(result, str):
                 result, repairs = _parse_synthesis_json(result)

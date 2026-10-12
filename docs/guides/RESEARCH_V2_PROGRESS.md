@@ -75,3 +75,8 @@ The review covers phase output contracts, transition gating, typed retained-stat
 ## Synthesis JSON escape recovery (T83)
 
 Synthesis now preserves literal invalid JSON escapes such as escaped citation brackets, while leaving valid escapes intact and rejecting broken structure. Repaired reports retain the original response and record partial delivery with a counted metadata event. Operator recovery is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#synthesis-recovery-after-invalid-json-escapes-t83). Live inspection and verification evidence belong to local [Report 065](../reports/065-research-synthesis-json-escapes/README.md).
+
+
+## Main-model synthesis and provider failure visibility (T84)
+
+Synthesis now explicitly selects the main pool model and retains an upstream boundary/provider failure when its response is empty. Actual-pool regression tests cover sticky NVIDIA history and main failure without fallback. Operator behavior is documented in the [rollout guide](RESEARCH_V2_ROLLOUT.md#main-model-synthesis-and-provider-execution-failures-t84); live evidence and gates belong to local [Report 066](../reports/066-research-synthesis-main-model/README.md).
