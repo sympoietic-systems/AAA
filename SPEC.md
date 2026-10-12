@@ -208,6 +208,7 @@ V137: synthesis pool -> explicit configured primary model, no sticky/fallback mo
 V138: explicit recovery targets the selected persisted step when logical groups duplicate; reused failed step clears prior result_summary/completed_at; request timeout + frozen parent deadline remain upper bounds; old frozen revisions retain saved limits until explicit recovery/new task; current attempt limits defined in V139
 V139: provider attempt timeout defaults600s (max600), configurable via AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS; effective attempt ≤ configured attempt, provider HTTP timeout, remaining frozen task deadline; old frozen policies unchanged until explicit recovery/new task
 V140: configured 600s attempt accepted by policy + HTTP client; rerun reaches phase execution; timeout remains bounded by task deadline
+V141: main-model synthesis requests ≤32768 output tokens; `finish_reason=length` remains failed with raw response retained; synthesis attempt ≤ configured attempt, HTTP timeout, remaining frozen task deadline
 
 ## §T
 
@@ -302,6 +303,7 @@ T84|x|pin research synthesis to configured main model; preserve provider-boundar
 T85|x|repair stale synthesis recovery target/old failure state; separate bounded synthesis attempt timeout from general attempts; tests + backend/static gates + operator docs|V138,V137,V135,V30,I.api
 T86|x|raise general provider attempt default to300s; add env override; preserve request/task deadline caps + old frozen policies; regression/full gates + docs|V139,V138,V30,I.env,I.api
 T87|x|accept600s provider timeout configuration without 400; raise attempt + HTTP defaults/max; preserve task deadline/frozen old policy; regression/full gates + docs|V140,V139,V30,I.env,I.api
+T88|x|raise only synthesis output budget to32768; preserve visible truncation failure + raw response; configure synthesis timeout for longer output; regression/gates/docs|V141,V140,V135,V30,I.api
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -472,3 +474,5 @@ B132|2026-10-12|synthesis recovery selected last duplicate query-group row and r
 B133|2026-10-12|slow general provider calls still capped at60s after synthesis-only timeout fix|set configurable general attempt default300s; retain provider HTTP and frozen task deadline as upper bounds; old task policy changes only after explicit recovery; V139
 
 B134|2026-10-12|600s env override rejected by 300s ProviderPolicy maximum, returning 400 before recovery|raise provider attempt + HTTP defaults/max to600s; explicitly test600s frozen policy; retain task deadline as cap; V140
+
+B135|2026-10-12|main-model synthesis consumed 16384-token output cap and OpenRouter returned finish_reason=length; retry waited pool cooldown|raise synthesis-only output cap to32768; configure 600s synthesis attempt; retain HTTP/task deadline caps and truncated-output failure; V141
