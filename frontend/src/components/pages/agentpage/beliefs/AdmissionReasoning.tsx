@@ -2,6 +2,8 @@ import type { AdmissionReceipt } from "../../../../api/types"
 import { formatDateTimeFull } from "../../../../utils/dateFormat"
 import { ReviewReceipt } from "./ReviewReasoning"
 
+import { EvaluationDiagnostics } from "./EvaluationDiagnostics"
+
 export function AdmissionReasoning({ receipts, statement, agent }: { receipts: AdmissionReceipt[]; statement?: string; agent?: string }) {
   if (!receipts.length) return <p className="text-[10px] text-[#888]">Admission reasoning unavailable for this historical record.</p>
   return <section aria-label="Belief admission reasoning" className="space-y-3 text-[10px] font-mono text-[#bbb]">
@@ -30,6 +32,7 @@ export function AdmissionReasoning({ receipts, statement, agent }: { receipts: A
       <p>2. Claim / tension: {receipt.statement || "Unknown / not recorded"}</p>
       <p>3. Comparison: {receipt.comparisons ? `${receipt.comparisons.length} recorded snapshots` : "Unknown / not recorded"}</p>
       <p>4. Consequence / challenge: {receipt.consequence || "Unknown / not recorded"} · {receipt.challenge || "Challenge unknown / not recorded"}</p>
+      <EvaluationDiagnostics diagnostics={receipt.evaluation?.diagnostics} />
       <p>5. Decision / uncertainty: advisory {receipt.decision}; operator decision unknown.</p>
       <p>Source quotation (separate from authored claim)</p>
       {receipt.evidence_quote && <blockquote className="border-l border-[#444] pl-2 whitespace-pre-wrap">{receipt.evidence_quote}</blockquote>}

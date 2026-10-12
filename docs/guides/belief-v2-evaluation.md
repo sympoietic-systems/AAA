@@ -57,3 +57,12 @@ Add `--recorded-only` to skip authored live contrasts. The output must be new an
 Counts describe visible queue entries. Each underlying proposal, source, assessment and detail remains available. Occurrences add no independent support, mass or confidence. The API preserves its proposal arrays and adds optional recurrence_group metadata. The reader considers at most 50 eligible entries and 128 ancestry steps; incomplete/cyclic ancestry leaves entries separate. Group metadata exposes scan truncation and unavailable ancestry. A deep-linked member opens its group, and keyboard controls expand/select the original entries. No schema migration or rollout flag is introduced; this behavior takes effect only when the new build is deployed.
 
 This addresses queue clutter. It does not reduce stored proposal counts, perform semantic merging, tune Jev or close T15 semantic acceptance.
+
+
+## Per-question evaluation diagnostics
+
+[ADR-129](../decisions/ADR-129-belief-evaluation-diagnostics.md) and [Report 066](../reports/066-belief-dimension-diagnostics/README.md) preserve at most fourteen observed question results in new native assessment receipts. Each records an allowed choice, finite confidence or unavailable value, configured threshold, and within-threshold/below-threshold/missing/invalid-choice/invalid-confidence status. Relation diagnostics bind the original comparison ID and statement hash after invalid-context pairs are excluded.
+
+These observations remain outside accepted relations and warrant dimensions. The all-or-nothing confidence gate and existing scope/time guards remain unchanged. Native belief reasoning, Traces/Creases and export use the same immutable receipt. The UI labels confidence as classifier-reported, without calibrated accuracy. Malformed raw strings/objects/secrets are omitted. Historical receipts without diagnostics stay empty; no provider backfill or automatic retries.
+
+The six saved Jev responses were replayed offline with exact original state/question hashes: thirty-four observations retained, every assessment still abstained, zero accepted relations/decisions. This proves projection/diagnostic retention on those inputs; it does not calibrate Jev or supply independent semantic gold. New JSON fields require compatible readers; binary rollback to a strict older parser needs a compatibility build. Production rollout remains separate.

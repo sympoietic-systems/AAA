@@ -377,6 +377,19 @@ async def assess_encounter(
         if acquired:
             semaphore.release()
     completed = _done(pending, str(result["status"]), str(result.get("reason", "")))
+    diagnostic_snapshots = [
+        snapshot for snapshot, valid in zip(pending.comparison_snapshots, prepared.valid_pairs, strict=True) if valid
+    ]
+    diagnostics = []
+    for observed in result.get("diagnostics", []):
+        diagnostic = dict(observed)
+        if diagnostic["question_id"].startswith("relation_"):
+            snapshot = diagnostic_snapshots[int(diagnostic["question_id"].split("_")[1])]
+            diagnostic.update(comparison_id=snapshot.record_id, comparison_statement_sha256=snapshot.statement_sha256)
+        diagnostics.append(diagnostic)
+    completed = Assessment.model_validate(
+        completed.model_dump() | {"evaluation_diagnostics": diagnostics, "returned_model": result.get("returned_model")}
+    )
     if result.get("status") == "evaluated":
         answers = result["answers"]
         relations = []

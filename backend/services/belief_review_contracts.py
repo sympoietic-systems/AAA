@@ -217,6 +217,63 @@ class ReferentContextSnapshot(FrozenRecord):
         return self
 
 
+class EvaluationDiagnostic(FrozenRecord):
+    question_id: str = Field(pattern=r"^(consequence|factual_grounding|artistic_grounding|tension|relation_[0-9])$")
+    choice: (
+        Literal[
+            "durable",
+            "local",
+            "none",
+            "unclear",
+            "supported",
+            "unsupported",
+            "present",
+            "absent",
+            "equivalent",
+            "extension",
+            "contradiction",
+            "independent",
+            "insufficient",
+        ]
+        | None
+    ) = None
+    confidence: Confidence | None = None
+    threshold: Confidence
+    status: Literal["within_threshold", "below_threshold", "missing", "invalid_choice", "invalid_confidence"]
+    is_semantic_verdict: Literal[False] = False
+    comparison_id: Identifier | None = None
+    comparison_statement_sha256: Sha256 | None = None
+
+    @model_validator(mode="after")
+    def bounded_observation(self) -> Self:
+        relation_question = self.question_id.startswith("relation_")
+        if (
+            relation_question
+            and not (self.comparison_id and self.comparison_statement_sha256)
+            or not relation_question
+            and (self.comparison_id is not None or self.comparison_statement_sha256 is not None)
+        ):
+            raise ValueError("Diagnostic comparison binding required only for relation questions")
+        choices = {
+            "consequence": {"durable", "local", "none", "unclear"},
+            "factual_grounding": {"supported", "unsupported", "unclear"},
+            "artistic_grounding": {"supported", "unsupported", "unclear"},
+            "tension": {"present", "absent", "unclear"},
+        }.get(self.question_id, {"equivalent", "extension", "contradiction", "independent", "insufficient"})
+        if self.choice is not None and self.choice not in choices:
+            raise ValueError("Diagnostic choice does not belong to question")
+        if self.status in {"within_threshold", "below_threshold"}:
+            if self.choice is None or self.confidence is None:
+                raise ValueError("Threshold diagnostic requires valid choice and confidence")
+            if (self.confidence >= self.threshold) != (self.status == "within_threshold"):
+                raise ValueError("Diagnostic threshold status mismatch")
+        if self.status in {"missing", "invalid_choice"} and (self.choice is not None or self.confidence is not None):
+            raise ValueError("Malformed diagnostic cannot retain raw choice/confidence")
+        if self.status == "invalid_confidence" and (self.choice is None or self.confidence is not None):
+            raise ValueError("Invalid confidence must remain unavailable")
+        return self
+
+
 class Assessment(FrozenRecord):
     id: Identifier
     agent_id: AgentId
@@ -229,6 +286,7 @@ class Assessment(FrozenRecord):
     referent_contexts: tuple[ReferentContextSnapshot, ...] = Field(default=(), max_length=11)
     relations: tuple[RelationObservation, ...] = Field(default=(), max_length=10)
     warrant_dimensions: tuple[WarrantDimension, ...] = Field(default=(), max_length=16)
+    evaluation_diagnostics: tuple[EvaluationDiagnostic, ...] = Field(default=(), max_length=14)
     consequence_or_tension: str = Field(default="", max_length=1000)
     challenge: str = Field(default="", max_length=1000)
     exclusions: tuple[Scope, ...] = Field(default=(), max_length=20)
@@ -247,6 +305,13 @@ class Assessment(FrozenRecord):
         comparisons = {c.record_id: c for c in self.comparison_snapshots}
         if len(comparisons) != len(self.comparison_snapshots):
             raise ValueError("Duplicate comparison snapshot")
+        if len({d.question_id for d in self.evaluation_diagnostics}) != len(self.evaluation_diagnostics):
+            raise ValueError("Duplicate evaluation diagnostic")
+        for diagnostic in self.evaluation_diagnostics:
+            if diagnostic.comparison_id:
+                snapshot = comparisons.get(diagnostic.comparison_id)
+                if snapshot is None or snapshot.statement_sha256 != diagnostic.comparison_statement_sha256:
+                    raise ValueError("Diagnostic lacks matching comparison snapshot")
         contexts = {c.record_id: c.context for c in self.referent_contexts}
         if len(contexts) != len(self.referent_contexts) or any(
             rid not in comparisons and rid != self.candidate_id for rid in contexts

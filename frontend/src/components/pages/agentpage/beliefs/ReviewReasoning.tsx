@@ -2,6 +2,8 @@ import { useEffect, useState } from "react"
 import { getReviewReceipt } from "../../../../api/beliefReview"
 import type { Recorded, ReasoningKey, ReviewExportItem } from "../../../../api/beliefReview"
 
+import { EvaluationDiagnostics } from "./EvaluationDiagnostics"
+
 const fields: [ReasoningKey, string][] = [
   ["encounter", "1. Encounter / source"], ["claim_or_tension", "2. Claim / tension"],
   ["comparison", "3. Comparison"], ["consequence_or_challenge", "4. Consequence / challenge"],
@@ -58,6 +60,7 @@ export function ReviewReasoning({ item }: { item: ReviewExportItem }) {
     {item.timestamp ? <time dateTime={item.timestamp}>{item.timestamp}</time> : <p>Timestamp unknown / not recorded</p>}
     {item.kind === "assessment" && <p>Provisional advisory assessment · evaluator {typeof status === "string" ? status : "unknown"}</p>}
     {typeof item.record.abstain_reason === "string" && item.record.abstain_reason && <p>Evaluator uncertainty: {item.record.abstain_reason}</p>}
+    <EvaluationDiagnostics diagnostics={item.record.evaluation_diagnostics} />
     {item.kind === "decision" && <p>Scoped operator decision · shared agreement not inferred</p>}
     {item.kind === "decision" && <p>This records a situated commitment; factual verification remains separate.</p>}
     {typeof item.record.rationale === "string" && <p>Recorded rationale: {item.record.rationale}</p>}

@@ -76,19 +76,46 @@ async def evaluate(triage: EvidenceTriage, state: dict[str, Any], count: int, fl
             "answers": {},
             "returned_model": result.get("returned_model"),
         }
-    try:
-        answers = result["answers"]
-        for key, definition in definitions.items():
-            answer = answers[key]
-            if not isinstance(answer, dict) or answer.get("choice") not in definition["criteria"]:
-                raise ValueError("Malformed or repetitive answer")
-            if probability(answer.get("confidence")) < floor:
-                raise ValueError("Uncertain answer")
-    except (KeyError, TypeError, ValueError):
+    answers = result["answers"]
+    diagnostics = []
+    for key, definition in definitions.items():
+        answer = answers.get(key)
+        choice = None
+        confidence = None
+        status = "missing"
+        if isinstance(answer, dict):
+            raw = answer.get("choice")
+            if isinstance(raw, str) and raw in definition["criteria"]:
+                choice = raw
+                try:
+                    confidence = probability(answer.get("confidence"))
+                except ValueError:
+                    status = "invalid_confidence"
+                else:
+                    status = "within_threshold" if confidence >= floor else "below_threshold"
+            else:
+                status = "invalid_choice"
+        diagnostics.append(
+            {
+                "question_id": key,
+                "choice": choice,
+                "confidence": confidence,
+                "threshold": floor,
+                "status": status,
+                "is_semantic_verdict": False,
+            }
+        )
+    if any(d["status"] != "within_threshold" for d in diagnostics):
         return {
             "status": "abstained",
             "reason": "invalid_repetitive_or_uncertain_answers",
             "answers": {},
             "returned_model": result.get("returned_model"),
+            "diagnostics": diagnostics,
         }
-    return {"status": "evaluated", "answers": answers, "returned_model": result.get("returned_model")}
+    return {
+        "status": "evaluated",
+        "answers": answers,
+        "returned_model": result.get("returned_model"),
+        "diagnostics": diagnostics,
+    }

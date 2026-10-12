@@ -307,6 +307,7 @@ class ExplicitBeliefRepository(BaseRepository):
                 "model": a["returned_model"] if a else None,
                 "requested_model": a["requested_model"] if a else None,
                 "confidence": a["assessment_confidence"] if a else None,
+                "diagnostics": a.get("evaluation_diagnostics", []) if a else [],
             },
         }
 

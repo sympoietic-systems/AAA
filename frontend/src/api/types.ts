@@ -137,7 +137,9 @@ export interface AdmissionReceipt {
   context_issues?: string[]; uncompared_count?: number;
   source: { conversation_id: string | null; message_id: number | null; parent_message_id?: number; message_sha256: string; evidence_sha256: string };
   comparisons?: { id: string; kind: string; label: string; statement: string; statement_sha256: string; scope?: string; temporal_scope?: string }[];
-  evaluation?: { status: string; model?: string; reason?: string; input_sha256?: string; latency_ms?: number; answers?: Record<string, { choice?: string; confidence?: number }> };
+  evaluation?: { diagnostics?: EvaluationDiagnostic[]; status: string; model?: string; reason?: string; input_sha256?: string; latency_ms?: number; answers?: Record<string, { choice?: string; confidence?: number }> };
 }
 
 export interface RecurrenceGroup { id: string; member_ids: string[]; count: number; count_kind: "visible_queue_entries"; standing: "context_incomplete"; semantic_equivalence: "unknown"; independent_warrant_delta: 0; tool_authority: "none"; scan_truncated: boolean; ancestry_unavailable: number }
+
+export interface EvaluationDiagnostic { question_id: string; choice: string | null; confidence: number | null; threshold: number; status: "within_threshold" | "below_threshold" | "missing" | "invalid_choice" | "invalid_confidence"; is_semantic_verdict: false; comparison_id?: string | null; comparison_statement_sha256?: string | null }

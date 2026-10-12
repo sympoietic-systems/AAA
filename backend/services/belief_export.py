@@ -159,7 +159,10 @@ class BeliefExport:
             }
         uncertainty = None
         if kind == "assessment":
-            uncertainty = {k: record.get(k) for k in ("evaluator_status", "abstain_reason", "assessment_confidence")}
+            uncertainty = {
+                k: record.get(k)
+                for k in ("evaluator_status", "abstain_reason", "assessment_confidence", "evaluation_diagnostics")
+            }
         elif kind == "decision":
             uncertainty = {
                 k: record.get(k) for k in ("actor", "authority", "next_state", "rationale", "dissent", "positions")

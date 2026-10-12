@@ -83,6 +83,8 @@ T14 local selection: bounded agent snapshot → 100 active/64 pending/32 deferre
 
 I.recurrence: additive read-only proposal recurrence_group; ≤50 eligible entries +128 ancestry steps; same agent/conversation, exact statement + absent scope/time/quote/consequence; current awaiting_context and immutable receipt/source binding; all member sources mutually ancestral. Group count=visible queue entries; no semantic equivalence/support/merge. Unknown/cyclic/truncated ancestry → singleton; siblings/enrichment/reviewed records separate. All original records/receipts retained.
 
+I.diagnostics: Assessment.evaluation_diagnostics≤14 typed question/allowed-choice/finite-confidence/threshold/status observations; filtered relation question maps to bound comparison ID/hash. Separate from relations/warrant; is_semantic_verdict=false. Missing/invalid raw payload omitted; defaults empty for historical receipts, no backfill/provider replay. Same immutable receipt projected through native page + Traces/Creases/export; thresholds/adoption unchanged.
+
 ## §V
 
 V1: ∀ promoted origin → source-bound encounter + visible assessed/deferred/failed outcome; no direct proposal bypass.
@@ -114,6 +116,8 @@ V26: automated corpus review uses two blind distinct returned model families; no
 
 V27: exact incomplete recurrence display groups only verified mutually ancestral same-agent/conversation sources; reviewed/enriched/stale records excluded; bounded scan explicit; every member/detail/deep link preserved; count adds zero warrant/mass/authority. Tests test_v27_branch_context_and_readonly_grouping + RecurrenceList.test.tsx.
 
+V28: uncertain/malformed Jev dimensions retain bounded valid observations + specific failure status, never accepted semantic relations/warrant; comparison diagnostic bound to exact snapshot/hash; threshold unchanged; original receipt identity/time preserved in page/traces/export; old receipts remain immutable. Tests test_v28_abstained_dimensions_persist_without_relations + EvaluationDiagnostics.test.tsx.
+
 ## §T
 
 `id` local to `BELIEF_SPEC.md`; references to root tasks qualified. Status: `.` todo; `~` partial; `x` done. Each task owns cited surfaces; dependencies below.
@@ -135,6 +139,7 @@ T13|x|belief/workshop UI + traces/creases expose same receipt, five reasoning fi
 T14|x|bounded exploratory/dormant retrieval + selection receipts; scoped dissent/provisional framing; preserve diffractive geometry; no tool/action authority transfer|V9,V14,V15,V16,V19,V24,I.selection,I.config
 T15|~|evaluate held-out advisory relations + candidate retention/review burden; matched participation replay/ablation; freeze budgets/acceptance targets; publish failures + unresolved judgments; [Report 062](../reports/062-belief-v2-evaluation/README.md): source-bound provisional audit + synthetic exploratory 0/1/2 replay local; [Report 063](../reports/063-belief-conversation-replay/README.md): five saved-turn counterfactuals + generator/protocol replication, 28 generation attempts/25 complete, 5 provisional source-bound judgment projections; [Report 064](../reports/064-belief-intake-replay/README.md): real isolated intake +6 live Jev calls; unscoped recurrence backlog and all-confidence abstention retained; independent gold/semantic targets/dream/usefulness unresolved, promotion blocked|V6,V8,V9,V10,V14,V15,V22,I.eval,I.selection
 T15a|x|read-only exact incomplete recurrence queue grouping + expandable original entries; bounded source ancestry; [Report 065](../reports/065-belief-recurrence/README.md): 3 stored proposals →1 expandable verified branch group; 1123 full tests + browser keyboard/detail checks; ADR-128; no admission/threshold change|V2,V3,V13,V20,V22,V27,I.recurrence,I.ui
+T15b|x|typed per-question uncertainty diagnostics + source-bound persistence/export/page/trace projection; [Report 066](../reports/066-belief-dimension-diagnostics/README.md): frozen six-call replay retains34 observations, all abstained, no accepted relations/adoption; 1147 full tests; no live retries/threshold tuning|V3,V4,V6,V8,V12,V13,V20,V22,V28,I.diagnostics,I.assessment,I.ui
 T16|.|versioned revision/supersession/resurfacing; legacy mapping + rollback/restart rehearsal on isolated copies; no semantic bulk cleanup|V11,V12,V15,V16,V21,I.decision,I.state,I.config
 T17|.|integrated backend/frontend gates; documentation/ADR/schema/API/config updates; end-to-end receipt + source lineage + dissent parity evidence; review release readiness|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
 T18|.|authorized staged rollout only; pin server build/migrations/config, complete-window telemetry, origin-level outcomes + rollback criteria; verify real receipts; report limits|V1,V19,V21,V22,V23,I.config,I.eval
@@ -278,3 +283,4 @@ B60|2026-10-11|unscoped exact recurrence produces new pending proposal; six live
 B61|2026-10-12|recurrence draft read oldest receipt from newest-first native history|latest index0 + enrichment regression; V27 existing
 B62|2026-10-12|recurrence component exported helper and failed React refresh lint contract; import ordering failed Python gate|separate pure helper module + sorted imports; existing quality protocol sufficient
 B63|2026-10-12|first full verification workshop concurrent same-key test returned4/6 results; grouping paths absent from that test; cause unconfirmed|retain failed log; isolated2 + final1123 pass; no workshop rewrite or new invariant; existing V11 concurrency contract
+B64|2026-10-12|advisory gate erased all dimensions on one uncertain answer and dropped returned model on abstention|bounded typed diagnostics separate from accepted relations; retain reported model; immutable trace/export parity + malformed/nonfinite/missing regressions; V28
