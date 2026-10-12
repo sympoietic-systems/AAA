@@ -212,6 +212,42 @@ def test_recovery_attempt_allowance_is_new_but_old_receipts_remain(recovery):
     assert receipts.get("task", failed.action_id).status == "failed"
 
 
+def test_recovery_after_previous_sixteen_revisions_is_allowed(recovery):
+    manager, *_ = recovery
+    state = manager.orchestrator._get_state("task")
+    state["recovery_history"] = [{"revision": revision} for revision in range(1, 17)]
+    manager.task_repo.update("task", orchestrator_state=json.dumps(state))
+
+    prepare_step_recovery(manager, "task", "digesting", "digest", "digest1")
+
+    recovered = json.loads(manager.task_repo.get("task")["orchestrator_state"])
+    assert len(recovered["recovery_history"]) == 17
+    assert recovered["recovery_history"][-1]["revision"] == 2
+
+
+def test_recovery_limit_is_configurable_and_bounded(recovery):
+    manager, *_ = recovery
+    manager.orchestrator.config["max_recovery_revisions"] = 2
+    state = manager.orchestrator._get_state("task")
+    state["recovery_history"] = [{"revision": revision} for revision in range(1, 3)]
+    manager.task_repo.update("task", orchestrator_state=json.dumps(state))
+    before = manager.task_repo.get("task")
+
+    with pytest.raises(ReceiptConflictError, match="Research recovery limit reached"):
+        prepare_step_recovery(manager, "task", "digesting", "digest", "digest1")
+
+    assert manager.task_repo.get("task") == before
+
+
+def test_recovery_revision_environment_override(monkeypatch):
+    from backend.config import _apply_env_overrides
+
+    monkeypatch.setenv("AAA_RESEARCH_MAX_RECOVERY_REVISIONS", "96")
+    config = _apply_env_overrides({"research_orchestrator": {}})
+
+    assert config["research_orchestrator"]["max_recovery_revisions"] == 96
+
+
 def test_late_old_action_cannot_replace_recovered_source_analysis(recovery):
     manager, journal, parsed, failed, results, receipts = recovery
     prepare_step_recovery(manager, "task", "digesting", "digest", "digest1")

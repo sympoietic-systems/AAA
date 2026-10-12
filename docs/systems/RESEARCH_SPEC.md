@@ -64,6 +64,7 @@ V14: Late result is accepted only for current action/version; stale or regenerat
 V15: Completion ∈ `complete|partial|failed|cancelled`; `complete` requires report support/coverage contract. UI distinguishes queued/running, approval wait, degraded/partial and terminal status.
 V16: Parsing preserves source identity, version and resolvable spans; OCR/layout uncertainty remains attached to derived claims.
 V17: Jev screening requires calibrated abstention and inspectable exclusions; no activation or promotion from synthetic fixtures alone.
+V18: Explicit same-task recovery remains available up to configured `max_recovery_revisions` (default 64, hard range 1..256); every revision retains fresh per-run watchdog, provider-attempt and prerequisite bounds.
 
 ## §T Delivery Contract
 
@@ -91,6 +92,7 @@ Task IDs and ordering remain owned by root SPEC.md. Detailed exit gates:
 - T62–T66 add durable action/dependency/version boundaries and finite prerequisites. They do not authorize arbitrary model-authored replanning; legacy phase behavior remains available under frozen policy.
 - Current production log excerpt showed truncation, upstream 503s, timeouts and delayed sibling outputs. It lacks conversation-level correlation; treat as reliability fixture, not a calibrated latency baseline.
 - T69 concludes with non-adoption of Jev for research selection; T71 records integrated technical evidence under the user-authorized quality assumption; independent parser review and scanned-PDF coverage are deferred to T75. T73's native-text routing tests do not establish semantic parser accuracy or scanned-PDF OCR correctness.
+- B1|2026-10-12|fixed global recovery cap of 16 blocked same-task report recovery after repeated backend failures|V18: configurable cap, bounded execution per revision
 
 ## Non-goals
 
