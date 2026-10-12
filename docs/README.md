@@ -152,3 +152,5 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 047: Beliefs v2 measured quantities and decay accounting](reports/047-belief-v2-quantities-and-decay/README.md)
 - [Report 067: Beliefs v2 semantic challenge](reports/067-belief-challenge/README.md)
 - [Report 068: Belief assessment dimension shadow comparison](reports/068-belief-shadow-gate/README.md)
+
+- [Report 069: Six-case belief shadow-gate desk review](reports/069-belief-shadow-adjudication/README.md)
