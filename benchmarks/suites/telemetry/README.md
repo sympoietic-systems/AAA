@@ -103,3 +103,17 @@ uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --output benchm
 ```
 Receipts contain fixture hashes and labels but omit fixture text, raw provider errors, and credentials. Provider cost remains unknown when an endpoint does not report it. The Cloudflare endpoint uses the documented Workers AI Jev/SystemOne decision interface.
 
+### 8. EmbeddingGemma 2 vs MiniLM retrieval/storage (`embedding_mrl_retrieval`)
+The frozen 30-document / 10-query synthetic fixture compares MiniLM at 384d with EmbeddingGemma 2 at 128d, 256d, 512d, and 768d. It records Recall@1/3/5, MRR, CPU encode latency, process RSS, and benchmark-local SQLite storage. Each model/dimension uses a fresh namespace and database; no production vectors or databases are read or written. MRL outputs are L2-normalized after truncation.
+
+Validate the fixture without loading model weights:
+```bash
+uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --validate-only
+```
+
+The EmbeddingGemma 2 profile requires a benchmark environment with Sentence Transformers ≥6.1, Transformers ≥5.19, and TorchVision installed; the repository's locked default model stack may predate the architecture. Run with:
+```bash
+uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --output benchmarks/runs/embedding_mrl_retrieval_<run-id>
+```
+The 2026-10-14 CPU run completed both models on the synthetic fixture. Detailed per-query receipts and SQLite stores are in the ignored run directory `benchmarks/runs/embedding_mrl_retrieval_20261014_verified`; perfect Gemma scores on this small hand-authored set are diagnostic only, not evidence for model promotion or multimodal performance.
+

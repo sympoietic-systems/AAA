@@ -209,6 +209,7 @@ V138: explicit recovery targets the selected persisted step when logical groups 
 V139: ∀ resumable quality audit → frozen UTC window + source identity + candidate-ID snapshot; each receipt binds message ID/content hash/sample version; summary ⊆ current snapshot + selected mode; failures remain visible/retryable
 V140: ∀ release preflight → authenticated read-only runtime + DB evidence; revision/config/migration/coverage absence stays unknown or incomplete; receipt reports bounded window + scan truncation; API schema matches serialized report
 V141: ∀ external decision response → verify object/answer/probability shapes before field access; malformed envelopes become bounded per-case failures, never raw provider data
+V142: ∀ dimension-truncated retrieval vector → L2-normalize after truncation before cosine scoring or persistence
 
 ## §T
 
@@ -305,7 +306,7 @@ T86|x|freeze reply-quality audit window/source/candidate snapshot; bind resumabl
 T87|x|add authenticated read-only runtime identity + receipt-coverage endpoint and receipt command; unknown stays explicit; replace stale T55|V106,V139,V140,I.api,I.benchmark
 T88|x|finish T37 active/sham/current causal benchmark slice; bounded issue state, abstain, predicate receipts, reachable isolated arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
 T89|~|benchmark Clef/Clef-flash vs Jev on frozen non-secret fixtures; retain validity, abstention, latency, calibration, failure/cost receipts; no routing change|V30,I.benchmark
-T90|.|benchmark EmbeddingGemma text retrieval vs MiniLM in isolated model/dimension namespace; measure recall, latency, memory/storage; no migration|V30,I.benchmark
+T90|x|benchmark EmbeddingGemma 2 text retrieval vs MiniLM in isolated model/dimension namespace; measure recall, latency, memory/storage; no migration|V30,V142,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -476,3 +477,4 @@ B133|2026-10-13|quality audit resume recomputed moving cutoff and summarized all
 B134|2026-10-13|audit regression fixture used stale sample version; strict standalone typing exposed untyped checkpoint/receipt shapes|fixture imports canonical SAMPLE_VERSION; type checkpoint/receipts and preserve explicit dynamic HTTP boundary; V30,V139; T86
 B135|2026-10-13|release readiness service added rows_examined while response schema required scanned_rows|align Pydantic response with service field; endpoint integration test validates serialized receipt; V140; T87
 B136|2026-10-14|strict mypy exposed un-narrowed dynamic response envelopes and probability maps at the Clef benchmark boundary|narrow response objects explicitly and test malformed envelope as a contained case failure; V141; T89
+B137|2026-10-14|EmbeddingGemma encoder normalization drifted after MRL truncation|normalize each truncated vector before cosine scoring/storage; assert unit norm; V142; T90
