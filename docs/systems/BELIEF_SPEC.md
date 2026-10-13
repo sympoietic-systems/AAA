@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1-T17 complete locally; T15 result inconclusive/no-go; T15c complete with prior race failure not reproduced; T18 pending. Date: 2026-10-13.
+Status: T1-T17 complete locally; T15 result inconclusive/no-go; T15c complete with prior race failure not reproduced; T18 replay tooling implemented locally, production rollout pending. Date: 2026-10-13.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -120,6 +120,7 @@ V28: uncertain/malformed Jev dimensions retain bounded valid observations + spec
 V29: passive chat/user assertion/conversation-pattern nucleation requires source-bound intake receipt; missing/disabled/unpromoted intake → abstain, ⊥ legacy direct-proposal fallback; explicit legacy notes retain declared compatibility route.
 V31: adopted proposal/belief aliases resolve to persisted belief kind; revision creates linked candidate with zero mass/confidence/signature, preserves prior commitment + receipt; supersession links adopted target; resurfacing preserves state/warrant. Tests test_v31_revision_alias_and_lineage + test_v16_resurface_preserves_standing_and_adds_no_evidence + test_v16_supersession_requires_adopted_target_and_preserves_both_commitments.
 V32: duplicate suggested labels cannot block explicit adoption or mutate prior node; stable ID and quantities retained. Test test_v32_duplicate_suggested_label_keeps_adoption_atomic.
+V33: V1 replay binds exact source snapshot to same record; legacy status/mass/confidence untouched; missing source/scope/time → V2 abstention; ⊥ replay-as-new-nucleation/adoption. Tests test_v1_replay_links_legacy_record_and_abstains_without_provider_or_context + test_changed_v1_snapshot_is_rejected_without_replacing_replay_history.
 
 ## §T
 
@@ -147,7 +148,7 @@ T15c|x|frozen hypothetical challenge;8 topic families,16 cases; family-disjoint 
 T15d|x|offline shadow projection compares aggregate gate with per-dimension floor; binds scope/time/quote; no provider calls, persistence joins, adoption or tuning; [Report 068](../reports/068-belief-shadow-gate/README.md):35 frozen cases,12 observations in 7 hypothetical cases,0 from 6 saved contrast assessments +13 recorded conversation nominations,16 context-blocked; usefulness unresolved|V3,V4,V6,V8,V20,V22,V26,V28,I.eval,I.assessment
 T16|x|versioned revision/supersession/resurfacing; legacy mapping + rollback/restart rehearsal on isolated copies; no semantic bulk cleanup|V11,V12,V15,V16,V21,V31,I.decision,I.state,I.config
 T17|x|integrated backend/frontend gates; authenticated receipt/source-lineage/dissent parity oracle; contract/config review; local readiness is not production certification; [Report 072](../reports/072-belief-v2-integration-readiness/README.md)|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
-T18|.|authorized staged rollout only; pin server build/migrations/config, complete-window telemetry, origin-level outcomes + rollback criteria; verify real receipts; report limits|V1,V19,V21,V22,V23,I.config,I.eval
+T18|~|operator V1 proposal review packet + idempotent V2 replay; staged rollout only after explicit authorization, pin server build/migrations/config, complete-window telemetry, origin-level outcomes + rollback criteria; verify real receipts; report limits|V1,V19,V21,V22,V23,V33,I.config,I.eval
 
 Dependencies:
 - T1 → T2,T3,T4. Offline contracts/corpus may progress while production identity unknown; T18 cannot.
@@ -300,3 +301,4 @@ B72|2026-10-13|second explicit adoption collided on per-agent label uniqueness a
 B73|2026-10-13|strict mypy rejected optional inferred workshop transition state|narrow transition result to ReviewState; existing strict typing gate
 B74|2026-10-13|revision proposal inherited predecessor vector, implying unmeasured geometry for changed statement|initialize neutral zero signature; V31
 B75|2026-10-13|lineage assertions landed in unrelated idempotency test and referenced unbound successor|place assertions in revision test; Ruff scope check
+B76|2026-10-13|new replay test asserted mapping access after service result became typed dataclass|use typed attributes; focused tests + strict typing; mechanical; existing quality gates sufficient

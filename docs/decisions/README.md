@@ -177,3 +177,4 @@ What becomes easier/harder?
 - [ADR-128: Incomplete belief recurrence display](ADR-128-incomplete-belief-recurrence-display.md) — Branch-bound read-only grouping preserves every record and adds no warrant.
 
 - [ADR-129: Per-question belief evaluation diagnostics](ADR-129-belief-evaluation-diagnostics.md) — Observed choices remain outside accepted relations and retain immutable source bindings.
+- [ADR-130: V1 proposal review replay into Beliefs V2](ADR-130-belief-v1-review-replay.md) — Bounded, idempotent V2 review of legacy proposals without importing warrant or lifecycle.

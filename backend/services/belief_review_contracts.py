@@ -31,6 +31,7 @@ Origin = Literal[
     "web",
     "conversation_pattern",
     "scar_fold",
+    "legacy_v1_replay",
 ]
 ADAPTER_VERSION: Literal["belief-relation-adapter-v1"] = "belief-relation-adapter-v1"
 

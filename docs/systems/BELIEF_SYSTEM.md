@@ -4,6 +4,8 @@ This document describes the design, mathematical calculations, database represen
 
 Beliefs v2 local status is owned by [BELIEF_SPEC](BELIEF_SPEC.md). T10 adds forward source-accounting sidecars for new v2 encounters, separating declared lineage, internal activity and recorded recurrence from verified warrant and legacy mass/confidence. Current resolvers verify no independent-source credit; historical encounters remain outside ledger coverage. [ADR-123](../decisions/ADR-123-belief-source-accounting.md) and the [operator guide](../guides/belief-source-accounting.md) define this boundary. T13 installs the [v2 review interface](../guides/belief-review-interface.md) locally; production rollout remains T18.
 
+T18 now includes an operator-only [V1 proposal replay guide](../guides/belief-legacy-review.md): replay creates a V2 observation/assessment sidecar linked to the existing record, and missing legacy source context remains an abstention. It does not change legacy standing or replace the independent acceptance and rollout gates.
+
 ---
 
 T14 adds [scoped participation](../guides/belief-participation.md) to the shared chat/dream window. Selection carries review standing and records final assembly receipts in existing message activation provenance. Exploratory slots remain default-off; geometric attention and recalled dissent confer no independent warrant or tool authority. [ADR-127](../decisions/ADR-127-belief-participation-selection.md) defines the boundary; T15 owns replay calibration.
