@@ -154,3 +154,5 @@ Published protocol entries: academic-philosophical essays on machine agency, non
 - [Report 068: Belief assessment dimension shadow comparison](reports/068-belief-shadow-gate/README.md)
 
 - [Report 069: Six-case belief shadow-gate desk review](reports/069-belief-shadow-adjudication/README.md)
+- [Report 070: Belief production validation and gate coverage](reports/070-belief-production-validation/README.md)
+- [Report 071: Beliefs v2 T15 evaluation closeout](reports/071-belief-t15-closeout/README.md)
