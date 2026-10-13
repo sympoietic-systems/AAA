@@ -1,6 +1,6 @@
 # Beliefs V2 Specification
 
-Status: T1-T15 evaluation complete locally; T15 result inconclusive/no-go; T15c complete with prior race failure not reproduced; T16-T18 pending. Date: 2026-10-13.
+Status: T1-T17 complete locally; T15 result inconclusive/no-go; T15c complete with prior race failure not reproduced; T18 pending. Date: 2026-10-13.
 Owner: this file → Beliefs v2 tasks/invariants; IDs file-scoped. Root [SPEC.md](../../SPEC.md) → shared invariants + existing admission task `T78` (`~` at inspection). No duplicate completion claims.
 Rationale: [BELIEFS_V2_PLAN.md](../architecture/BELIEFS_V2_PLAN.md).
 Evidence: [Report 045](../reports/045-belief-month-review/README.md); [recovered Symbia critique](../reports/045-belief-month-review/beliefs-v2-philosophical-review.md).
@@ -146,7 +146,7 @@ T15b|x|typed per-question uncertainty diagnostics + source-bound persistence/exp
 T15c|x|frozen hypothetical challenge;8 topic families,16 cases; family-disjoint folds; blind non-Jev references, nongold; [Report 067](../reports/067-belief-challenge/README.md):29 valid opinions,10 successful Jev calls all abstain,3 source guards,3 unavailable; prior workshop race retained; current full backend gate 1048 pass, not reproduced; no threshold tuning/promotion|V3,V4,V6,V8,V19,V20,V22,V26,V28,I.eval,I.assessment
 T15d|x|offline shadow projection compares aggregate gate with per-dimension floor; binds scope/time/quote; no provider calls, persistence joins, adoption or tuning; [Report 068](../reports/068-belief-shadow-gate/README.md):35 frozen cases,12 observations in 7 hypothetical cases,0 from 6 saved contrast assessments +13 recorded conversation nominations,16 context-blocked; usefulness unresolved|V3,V4,V6,V8,V20,V22,V26,V28,I.eval,I.assessment
 T16|x|versioned revision/supersession/resurfacing; legacy mapping + rollback/restart rehearsal on isolated copies; no semantic bulk cleanup|V11,V12,V15,V16,V21,V31,I.decision,I.state,I.config
-T17|.|integrated backend/frontend gates; documentation/ADR/schema/API/config updates; end-to-end receipt + source lineage + dissent parity evidence; review release readiness|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
+T17|x|integrated backend/frontend gates; authenticated receipt/source-lineage/dissent parity oracle; contract/config review; local readiness is not production certification; [Report 072](../reports/072-belief-v2-integration-readiness/README.md)|V1,V2,V4,V7,V9,V10,V13,V14,V18,V20,V21,V23,I.api,I.ui,I.eval
 T18|.|authorized staged rollout only; pin server build/migrations/config, complete-window telemetry, origin-level outcomes + rollback criteria; verify real receipts; report limits|V1,V19,V21,V22,V23,I.config,I.eval
 
 Dependencies:

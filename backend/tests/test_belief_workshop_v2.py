@@ -14,11 +14,12 @@ from pydantic import ValidationError
 
 from backend.api.deps import get_belief_service
 from backend.api.exceptions import register_error_handlers
+from backend.api.routes.belief_export import router as export_router
 from backend.api.routes.belief_workshop import router
 from backend.api.routes.beliefs import router as legacy_router
 from backend.core.sessions import SessionStore
 from backend.errors import ConstraintViolation, ResourceNotFound, SecurityViolation
-from backend.services.belief_review_contracts import Actor, WorkshopCommand
+from backend.services.belief_review_contracts import Actor, LineageEntry, WorkshopCommand
 from backend.services.belief_review_store import BeliefReviewStore
 from backend.services.belief_workshop import BeliefWorkshop
 from backend.storage.migrations.m067_belief_workshop import up
@@ -90,6 +91,7 @@ def client(db, monkeypatch):
     app.state.belief_repo = BeliefRepository(db)
     register_error_handlers(app)
     app.include_router(router, prefix="/api")
+    app.include_router(export_router, prefix="/api")
     app.include_router(legacy_router, prefix="/api")
     fake = AsyncMock()
     app.dependency_overrides[get_belief_service] = lambda: fake
@@ -502,6 +504,57 @@ def test_api_auth_boundaries_and_server_actor(db, candidate, monkeypatch):
     assert http.post(endpoint, json=payload, headers=headers).json() == response.json()
     monkeypatch.delenv("AAA_PASSWORD")
     assert http.get(url(candidate) + "/review").status_code == 403
+
+
+def test_api_receipt_source_lineage_and_dissent_match_review_and_export(db, monkeypatch):
+    """One authenticated source-bound intake remains traceable through review and export."""
+    saved = asyncio.run(
+        BeliefReviewStore(db).register(
+            incoming(
+                id="encounter:e2e-lineage",
+                segment_id="tag:e2e-lineage",
+                lineage=(
+                    LineageEntry(
+                        source_id="42",
+                        source_sha256=HASH,
+                        independence_status="derived",
+                        parent_sources=("conversation:fixture",),
+                    ),
+                ),
+            )
+        )
+    )
+    monkeypatch.setenv("AAA_PASSWORD", "fixture-password")
+    http, _ = client(db, monkeypatch)
+    headers = {"Authorization": "Bearer fixture-password", "Idempotency-Key": "e2e-dissent"}
+    payload = command(action="decline", dissent=("The replay scope remains contested",)).model_dump(mode="json")
+
+    created = http.post(url(saved.record_id) + "/decisions", json=payload, headers=headers)
+    assert created.status_code == 200, created.text
+    receipt = created.json()
+    assert receipt["decision"]["dissent"] == ["The replay scope remains contested"]
+    assert receipt["counter_trace"]["disposition"] == "retained_scoped_dissent"
+    assert receipt["tool_authority"] == "none"
+
+    review = http.get(url(saved.record_id) + "/review", headers=headers).json()
+    assert review["commands"][0]["id"] == receipt["id"]
+    assert review["commands"][0]["decision"]["dissent"] == receipt["decision"]["dissent"]
+    assert review["counter_traces"] == [receipt["counter_trace"]]
+
+    interval = {"from": "2026-10-01T00:00:00Z", "to": "2026-11-01T00:00:00Z"}
+    decision_page = http.get("/api/beliefs/v2/agents/symbia/decisions", params=interval, headers=headers)
+    assert decision_page.status_code == 200, decision_page.text
+    exported_decision = next(item for item in decision_page.json()["items"] if item["id"] == receipt["decision"]["id"])
+    assert exported_decision["reasoning"]["decision_or_uncertainty"]["dissent"] == receipt["decision"]["dissent"]
+    assert exported_decision["reasoning_sources"][0]["id"] == receipt["decision"]["id"]
+
+    encounter_page = http.get("/api/beliefs/v2/agents/symbia/encounters", params=interval, headers=headers)
+    assert encounter_page.status_code == 200, encounter_page.text
+    exported_encounter = next(item for item in encounter_page.json()["items"] if item["id"] == saved.encounter.id)
+    source_lineage = exported_encounter["reasoning"]["encounter"]["lineage"]
+    assert source_lineage[0]["source_id"] == "42"
+    assert source_lineage[0]["parent_sources"] == ["conversation:fixture"]
+    assert source_lineage[0]["independence_status"] == "derived"
 
 
 @pytest.mark.parametrize("suffix,payload", [("refine", {}), ("vet", {"action": "adopt"})])
