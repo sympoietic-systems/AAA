@@ -82,3 +82,10 @@ Quantifies:
 - **Conciliatory Padding Ratio ($R_{\text{pad}}$):** Verifies polite agreement boilerplate is eliminated.
 - **Recovery to Flow:** Confirms whether Collapse Pressure drops $< 0.35$ following human accommodation.
 
+### 6. Causal selector harness (`causal_intervention`)
+The deterministic T37 harness provides bounded, process-local `current`, write-only `sham`, and memory-reading `active` conversation arms. It records selector predicate, prior mode/outcome, mode coverage and memory read/write adherence without persisting conversation text or connecting to production routing. Verify its guard reachability and arm isolation with:
+```bash
+uv run pytest benchmarks/tests/test_telemetry_causal_intervention.py -q
+```
+This is a contract harness for later counterbalanced ablation work, not an outcome comparison or policy ranking.
+
