@@ -207,6 +207,7 @@ V136: synthesis invalid JSON escapes -> bounded linear literal-backslash preserv
 V137: synthesis pool -> explicit configured primary model, no sticky/fallback model on main failure; direct providers unchanged; empty provider error -> visible execution-boundary/provider failure, raw wrapper retained, no fake answer-shape error
 V138: explicit recovery targets the selected persisted step when logical groups duplicate; reused failed step clears prior result_summary/completed_at; synthesis attempt budget defaults300s (max300) separate from general60s; request timeout + frozen parent deadline remain upper bounds; legacy frozen revisions retain60s until explicit recovery/new task
 V139: ∀ resumable quality audit → frozen UTC window + source identity + candidate-ID snapshot; each receipt binds message ID/content hash/sample version; summary ⊆ current snapshot + selected mode; failures remain visible/retryable
+V140: ∀ release preflight → authenticated read-only runtime + DB evidence; revision/config/migration/coverage absence stays unknown or incomplete; receipt reports bounded window + scan truncation; API schema matches serialized report
 
 ## §T
 
@@ -300,7 +301,7 @@ T83|x|recover invalid Markdown/LaTeX escapes in synthesis; retain raw response +
 T84|x|pin research synthesis to configured main model; preserve provider-boundary reason on empty failure; actual-pool regressions + gates + operator docs|V137,V136,V135,V30,I.api
 T85|x|repair stale synthesis recovery target/old failure state; separate bounded synthesis attempt timeout from general attempts; tests + backend/static gates + operator docs|V138,V137,V135,V30,I.api
 T86|x|freeze reply-quality audit window/source/candidate snapshot; bind resumable receipts; scope denominators + failure accounting|V139,V123,V124,I.internal
-T87|.|add read-only deployment identity + receipt-coverage preflight; unknown stays explicit; replace stale T55|V106,V139,I.benchmark
+T87|x|add authenticated read-only runtime identity + receipt-coverage endpoint and receipt command; unknown stays explicit; replace stale T55|V106,V139,V140,I.api,I.benchmark
 T88|.|finish T37 active/sham/current causal benchmark slice; bounded issue state, abstain, predicate receipts, reachable isolated arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
 T89|.|benchmark Clef/Clef-flash vs Jev on frozen non-secret fixtures; retain validity, abstention, latency, calibration, failure/cost receipts; no routing change|V30,I.benchmark
 T90|.|benchmark EmbeddingGemma text retrieval vs MiniLM in isolated model/dimension namespace; measure recall, latency, memory/storage; no migration|V30,I.benchmark
@@ -472,3 +473,4 @@ B131|2026-10-12|prefer_primary still allowed Nemotron fallback; provider boundar
 B132|2026-10-12|synthesis recovery selected last duplicate query-group row and reused failure retained stale summary; global60s attempt limit cut off main synthesis despite300s provider HTTP timeout|honor clicked step ID; explicitly clear nullable failure/completion fields; synthesis-specific300s limit remains capped by request timeout and frozen phase deadline; retain legacy policy until explicit recovery; V138
 B133|2026-10-13|quality audit resume recomputed moving cutoff and summarized all retained checkpoint rows, mixing windows|freeze audit identity/window/candidate snapshot; bind and count only current-snapshot receipts; V139; T86
 B134|2026-10-13|audit regression fixture used stale sample version; strict standalone typing exposed untyped checkpoint/receipt shapes|fixture imports canonical SAMPLE_VERSION; type checkpoint/receipts and preserve explicit dynamic HTTP boundary; V30,V139; T86
+B135|2026-10-13|release readiness service added rows_examined while response schema required scanned_rows|align Pydantic response with service field; endpoint integration test validates serialized receipt; V140; T87

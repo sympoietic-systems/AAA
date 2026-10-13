@@ -16,7 +16,7 @@ Provenance describes assembly, not causal influence on a response. Schema change
 
 ## Operations
 
-Run normal startup migrations (`AAA_RUN_MIGRATIONS=true`) before using this branch with an existing database. Migration is additive, idempotent and preserves existing rows. Read-only coverage inspection: `python -m benchmarks.suites.activation_usage <database> --output <receipt.json>`. Unknown legacy rows are not backfilled.
+Run normal startup migrations (`AAA_RUN_MIGRATIONS=true`) before using this branch with an existing database. Migration is additive, idempotent and preserves existing rows. Read-only local coverage inspection: `python -m benchmarks.suites.activation_usage <database> --output <receipt.json>`. For a live authenticated runtime snapshot, request `GET /api/release-readiness?days=30`; the remote receipt command is `python -m benchmarks.suites.release_readiness_preflight --base-url https://<host>/api --output <receipt.json>` and reads `AAA_PASSWORD` from the environment. Unknown legacy rows are not backfilled. The runtime endpoint does not run migrations or infer response influence from assembly provenance.
 
 ## Consultation
 
