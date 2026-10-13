@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-10-13",
+  "source": "AAA production API and configured production DB, authenticated read-only GETs",
+  "sample_method": "six preselected Symbia proposal IDs from the recent-month stratified sample",
+  "production_write_operations": 0,
+  "sample": [
+    {
+      "proposal_id": "479689b0-dc95-4b3e-ac38-a811f5e62f58",
+      "saved_status": "pending",
+      "observed_production_status": "pending",
+      "statement_sha256": "e7e7230dec4d6ce48cf03389509614a242778553e8fac1d0f86b52dbd5be4bf1",
+      "statement_hash_matches_production": true,
+      "candidate_context": "available",
+      "comparison_context": "not_applicable",
+      "valid_model_annotations": 2,
+      "reviewer_slots": 2,
+      "relation_counts": {
+        "no_comparison": 2
+      },
+      "context_incomplete": false
+    },
+    {
+      "proposal_id": "fa00ee9a-864b-43af-8878-6b87dbe6a80a",
+      "saved_status": "refined",
+      "observed_production_status": "refined",
+      "statement_sha256": "ec43961f8afe02ac87737af3569b94f16e7f127a3767f354d79cc114c2cba648",
+      "statement_hash_matches_production": true,
+      "candidate_context": "unavailable",
+      "comparison_context": "unavailable",
+      "valid_model_annotations": 1,
+      "reviewer_slots": 2,
+      "relation_counts": {
+        "insufficient_context": 1
+      },
+      "context_incomplete": true
+    },
+    {
+      "proposal_id": "4304bbdf-d46c-427c-87fe-ddfe06b4d11d",
+      "saved_status": "refined",
+      "observed_production_status": "refined",
+      "statement_sha256": "4b40db26d081e0d232d58582f13941ce98bc4ac4c16c6a43c94d5010990d8dc7",
+      "statement_hash_matches_production": true,
+      "candidate_context": "unavailable",
+      "comparison_context": "available",
+      "valid_model_annotations": 2,
+      "reviewer_slots": 2,
+      "relation_counts": {
+        "insufficient_context": 2
+      },
+      "context_incomplete": true
+    },
+    {
+      "proposal_id": "21927ce3-b272-4d12-bfe5-d27e858b6f7d",
+      "saved_status": "refined",
+      "observed_production_status": "refined",
+      "statement_sha256": "22eef34d55a97fdc31e5d5a160eecee9bb28247b9fb1e4603bf136b1dfc4c6ad",
+      "statement_hash_matches_production": true,
+      "candidate_context": "available",
+      "comparison_context": "unavailable",
+      "valid_model_annotations": 2,
+      "reviewer_slots": 2,
+      "relation_counts": {
+        "insufficient_context": 2
+      },
+      "context_incomplete": true
+    },
+    {
+      "proposal_id": "741614ff-7798-4887-ac36-a0e2d6e97c10",
+      "saved_status": "adopted",
+      "observed_production_status": "adopted",
+      "statement_sha256": "3b58adfdc01eb1b8531be3ac4ffc8b9880cb663214f48602f79d6f6f56179ab3",
+      "statement_hash_matches_production": true,
+      "candidate_context": "available",
+      "comparison_context": "unavailable",
+      "valid_model_annotations": 2,
+      "reviewer_slots": 2,
+      "relation_counts": {
+        "insufficient_context": 2
+      },
+      "context_incomplete": true
+    },
+    {
+      "proposal_id": "d9f04ce2-0e26-416f-8d53-1dd85a596be9",
+      "saved_status": "adopted",
+      "observed_production_status": "adopted",
+      "statement_sha256": "bff8e862f5737d469d6316ec722c02ec2357f5bd1b49a90d9e837cf614aa8985",
+      "statement_hash_matches_production": true,
+      "candidate_context": "available",
+      "comparison_context": "unavailable",
+      "valid_model_annotations": 1,
+      "reviewer_slots": 2,
+      "relation_counts": {
+        "insufficient_context": 1
+      },
+      "context_incomplete": true
+    }
+  ],
+  "production_gate_tables": {
+    "belief_admission": {
+      "rows": 0,
+      "has_more": false
+    },
+    "belief_encounters": {
+      "rows": 0,
+      "has_more": false
+    }
+  },
+  "recent_month_scan": {
+    "window_start_date": "2026-09-13",
+    "window_end_date": "2026-10-13",
+    "rows": 122,
+    "statuses": {
+      "pending": 94,
+      "refined": 19,
+      "adopted": 9
+    },
+    "first_source_trace_types": {
+      "chat_turn": 82,
+      "intention": 29,
+      "scar_fold": 11
+    },
+    "unique_rows_scanned": 160,
+    "pagination_complete": true
+  },
+  "prompt_bleedthrough_example": {
+    "proposal_id": "67dc62ae-b487-4afc-9c0e-df1722684b0d",
+    "proposal_status": "pending",
+    "agent_id": "codex",
+    "source_trace_type": "chat_turn",
+    "source_message_id": "4120",
+    "source_message_sha256": "8e4fffb9049a5f83fc6fb4034006715717cf90cc057aca826fc3636f3191be92",
+    "source_message_chars": 878,
+    "provisional_statement_chars": 200,
+    "provisional_statement_is_exact_source_prefix": true,
+    "source_text_included": false
+  },
+  "production_runtime_observations": {
+    "authenticated_health": {
+      "status": "ok",
+      "modules": 19
+    },
+    "latest_migration": {
+      "id": 70,
+      "name": "068_belief_export_order",
+      "applied_at": "2026-10-11 15:37:09"
+    },
+    "build_commit_verified": false,
+    "effective_config_verified": false
+  },
+  "review_packet_validation": "passed structural bindings and split integrity only",
+  "historical_model_review_run": "belief-auto-review/2026-10-08-t4-v4",
+  "summary": {
+    "records": 6,
+    "statement_hash_matches": 6,
+    "status_matches": 6,
+    "valid_model_annotations": 10,
+    "reviewer_slots": 12,
+    "incomplete_context_cases": 5,
+    "cases_with_complete_context": 1,
+    "semantic_gold_annotations": 0
+  },
+  "runtime_boundary": {
+    "production_build_config_identity_verified": false,
+    "production_effective_config_verified": false,
+    "local_repo_config": {
+      "belief_review.origin_intake.passive_chat": false,
+      "belief_review.origin_intake.explicit_chat": false,
+      "belief_review.origin_intake.explicit_dream": false,
+      "belief_review.assessment.enabled": false,
+      "belief_admission.jev_shadow": true
+    },
+    "receipt_paths_exist_in_local_code": {
+      "legacy_belief_admission": true,
+      "v2_belief_encounters": true
+    },
+    "observed_pre_fix_legacy_chat_turn_fallback_bypassed_receipts_when_passive_intake_returned_none": true,
+    "pre_fix_fallback_test_replaced_by": "test_v29_default_off_passive_chat_abstains_without_legacy_proposal",
+    "duplicate_receipt_table_added": false,
+    "focused_tests_at_initial_validation": "61 passed"
+  },
+  "local_followup_fix": {
+    "status": "implemented_locally_not_deployed",
+    "invariant": "BELIEF_SPEC V29",
+    "passive_chat_user_assertion_and_conversation_pattern_require_source_bound_intake_receipt": true,
+    "missing_disabled_or_unpromoted_intake_abstains_without_legacy_proposal": true,
+    "explicit_legacy_note_route_preserved": true,
+    "suppression_log_includes_source_text": false,
+    "regression_tests": [
+      "test_v29_default_off_passive_chat_abstains_without_legacy_proposal",
+      "test_v29_passive_chat_abstains_when_intake_service_is_missing"
+    ],
+    "focused_origin_tests": "88 passed",
+    "ruff": "passed",
+    "mypy_backend_services_belief_passive_intake": "passed",
+    "mypy_belief_engine": "existing file-level typing debt; 17 errors outside changed lines"
+  }
+}

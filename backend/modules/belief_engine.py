@@ -168,20 +168,38 @@ class BeliefDynamicsEngine(ProcessingModule):
         if source_type == "shared_note" and parent_message_id is not None:
             # Preserve the legacy route until this origin is promoted.
             source_type, source_id = "chat_turn", str(parent_message_id)
-        if (
-            not legacy_note
-            and self._origin_intake is not None
-            and source_type in {"chat_turn", "user_assertion", "conversational_pattern"}
-        ):
+        passive_origins = {
+            "chat_turn": "passive_chat",
+            "user_assertion": "passive_chat",
+            "conversational_pattern": "conversation_pattern",
+        }
+        if not legacy_note and source_type in passive_origins:
+            origin = passive_origins[source_type]
+            if self._origin_intake is None:
+                logger.info(
+                    "Belief nucleation abstained: origin intake unavailable (agent=%s, origin=%s, source_id=%s)",
+                    agent_id,
+                    origin,
+                    source_id[:128],
+                )
+                return None
             receipt = self._origin_intake(
                 agent_id,
                 statement,
-                origin="conversation_pattern" if source_type == "conversational_pattern" else "passive_chat",
+                origin=origin,
                 source_id=source_id,
                 segment_id="pattern:0" if source_type == "conversational_pattern" else "passive:0",
             )
-            if receipt is not None:
-                return str(receipt["proposal_id"])
+            if receipt is None:
+                logger.info(
+                    "Belief nucleation abstained: origin intake disabled or unpromoted "
+                    "(agent=%s, origin=%s, source_id=%s)",
+                    agent_id,
+                    origin,
+                    source_id[:128],
+                )
+                return None
+            return str(receipt["proposal_id"])
         existing = self._belief_repo.list_beliefs(agent_id)
 
         initial_mass = 0.05 * source_weight / 0.5

@@ -117,6 +117,7 @@ V26: automated corpus review uses two blind distinct returned model families; no
 V27: exact incomplete recurrence display groups only verified mutually ancestral same-agent/conversation sources; reviewed/enriched/stale records excluded; bounded scan explicit; every member/detail/deep link preserved; count adds zero warrant/mass/authority. Tests test_v27_branch_context_and_readonly_grouping + RecurrenceList.test.tsx.
 
 V28: uncertain/malformed Jev dimensions retain bounded valid observations + specific failure status, never accepted semantic relations/warrant; comparison diagnostic bound to exact snapshot/hash; threshold unchanged; original receipt identity/time preserved in page/traces/export; old receipts remain immutable. Tests test_v28_abstained_dimensions_persist_without_relations + EvaluationDiagnostics.test.tsx.
+V29: passive chat/user assertion/conversation-pattern nucleation requires source-bound intake receipt; missing/disabled/unpromoted intake → abstain, ⊥ legacy direct-proposal fallback; explicit legacy notes retain declared compatibility route.
 
 ## §T
 
@@ -290,3 +291,4 @@ B65|2026-10-12|challenge reviewer closure left loop case unbound in lint; fixtur
 B66|2026-10-12|migration051 auto-resolved live structural evaluator during benchmark setup; legacy replay total calls uninstrumented|benchmark-only unavailable-scorer guard + no-network regression; retain contamination erratum; no production migration change; V19,V22
 B67|2026-10-12|reference prompt left uncertainty type unspecified; NVIDIA numeric uncertainty rejected by v1 text schema; provider connections then failed|separate v2 projection retains numeric self-report uncalibrated; raw failures immutable; supplement only unattempted cells after connectivity restoration; V26
 B68|2026-10-12|aggregate assessment status hides independently confident dimensions from quick inspection|offline namespace projection keeps each above-floor observation and unresolved dimensions distinct; scope/time/quote binding required; no persisted join or adoption authority; V22,V28 existing
+B69|2026-10-13|default-off passive chat intake returned None then legacy engine directly created proposal from ordinary task turn|fail closed for passive chat/user assertion/conversation pattern absent source-bound intake receipt; explicit legacy notes preserved; test_v29_default_off_passive_chat_abstains_without_legacy_proposal; V29

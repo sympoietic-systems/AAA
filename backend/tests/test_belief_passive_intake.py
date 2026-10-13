@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from functools import partial
 from pathlib import Path
 from unittest.mock import patch
 
@@ -131,14 +132,31 @@ def test_v3_v20_invalid_quote_and_owner(admission_db):
         invoke(path, parent, "scar_fold")
 
 
-def test_v1_default_off_legacy_engine_parity(admission_db):
+@pytest.mark.parametrize(
+    ("source_type", "origin"),
+    [
+        ("chat_turn", "passive_chat"),
+        ("user_assertion", "passive_chat"),
+        ("conversational_pattern", "conversation_pattern"),
+    ],
+)
+def test_v29_default_off_passive_chat_abstains_without_legacy_proposal(admission_db, source_type, origin):
+    path, messages, parent, _ = admission_db
+    config = {"belief_review": {"origin_intake": {origin: False}}}
+    intake = partial(passive_intake, path, config=config)
+    engine = BeliefDynamicsEngine(BeliefRepository(path), messages, Path("unused"), origin_intake=intake)
+    result = engine._nucleate_proto_belief("symbia", parent.content, np.zeros(16), source_type, str(parent.id), 0.4)
+    assert result is None
+    assert not sql(path, "SELECT id FROM belief_proposals")
+    assert not sql(path, "SELECT id FROM belief_encounters")
+
+
+def test_v29_passive_chat_abstains_when_intake_service_is_missing(admission_db):
     path, messages, parent, _ = admission_db
     engine = BeliefDynamicsEngine(BeliefRepository(path), messages, Path("unused"))
     result = engine._nucleate_proto_belief("symbia", parent.content, np.zeros(16), "chat_turn", str(parent.id), 0.4)
-    proposal = BeliefRepository(path).get_proposal(result)
-    assert proposal.confidence == 0.1 and proposal.nucleation_mass == pytest.approx(0.04)
-    assert not proposal.admission_history
-    assert not sql(path, "SELECT id FROM belief_encounters")
+    assert result is None
+    assert not sql(path, "SELECT id FROM belief_proposals")
 
 
 @pytest.mark.asyncio

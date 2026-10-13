@@ -34,7 +34,7 @@ def passive_intake(
     conversation_id: str | None = None,
     source_text: str = "",
 ) -> dict[str, Any] | None:
-    """Sync use case; async callers offload once. None allows only unpromoted legacy routing."""
+    """Sync use case; async callers offload once. Callers own explicit disabled-origin policy."""
     settings = config.get("belief_review", {})
     if not isinstance(settings, dict) or not isinstance(settings.get("origin_intake", {}), dict):
         raise ValidationGlitch("Origin settings must be mappings", entity="belief_intake")
