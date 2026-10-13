@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from backend.config_schema import ENV_OVERRIDES
 from backend.modules.provider_attempts import AttemptBudgetExceeded, current_scope, new_request_scope
 from backend.services.research.provider_observation import generate_unified, observe_provider_calls
 from backend.services.research.provider_policy import ProviderPolicy
@@ -14,12 +15,13 @@ from backend.storage.research_receipts import ResearchActionReceipt
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "phase,legacy,expected", [("synthesizing", False, 300), ("planning", False, 60), ("synthesizing", True, 60)]
+    "phase,legacy,expected", [("synthesizing", False, 600), ("planning", False, 600), ("synthesizing", True, 60)]
 )
 async def test_v138_timeout_applies_to_direct_calls_and_nested_request_factory(phase, legacy, expected):
     policy = ProviderPolicy().freeze()
     if legacy:
         policy.pop("synthesis_attempt_timeout_seconds")
+        policy["attempt_timeout_seconds"] = 60
     receipt = ResearchActionReceipt.model_construct(task_id="task", action_id="action", kind=phase)
     repo = MagicMock()
     repo.cost_ceiling.return_value = None
@@ -60,10 +62,11 @@ async def test_v138_slow_report_survives_short_general_attempt_budget(phase):
 
 
 @pytest.mark.asyncio
-async def test_v138_parent_deadline_still_caps_long_synthesis_budget():
-    policy = ProviderPolicy(synthesis_attempt_timeout_seconds=300).freeze()
+@pytest.mark.parametrize("phase", ["synthesizing", "planning"])
+async def test_v138_parent_deadline_still_caps_long_attempt_budget(phase):
+    policy = ProviderPolicy().freeze()
     policy["deadline"] = (datetime.now(UTC) + timedelta(seconds=0.01)).isoformat()
-    receipt = ResearchActionReceipt.model_construct(task_id="task", action_id="action", kind="synthesizing")
+    receipt = ResearchActionReceipt.model_construct(task_id="task", action_id="action", kind=phase)
     repo = MagicMock()
     repo.cost_ceiling.return_value = None
 
@@ -74,3 +77,14 @@ async def test_v138_parent_deadline_still_caps_long_synthesis_budget():
 
     with observe_provider_calls(receipt, repo, policy), pytest.raises((TimeoutError, AttemptBudgetExceeded)):
         await generate_unified(Provider(), user_prompt="test")
+
+
+def test_v140_timeout_600_is_valid_and_general_timeout_has_an_environment_override(monkeypatch):
+    assert ProviderPolicy().attempt_timeout_seconds == 600
+    assert ProviderPolicy(synthesis_attempt_timeout_seconds=600).freeze()["synthesis_attempt_timeout_seconds"] == 600
+    override = next(item for item in ENV_OVERRIDES if item.env_var == "AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS")
+    config = {}
+    monkeypatch.setenv("AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS", "600")
+    override.apply(config)
+    assert config["research_orchestrator"]["provider_limits"]["attempt_timeout_seconds"] == 600.0
+    assert ProviderPolicy(**config["research_orchestrator"]["provider_limits"]).attempt_timeout_seconds == 600

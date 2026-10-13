@@ -423,10 +423,9 @@ async def test_synthesize_compiles_reflection_history():
 
 
 @pytest.mark.asyncio
-async def test_synthesize_prefers_primary_and_uses_adequate_tokens():
+async def test_v141_synthesis_uses_primary_and_explicit_32768_token_budget():
     """Invariant test: research synthesis must prioritize the primary main model
-    instead of sticky fallbacks, and must allocate at least 8192 max_tokens to prevent
-    truncation of comprehensive research reports.
+    instead of sticky fallbacks, and must use the synthesis-only output budget.
     """
     state = MockAppState()
     state.llm_provider.supports_prefer_primary = True
@@ -470,4 +469,4 @@ async def test_synthesize_prefers_primary_and_uses_adequate_tokens():
         mock_gen.assert_called_once()
         args, kwargs = mock_gen.call_args
         assert kwargs.get("model") == "openrouter_router/main-primary-model"
-        assert kwargs.get("max_tokens", 0) >= 8192
+        assert kwargs.get("max_tokens") == 32768

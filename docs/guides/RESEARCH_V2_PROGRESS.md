@@ -85,3 +85,12 @@ Synthesis now explicitly selects the main pool model and retains an upstream bou
 ## Synthesis timeout and stale-step recovery (T85)
 
 Explicit Synthesize recovery now targets the row selected by the operator, clears its prior failure state, and gives each synthesis attempt up to 300 seconds by default. The request timeout and frozen phase deadline remain in force; old task policies change only through explicit recovery. Operator steps are in the [rollout guide](RESEARCH_V2_ROLLOUT.md#synthesis-timeout-and-stale-step-recovery-t85); verification evidence belongs to local [Report 068](../reports/068-research-synthesis-recovery-timeout/README.md).
+
+
+## Longer provider attempts (T86/T87)
+
+T86 raised general provider attempts to a 300-second default with an environment override; its verification evidence is in local [Report 070](../reports/070-research-provider-attempt-timeout/README.md). T87 raises general and synthesis defaults and maximums to 600 seconds after a production rerun returned HTTP 400 because its configured 600-second attempt exceeded the prior policy maximum of 300. `AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS`, `AAA_RESEARCH_SYNTHESIS_TIMEOUT_SECONDS`, and `AAA_LLM_TIMEOUT` control the respective limits. The frozen research deadline remains the upper bound, and existing tasks keep their saved policy until explicit recovery. See the [rollout guide](RESEARCH_V2_ROLLOUT.md#longer-provider-attempts-t86t87).
+
+## Synthesis output budget (T88)
+
+The main-model synthesis prompt now requests up to 32,768 output tokens; other LLM calls keep their own budgets. Configure `AAA_RESEARCH_SYNTHESIS_TIMEOUT_SECONDS=600` and `AAA_LLM_TIMEOUT=600` when running large syntheses. The task watchdog remains the upper bound, and truncated output remains an explicit failure with its raw response retained.

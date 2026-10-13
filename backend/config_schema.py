@@ -162,12 +162,20 @@ ENV_OVERRIDES: list[EnvOverride] = [
     # ── Research tasks ──
     EnvOverride("AAA_RESEARCH_MANUAL_MODE", "research_tasks", "manual_mode", _parse_bool),
     EnvOverride("AAA_RESEARCH_MAX_QUERIES", "research_orchestrator", "max_queries", _parse_int),
+    EnvOverride("AAA_RESEARCH_MAX_RECOVERY_REVISIONS", "research_orchestrator", "max_recovery_revisions", _parse_int),
     EnvOverride(
         "AAA_RESEARCH_TIMEOUT_SECONDS",
         "research_orchestrator",
         "provider_limits",
         _parse_float,
         sub_key="task_timeout_seconds",
+    ),
+    EnvOverride(
+        "AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS",
+        "research_orchestrator",
+        "provider_limits",
+        _parse_float,
+        sub_key="attempt_timeout_seconds",
     ),
     EnvOverride(
         "AAA_RESEARCH_MAX_ATTEMPTS", "research_orchestrator", "provider_limits", _parse_int, sub_key="max_task_attempts"

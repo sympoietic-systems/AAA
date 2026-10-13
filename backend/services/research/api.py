@@ -9,6 +9,9 @@ from typing import Any, ParamSpec, TypeVar
 P = ParamSpec("P")
 R = TypeVar("R")
 
+DEFAULT_MAX_RECOVERY_REVISIONS = 64
+HARD_MAX_RECOVERY_REVISIONS = 256
+
 
 async def run_research_sync(operation: Callable[P, R], /, *args: P.args, **kwargs: P.kwargs) -> R:
     """Run one synchronous research use case outside the event loop."""
@@ -89,7 +92,13 @@ def prepare_step_recovery(manager: Any, task_id: str, phase: str, step_type: str
     policy = dict(state.get("action_journal_policy") or {})
     revision = policy.get("execution_revision", 1) + 1
     history = state.get("recovery_history", [])
-    if len(history) >= 16:
+    configured_limit = orch.config.get("max_recovery_revisions", DEFAULT_MAX_RECOVERY_REVISIONS)
+    recovery_limit = (
+        min(HARD_MAX_RECOVERY_REVISIONS, max(1, configured_limit))
+        if type(configured_limit) is int
+        else DEFAULT_MAX_RECOVERY_REVISIONS
+    )
+    if len(history) >= recovery_limit:
         raise ReceiptConflictError("Research recovery limit reached")
     state["recovery_history"] = history + [
         {
