@@ -60,26 +60,105 @@ class BeliefWorkshopRepository(BeliefDecisionRepository):
             packet = cast(dict[str, Any], json.loads(receipt))
             command = packet["command"]
             action = command["action"]
-            if action not in TRANSITIONS or write.next_state != TRANSITIONS[action]:
-                raise ConstraintViolation("Workshop action not implemented by T11", entity="belief_workshop")
-            if write.previous_state in {"adopted", "superseded"}:
+            if action in TRANSITIONS and write.next_state != TRANSITIONS[action]:
+                raise ConstraintViolation("Workshop action/state mismatch", entity="belief_workshop")
+            if action not in TRANSITIONS and action not in {"revise", "supersede", "resurface"}:
+                raise ConstraintViolation("Workshop action not implemented", entity="belief_workshop")
+            if action in TRANSITIONS and write.previous_state in {"adopted", "superseded"}:
                 raise ConstraintViolation(
                     "Existing commitment requires linked revision workflow", entity="belief_workshop"
                 )
             for record, fingerprint in fingerprints:
                 if self.snapshot(write.agent_id, record)["fingerprint"] != fingerprint:
                     raise ConstraintViolation("Workshop source or comparison changed", entity="belief_workshop")
+            if action in {"revise", "supersede", "resurface"}:
+                source = self.snapshot(write.agent_id, packet["record_id"])
+                if (
+                    source["statement_sha256"] != command["expected_statement_sha256"]
+                    or not source["state"]
+                    or source["state"]["state"]
+                    not in ({"adopted"} if action in {"revise", "supersede"} else {"adopted", "superseded"})
+                ):
+                    raise ConstraintViolation("Linked command source is no longer current", entity="belief_workshop")
+            if action == "supersede":
+                target = self.snapshot(write.agent_id, command["target_record_id"])
+                target_state = target["state"]
+                if (
+                    target["statement_sha256"] != command["expected_target_statement_sha256"]
+                    or not target_state
+                    or target_state["state"] != "adopted"
+                    or target_state["version"] != command["expected_target_review_version"]
+                ):
+                    raise ConstraintViolation("Supersession target changed or is not adopted", entity="belief_workshop")
+            if action == "resurface" and command["assessment_ids"]:
+                raise ConstraintViolation("Resurfacing cannot add assessments", entity="belief_workshop")
+            if action == "revise":
+                if write.record_id != packet["linked_record_id"] or write.next_state != "candidate":
+                    raise ConstraintViolation("Revision candidate binding mismatch", entity="belief_workshop")
+                if source["kind"] != "belief":
+                    raise ConstraintViolation("Only an adopted belief can be revised", entity="belief_workshop")
+                source = (
+                    self._conn()
+                    .execute(
+                        "SELECT label FROM belief_nodes WHERE LOWER(agent_id)=? AND id=?",
+                        (write.agent_id, packet["record_id"]),
+                    )
+                    .fetchone()
+                )
+                if source is None:
+                    raise ConstraintViolation("Revision source is not a persisted belief", entity="belief_workshop")
+                successor = write.record_id
+                statement = command["statement"]
+                trace = json.dumps(
+                    {
+                        "revision_of": packet["record_id"],
+                        "prior_statement_sha256": command["expected_statement_sha256"],
+                        "warrant": "none_added",
+                    }
+                )
+                self._conn().execute(
+                    "INSERT INTO belief_proposals(id,agent_id,provisional_statement,source_trace,initial_signature,nucleation_mass,confidence,status,suggested_label,suggested_statement) "
+                    "VALUES (?,?,?,?,?,0,0,'pending',?,?)",
+                    (successor, write.agent_id, statement, trace, json.dumps([0.0] * 16), source["label"], statement),
+                )
             self.commit_decision(write)
             if action == "adopt":
                 self._materialize(write)
             self._conn().execute(
                 "INSERT INTO belief_workshop_commands VALUES (?,?,?,?,?,?,?,?)",
-                (write.agent_id, command_id, write.record_id, input_hash, write.id, action, write.timestamp, receipt),
+                (
+                    write.agent_id,
+                    command_id,
+                    packet["record_id"],
+                    input_hash,
+                    write.id,
+                    action,
+                    write.timestamp,
+                    receipt,
+                ),
             )
+            if action in {"revise", "supersede"}:
+                target_id = write.record_id if action == "revise" else command["target_record_id"]
+                source_id = packet["record_id"]
+                self._conn().execute(
+                    "INSERT INTO belief_revision_links(agent_id,source_record_id,successor_record_id,action,source_statement_sha256,successor_statement_sha256,command_id,decision_id,timestamp) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        write.agent_id,
+                        source_id,
+                        target_id,
+                        action,
+                        command["expected_statement_sha256"],
+                        write.statement_hash if action == "revise" else command["expected_target_statement_sha256"],
+                        command_id,
+                        write.id,
+                        write.timestamp,
+                    ),
+                )
             self._conn().execute(
                 "INSERT INTO notifications(id,type,timestamp,snippet,source,source_type,source_id,read,dismissed) "
                 "VALUES (?,'trace',?,?,'belief_workshop_v2','belief_review',?,0,0)",
-                (write.id + ":review", write.timestamp, receipt, write.record_id),
+                (write.id + ":review", write.timestamp, receipt, packet["record_id"]),
             )
             return packet
 
@@ -98,6 +177,11 @@ class BeliefWorkshopRepository(BeliefDecisionRepository):
         from backend.storage.repositories.cognitive.belief import BeliefRepository
 
         vector = BeliefRepository(self._db_path).validate_and_format_vector(str(proposal["initial_signature"]))
+        label = str(proposal["suggested_label"] or "emergent-belief")
+        if conn.execute(
+            "SELECT 1 FROM belief_nodes WHERE LOWER(agent_id)=? AND label=?", (write.agent_id, label)
+        ).fetchone():
+            label = f"{label}-{write.record_id[:12]}"
         # Preserve existing structural quantities; missing geometry is an explicit unscored zero projection.
         genesis = json.dumps(
             {
@@ -113,7 +197,7 @@ class BeliefWorkshopRepository(BeliefDecisionRepository):
             (
                 write.record_id,
                 write.agent_id,
-                proposal["suggested_label"] or "emergent-belief",
+                label,
                 self._record_statement(write.agent_id, write.record_id),
                 proposal["confidence"],
                 proposal["nucleation_mass"],
@@ -186,6 +270,23 @@ class BeliefWorkshopRepository(BeliefDecisionRepository):
             )
             .fetchall()
         )
+        lineage = (
+            self._conn()
+            .execute(
+                "SELECT source_record_id,successor_record_id,action,source_statement_sha256,successor_statement_sha256,command_id,decision_id,timestamp "
+                "FROM belief_revision_links WHERE agent_id=? AND (source_record_id=? OR successor_record_id=?) ORDER BY timestamp DESC,command_id DESC LIMIT 50",
+                (agent, record, record),
+            )
+            .fetchall()
+        )
+        lineage_count = (
+            self._conn()
+            .execute(
+                "SELECT count(*) FROM belief_revision_links WHERE agent_id=? AND (source_record_id=? OR successor_record_id=?)",
+                (agent, record, record),
+            )
+            .fetchone()[0]
+        )
         return {
             "agent_id": agent,
             "record": own,
@@ -198,6 +299,21 @@ class BeliefWorkshopRepository(BeliefDecisionRepository):
             "counter_traces_truncated": declines > len(counters),
             "command_count": count,
             "counter_trace_count": declines,
+            "lineage_links": [
+                {
+                    "source_record_id": row[0],
+                    "successor_record_id": row[1],
+                    "action": row[2],
+                    "source_statement_sha256": row[3],
+                    "successor_statement_sha256": row[4],
+                    "command_id": row[5],
+                    "decision_id": row[6],
+                    "timestamp": row[7],
+                }
+                for row in lineage
+            ],
+            "lineage_count": int(lineage_count),
+            "lineage_truncated": lineage_count > len(lineage),
             "advisory_assessments": [
                 {"receipt": json.loads(row[0]), "binding": "historical_requires_reassessment", "tool_authority": "none"}
                 for row in assessments

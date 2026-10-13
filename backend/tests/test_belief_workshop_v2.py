@@ -22,6 +22,7 @@ from backend.services.belief_review_contracts import Actor, WorkshopCommand
 from backend.services.belief_review_store import BeliefReviewStore
 from backend.services.belief_workshop import BeliefWorkshop
 from backend.storage.migrations.m067_belief_workshop import up
+from backend.storage.migrations.m069_belief_revision_links import up as revision_links_up
 from backend.storage.repositories.cognitive.belief import BeliefRepository
 from backend.tests.test_belief_review_contracts import HASH, STATEMENT
 from backend.tests.test_belief_review_persistence import db as review_db
@@ -326,7 +327,7 @@ def test_foreign_agent_and_conflicting_alias_rejected(db, candidate):
 
 
 def test_unsupported_actions_and_immutable_commands(db, candidate):
-    with pytest.raises(ConstraintViolation, match="T16"):
+    with pytest.raises(ConstraintViolation, match="canonical commitment"):
         execute(db, candidate, action="resurface")
     execute(db, candidate, action="defer")
     with pytest.raises(sqlite3.IntegrityError):
@@ -339,10 +340,150 @@ def test_unsupported_actions_and_immutable_commands(db, candidate):
     try:
         up(conn)
         up(conn)
+        revision_links_up(conn)
+        revision_links_up(conn)
         conn.commit()
     finally:
         conn.close()
     assert family(db, candidate)["command_count"] == 1
+
+
+def test_v31_revision_alias_and_lineage(db, candidate, monkeypatch):
+    execute(db, candidate)
+    source_before = BeliefRepository(db).get_belief("symbia", candidate)
+    revised_statement = "A revised distinction changes a later replay decision."
+    revision = execute(
+        db,
+        candidate,
+        key="revise-1",
+        action="revise",
+        expected_state="adopted",
+        expected_review_version=1,
+        statement=revised_statement,
+    )
+    successor = revision["linked_record_id"]
+    assert successor and successor != candidate
+    assert revision["decision"]["next_state"] == "candidate"
+    assert revision["decision"]["record_id"] == successor
+    assert BeliefRepository(db).get_belief("symbia", candidate).statement == source_before.statement
+    proposal = BeliefRepository(db).get_proposal(successor)
+    assert proposal.provisional_statement == revised_statement
+    assert proposal.confidence == 0 and proposal.nucleation_mass == 0
+    assert BeliefRepository(db).validate_and_format_vector(proposal.initial_signature) == json.dumps([0.0] * 16)
+    assert family(db, candidate)["record"]["state"]["state"] == "adopted"
+    assert [
+        row[0] for row in sql(db, "SELECT action FROM belief_revision_links WHERE source_record_id=?", (candidate,))
+    ] == ["revise"]
+    assert family(db, successor)["record"]["state"]["state"] == "candidate"
+    assert family(db, candidate)["command_count"] == 2
+    assert family(db, candidate)["lineage_links"][0]["successor_record_id"] == successor
+    assert family(db, successor)["lineage_links"][0]["source_record_id"] == candidate
+
+    # Simulate application rollback/start with migrations disabled on the isolated DB copy.
+    from backend.storage.database import init_db
+
+    monkeypatch.setenv("AAA_RUN_MIGRATIONS", "false")
+    conn = init_db(db)
+    try:
+        assert (
+            conn.execute(
+                "SELECT count(*) FROM belief_revision_links WHERE source_record_id=?", (candidate,)
+            ).fetchone()[0]
+            == 1
+        )
+        assert conn.execute("SELECT count(*) FROM belief_nodes WHERE id=?", (candidate,)).fetchone()[0] == 1
+    finally:
+        conn.close()
+    assert family(db, successor)["record"]["state"]["state"] == "candidate"
+
+
+def test_v16_resurface_preserves_standing_and_adds_no_evidence(db, candidate):
+    execute(db, candidate)
+    before = BeliefRepository(db).get_belief("symbia", candidate)
+    receipt = execute(
+        db, candidate, key="resurface", action="resurface", expected_state="adopted", expected_review_version=1
+    )
+    view = family(db, candidate)
+    after = BeliefRepository(db).get_belief("symbia", candidate)
+    assert view["record"]["state"]["state"] == "adopted"
+    assert view["record"]["state"]["version"] == 2
+    assert before.ontological_mass == after.ontological_mass and before.confidence == after.confidence
+    assert receipt["decision"]["assessment_ids"] == []
+    assert view["command_count"] == 2
+    with pytest.raises(ConstraintViolation, match="cannot add assessment"):
+        execute(
+            db,
+            candidate,
+            key="resurface-with-assessment",
+            action="resurface",
+            expected_state="adopted",
+            expected_review_version=2,
+            assessment_ids=("assessment:invented",),
+        )
+
+
+def test_v16_supersession_requires_adopted_target_and_preserves_both_commitments(db, candidate):
+    execute(db, candidate)
+    peer_id, peer_hash = peer(db)
+    with pytest.raises(ConstraintViolation, match="current adopted commitment"):
+        execute(
+            db,
+            candidate,
+            key="premature-supersede",
+            action="supersede",
+            expected_state="adopted",
+            expected_review_version=1,
+            target_record_id=peer_id,
+            expected_target_review_version=0,
+            expected_target_statement_sha256=peer_hash,
+        )
+    execute(db, peer_id, expected_statement_sha256=peer_hash)
+    source_statement = family(db, candidate)["record"]["statement_sha256"]
+    target_view = family(db, peer_id)["record"]
+    receipt = execute(
+        db,
+        candidate,
+        key="supersede",
+        action="supersede",
+        expected_state="adopted",
+        expected_review_version=1,
+        target_record_id=peer_id,
+        expected_target_review_version=1,
+        expected_target_statement_sha256=target_view["statement_sha256"],
+    )
+    assert receipt["linked_record_id"] == peer_id
+    assert family(db, candidate)["record"]["state"]["state"] == "superseded"
+    assert family(db, peer_id)["record"]["state"]["state"] == "adopted"
+    assert [
+        tuple(row)
+        for row in sql(
+            db,
+            "SELECT action,source_statement_sha256 FROM belief_revision_links WHERE source_record_id=?",
+            (candidate,),
+        )
+    ] == [("supersede", source_statement)]
+    decisions = [
+        json.loads(row[0])
+        for row in sql(
+            db,
+            "SELECT decision_json FROM belief_review_decisions WHERE agent_id='symbia' AND record_id=? ORDER BY version",
+            (candidate,),
+        )
+    ]
+    assert [decision["next_state"] for decision in decisions] == ["adopted", "superseded"]
+    assert decisions[0]["id"] != decisions[1]["id"]
+    assert BeliefRepository(db).get_belief("symbia", candidate) is not None
+
+
+def test_v32_duplicate_suggested_label_keeps_adoption_atomic(db, candidate):
+    repo = BeliefRepository(db)
+    execute(db, candidate)
+    second_id, second_hash = peer(db)
+    execute(db, second_id, expected_statement_sha256=second_hash)
+    beliefs = [repo.get_belief("symbia", item) for item in (candidate, second_id)]
+    assert all(belief is not None for belief in beliefs)
+    assert len({belief.label for belief in beliefs if belief is not None}) == 2
+    assert {belief.id for belief in beliefs if belief is not None} == {candidate, second_id}
 
 
 def test_api_auth_boundaries_and_server_actor(db, candidate, monkeypatch):

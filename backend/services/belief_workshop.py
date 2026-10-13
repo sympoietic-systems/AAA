@@ -1,14 +1,15 @@
 """Bounded operator workshop; teachback is reconstruction, never warrant or a tool command."""
 
 import asyncio
+import hashlib
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field
 
 from backend.errors import ConstraintViolation, SecurityViolation, ValidationGlitch
 from backend.services.belief_assessment import _context
-from backend.services.belief_review_contracts import Actor, FrozenRecord, ReviewDecision, WorkshopCommand
+from backend.services.belief_review_contracts import Actor, FrozenRecord, ReviewDecision, ReviewState, WorkshopCommand
 from backend.services.belief_review_store import _agent, _digest, _identifier, _json, _validated
 from backend.storage.belief_review import DecisionWrite
 from backend.storage.repositories.cognitive.belief_workshop import TRANSITIONS, BeliefWorkshopRepository
@@ -24,6 +25,7 @@ class WorkshopReceipt(FrozenRecord):
     relation_snapshots: tuple[dict[str, Any], ...] = Field(max_length=10)
     alternative_snapshot: dict[str, Any] | None
     counter_trace: dict[str, Any] | None
+    linked_record_id: str | None = None
     tool_authority: str = "none"
     shared_agreement: str = "not_inferred"
 
@@ -60,10 +62,20 @@ class BeliefWorkshop:
         prior = self.repository.prior(agent, command_id, digest)
         if prior:
             return prior
-        if command.action not in TRANSITIONS or command.statement is not None or command.target_record_id is not None:
+        if command.action == "merge" or (
+            command.action in TRANSITIONS and (command.statement is not None or command.target_record_id is not None)
+        ):
             raise ConstraintViolation(
-                "Linked revision/merge/supersession/resurfacing remains T16", entity="belief_workshop"
+                "Merge remains unsupported; other workshop actions reject linked fields", entity="belief_workshop"
             )
+        if command.action == "revise" and (command.statement is None or command.target_record_id is not None):
+            raise ValidationGlitch("Revision requires a new statement and no target record", entity="belief_workshop")
+        if command.action == "supersede" and (command.target_record_id is None or command.statement is not None):
+            raise ValidationGlitch("Supersession requires an adopted target record", entity="belief_workshop")
+        if command.action == "resurface" and (command.statement is not None or command.target_record_id is not None):
+            raise ValidationGlitch("Resurfacing cannot change statement or target", entity="belief_workshop")
+        if command.action not in TRANSITIONS and command.action not in {"revise", "supersede", "resurface"}:
+            raise ConstraintViolation("Unknown workshop action", entity="belief_workshop")
         own = self.repository.snapshot(agent, record)
         if len(own["statement"]) > 4000:
             raise ValidationGlitch("Record statement exceeds workshop boundary", entity="belief_workshop")
@@ -74,6 +86,12 @@ class BeliefWorkshop:
             or (current["state"] if current else None) != command.expected_state
         ):
             raise ConstraintViolation("Stale workshop statement/state/version", entity="belief_workshop")
+        if command.action in {"revise", "supersede"} and (not current or current["state"] != "adopted"):
+            raise ConstraintViolation("Linked action requires a canonical commitment", entity="belief_workshop")
+        if command.action == "resurface" and (not current or current["state"] not in {"adopted", "superseded"}):
+            raise ConstraintViolation("Resurfacing requires a canonical commitment", entity="belief_workshop")
+        if command.action == "resurface" and command.assessment_ids:
+            raise ConstraintViolation("Resurfacing cannot add assessment or warrant", entity="belief_workshop")
         snapshots: dict[str, dict[str, Any]] = {record: own}
         resolved = _context(
             own["statement"], command.scope, command.temporal_scope, "operator:" + command_id, command.context
@@ -113,6 +131,22 @@ class BeliefWorkshop:
                         "Same-condition relation requires matching scope/time", entity="belief_workshop"
                     )
             snapshots[relation.record_id] = peer
+        target = None
+        if command.target_record_id:
+            if command.target_record_id == record:
+                raise ConstraintViolation("Supersession target must be a distinct record", entity="belief_workshop")
+            target = self.repository.snapshot(agent, command.target_record_id)
+            target_state = target["state"]
+            if (
+                target["statement_sha256"] != command.expected_target_statement_sha256
+                or (target_state["version"] if target_state else 0) != command.expected_target_review_version
+                or not target_state
+                or target_state["state"] != "adopted"
+            ):
+                raise ConstraintViolation(
+                    "Supersession target must be a current adopted commitment", entity="belief_workshop"
+                )
+            snapshots[command.target_record_id] = target
         alternative = None
         if command.teachback:
             fork = command.teachback
@@ -135,18 +169,32 @@ class BeliefWorkshop:
                     )
                 position = position.model_copy(update={"declaration_source_id": command_id})
             positions.append(position)
+        decision_record = "revision:" + _digest([agent, record, key]) if command.action == "revise" else record
+        if command.action == "revise":
+            decision_state: ReviewState = "candidate"
+        elif command.action == "supersede":
+            decision_state = "superseded"
+        elif command.action == "resurface":
+            decision_state = cast(ReviewState, current["state"])
+        else:
+            decision_state = TRANSITIONS[command.action]
+        decision_hash = (
+            hashlib.sha256(command.statement.encode()).hexdigest()
+            if command.action == "revise" and command.statement
+            else command.expected_statement_sha256
+        )
         decision = _validated(
             ReviewDecision(
-                id="decision:" + _digest([agent, record, key]),
+                id="decision:" + _digest([agent, decision_record, key]),
                 agent_id=agent,
-                record_id=record,
-                statement_sha256=command.expected_statement_sha256,
+                record_id=decision_record,
+                statement_sha256=decision_hash,
                 actor=actor,
                 authority="operator_review",
                 policy_version="belief-workshop-v1",
-                expected_review_version=command.expected_review_version,
-                previous_state=command.expected_state,
-                next_state=TRANSITIONS[command.action],
+                expected_review_version=0 if command.action == "revise" else command.expected_review_version,
+                previous_state=None if command.action == "revise" else command.expected_state,
+                next_state=decision_state,
                 scope=command.scope,
                 rationale=command.rationale,
                 consequence=command.consequence,
@@ -185,11 +233,12 @@ class BeliefWorkshop:
             relation_snapshots=tuple(snapshots[r.record_id] for r in command.relations),
             alternative_snapshot=alternative,
             counter_trace=counter,
+            linked_record_id=decision_record if command.action == "revise" else command.target_record_id,
         )
         write = DecisionWrite(
             agent,
             decision.id,
-            record,
+            decision.record_id,
             decision.statement_sha256,
             decision.expected_review_version,
             decision.previous_state,

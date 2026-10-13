@@ -1,6 +1,6 @@
 # Belief workshop review
 
-T11 installs authenticated backend review commands. T13 installs the [frontend workshop](belief-review-interface.md); T12 installs snapshot export. Production activation remains T18.
+T11 installs authenticated backend review commands. T13 installs the [frontend workshop](belief-review-interface.md); T12 installs snapshot export. T16 adds linked revision, supersession and resurfacing. Production activation remains T18.
 
 Configure `AAA_PASSWORD`. Use the existing bearer credential, or a valid browser session with the existing same-origin and `x-aaa-csrf: 1` mutation requirements. Review remains unavailable when authentication is disabled. The server records `shared-operator`; that credential cannot establish the identity or assent of separate people.
 
@@ -33,8 +33,13 @@ Replace the example hash with the actual 64-character SHA256 returned by the rea
 | `defer` | `deferred` | Record postponement |
 | `request_context` | `awaiting_context` | Record the missing context and challenge |
 | `request_review` | `under_review` | Record review intent |
+| `revise` | new linked `candidate` | Create a new zero-mass, zero-confidence candidate from an adopted belief; predecessor text and receipt stay intact |
+| `supersede` | source becomes `superseded` | Link source to a distinct, currently adopted target using target hash/version |
+| `resurface` | standing unchanged | Record operator attention; no new assessments, evidence, mass or confidence |
 
-These actions accept an absent legacy review state or candidate, awaiting-context, under-review, deferred or declined state. An adopted/superseded record requires T16's linked revision workflow. T11 also rejects revise, merge, supersede and resurface commands explicitly.
+The first five actions accept an absent legacy review state or candidate, awaiting-context, under-review, deferred or declined state. `revise` and `supersede` require a canonical adopted source; supersession also requires an adopted target. `resurface` requires adopted or superseded standing and cannot carry assessment IDs. Merge remains unsupported. Legacy records are never mapped automatically; an explicit operator action establishes each link.
+
+Revision changes no existing belief row. It creates a new pending proposal with a typed link to the source and `warrant: none_added`; assess and adopt the successor through the ordinary review path. Supersession preserves the source's original adoption receipt, statement, dissent and evidence history. Resurfacing increments review history while preserving standing and structural quantities. Read the complete bounded family first; supersession targets must appear as currently adopted nominees.
 
 An exact retry with the same key returns the original receipt, even if later commands changed the current state. Read again for current state. Changed input under that key, a stale version/hash, or a changed comparison/source returns 409. A failed write leaves no partial decision or adoption representation.
 
@@ -48,4 +53,4 @@ Every successful command appends a trace notification carrying the same receipt,
 
 Managed v2 records reject legacy refinement/vetting, statement editing, version creation and destructive mutation. This also applies at storage write time after provider waits. Use the v2 command path for supported actions. Source accounting and structural metabolism remain separate from adoption.
 
-See [ADR-124](../decisions/ADR-124-belief-workshop-review.md) and [BELIEF_SPEC](../systems/BELIEF_SPEC.md).
+See [ADR-124](../decisions/ADR-124-belief-workshop-review.md), [ADR-129](../decisions/ADR-129-belief-linked-lineage.md) and [BELIEF_SPEC](../systems/BELIEF_SPEC.md).

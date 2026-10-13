@@ -96,11 +96,19 @@ class BeliefAssessmentRepository(BeliefReviewRepository):
             .fetchone()
         )
         context = json.loads(linked[1]) if linked else None
+        record_kind = kind
+        if kind == "any":
+            backing_belief = (
+                self._conn()
+                .execute("SELECT 1 FROM belief_nodes WHERE LOWER(agent_id)=? AND id=?", (agent, record))
+                .fetchone()
+            )
+            record_kind = "belief" if backing_belief else "proposal"
         result: dict[str, Any] = {
             "id": str(row[0]),
             "label": str(row[1]),
             "statement": str(row[2]),
-            "kind": "belief" if kind == "belief" else "proposal",
+            "kind": record_kind,
             "legacy_status": str(row[3]),
             "review_state": str(state[0]) if state else None,
             "review_version": int(state[1]) if state else None,

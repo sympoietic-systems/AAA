@@ -101,7 +101,20 @@ it("V10 V24 keeps counter-traces and family nominations after adoption with expl
   expect(screen.getAllByText(/Scope too broad/).length).toBeGreaterThan(0)
   expect(screen.getByText(/Older counter-traces retained/)).toBeTruthy()
   expect(screen.getByText(/no equivalence, contradiction or merge verdict inferred/)).toBeTruthy()
-  expect(screen.queryByRole("button", { name: "[record decision]" })).toBeNull()
+  expect(screen.getByRole("button", { name: "[record decision]" })).toBeTruthy()
+  expect(Array.from((screen.getByLabelText("Action") as HTMLSelectElement).options).map(option => option.value)).toEqual(["revise", "supersede", "resurface"])
+})
+
+it("V31 adopted commitments expose linked lineage and revision/resurface controls", async () => {
+  const peerRecord = { ...view.record, id: "adopted-peer", label: "Adopted peer", state: { state: "adopted" as const, version: 2, scope: "practice" } }
+  showWorkshop({ ...view, record: { ...view.record, kind: "belief", state: { state: "adopted", version: 4, scope: "practice" } }, family: [peerRecord], lineage_links: [{ source_record_id: "claim", successor_record_id: "adopted-peer", action: "revise", source_statement_sha256: "a".repeat(64), successor_statement_sha256: "b".repeat(64), command_id: "cmd1", decision_id: "d1", timestamp: item.timestamp! }], lineage_count: 1 })
+  fireEvent.change(await screen.findByLabelText("Action"), { target: { value: "revise" } })
+  expect(screen.getByLabelText("New candidate statement")).toBeTruthy()
+  expect(screen.getByRole("link", { name: /Open linked record adopted-peer/ })).toBeTruthy()
+  fireEvent.change(screen.getByLabelText("Action"), { target: { value: "supersede" } })
+  expect(screen.getByLabelText("Adopted successor")).toBeTruthy()
+  fireEvent.change(screen.getByLabelText("Action"), { target: { value: "resurface" } })
+  expect(screen.getByText(/adds no assessment, warrant or mass/)).toBeTruthy()
 })
 
 it("V11 V13 binds decline to exact state/hash/version and preserves receipt on unchanged retry", async () => {

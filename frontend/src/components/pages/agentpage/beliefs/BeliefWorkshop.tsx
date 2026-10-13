@@ -4,7 +4,8 @@ import type { ReviewAction, ReviewCommand, WorkshopReceipt, WorkshopView } from 
 import { ApiError } from "../../../../api/http"
 import { CounterTrace, RecordedDetails, ReviewReceipt, ReceiptDisclosure } from "./ReviewReasoning"
 
-const actions: ReviewAction[] = ["request_review", "request_context", "defer", "decline", "adopt"]
+const pendingActions: ReviewAction[] = ["request_review", "request_context", "defer", "decline", "adopt"]
+const adoptedActions: ReviewAction[] = ["revise", "supersede", "resurface"]
 const control = "w-full bg-transparent text-ui-primary font-mono py-2 focus-visible:outline outline-1"
 
 export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }: {
@@ -21,6 +22,8 @@ export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }
   const [consequence, setConsequence] = useState("")
   const [challenge, setChallenge] = useState("")
   const [dissent, setDissent] = useState("")
+  const [revisedStatement, setRevisedStatement] = useState("")
+  const [targetRecordId, setTargetRecordId] = useState("")
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<{ identity: string; receipt?: WorkshopReceipt; error?: string; stale?: boolean } | null>(null)
   const attempt = useRef<{ identity: string; serialized: string; key: string } | null>(null)
@@ -40,6 +43,10 @@ export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }
   }, [agent, record, identity, refresh, onLegacyAvailability])
   const view = loaded?.identity === identity ? loaded.view : undefined
   const result = outcome?.identity === identity ? outcome : null
+  const actions = view?.record.state?.state === "adopted" ? adoptedActions
+    : view?.record.state?.state === "superseded" ? ["resurface" as ReviewAction]
+    : pendingActions
+  const currentAction = actions.includes(action) ? action : actions[0]
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!view || inFlight.current || result?.stale) return
@@ -48,12 +55,20 @@ export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }
       return
     }
     const command: ReviewCommand = {
-      action, expected_review_version: view.record.state?.version ?? 0,
+      action: currentAction, expected_review_version: view.record.state?.version ?? 0,
       expected_statement_sha256: view.record.statement_sha256, expected_state: view.record.state?.state ?? null,
       scope: scope.trim(), temporal_scope: temporalScope.trim(), rationale: rationale.trim(),
       consequence: consequence.trim(), challenge: challenge.trim(), dissent: dissent.trim() ? [dissent.trim()] : [],
       // Assessments are historical and require explicit reassessment before binding a new decision.
       assessment_ids: [],
+    }
+    if (currentAction === "revise") command.statement = revisedStatement.trim()
+    if (currentAction === "supersede") {
+      const target = view.family.find(member => member.id === targetRecordId && member.state?.state === "adopted")
+      if (!target) { setOutcome({ identity, error: "Choose a currently adopted target from the family list." }); return }
+      command.target_record_id = target.id
+      command.expected_target_review_version = target.state?.version
+      command.expected_target_statement_sha256 = target.statement_sha256
     }
     const serialized = JSON.stringify(command)
     if (attempt.current?.identity !== identity || attempt.current.serialized !== serialized) {
@@ -101,6 +116,20 @@ export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }
         </div>)}
         {view.history_truncated && <p>Older commands retained; bounded history truncated.</p>}
       </ReceiptDisclosure>
+      <section aria-label="Belief lineage" className="space-y-2">
+        <h4 className="text-ui-primary">Linked lineage ({view.lineage_links?.length ?? 0} of {view.lineage_count ?? 0})</h4>
+        {!view.lineage_links?.length && <p>No explicit revision or supersession link recorded.</p>}
+        {view.lineage_links?.map(link => {
+          const relatedId = link.source_record_id === record ? link.successor_record_id : link.source_record_id
+          const relation = link.source_record_id === record ? "successor" : "predecessor"
+          return <div key={`${link.command_id}:${link.action}`} className="py-1">
+            <p>{link.action} · {relation} statement hash {link.source_record_id === record ? link.successor_statement_sha256 : link.source_statement_sha256}</p>
+            <a className="underline focus-visible:outline" href={`/agent?tab=beliefs&agent=${encodeURIComponent(agent)}&id=${encodeURIComponent(relatedId)}`}>Open linked record {relatedId}</a>
+            <ReviewReceipt agent={agent} resource="decisions" id={link.decision_id} />
+          </div>
+        })}
+        {view.lineage_truncated && <p>Older lineage links retained; bounded display truncated.</p>}
+      </section>
       <section aria-label="Retained counter-traces" className="space-y-2">
         <h4 className="text-ui-primary">Retained decline / dissent ({view.counter_traces.length} of {view.counter_trace_count})</h4>
         {!view.counter_traces.length && <p>No recorded decline counter-trace in this view.</p>}
@@ -110,11 +139,14 @@ export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }
       {result?.receipt && <p role="status">Recorded decision {result.receipt.decision.id} · {result.receipt.decision.next_state}</p>}
       {result?.error && <p role="alert">{result.error}{result.stale ? " Refresh before a new decision; no overwrite occurred." : " Retry unchanged fields to recover the same command receipt."}</p>}
       {result?.stale && <button className="min-h-11 text-action-dim focus-visible:outline" onClick={() => { setLoaded(null); setOutcome(null); attempt.current = null; setRefresh(n => n + 1) }}>[refresh changed record]</button>}
-      {view.record.state?.state === "adopted" || view.record.state?.state === "superseded" ? <p>Existing commitment retained. Linked revision workflows are scheduled for T16.</p> : <form onSubmit={submit} className="space-y-2">
+      <form onSubmit={submit} className="space-y-2">
         <fieldset disabled={busy || !!result?.stale} className="space-y-2">
           <legend className="text-ui-primary">Record a scoped operator decision</legend>
           <label className="block" htmlFor={actionId}>Action</label>
-          <select id={actionId} className={control} value={action} onChange={e => setAction(e.target.value as ReviewAction)}>{actions.map(value => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select>
+          <select id={actionId} className={control} value={currentAction} onChange={e => setAction(e.target.value as ReviewAction)}>{actions.map(value => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select>
+          {currentAction === "revise" && <label className="block">New candidate statement<textarea className={control} required maxLength={4000} value={revisedStatement} onChange={e => setRevisedStatement(e.target.value)} /></label>}
+          {currentAction === "supersede" && <label className="block">Adopted successor<select className={control} required value={targetRecordId} onChange={e => setTargetRecordId(e.target.value)}><option value="">Choose target</option>{view.family.filter(member => member.state?.state === "adopted").map(member => <option key={member.id} value={member.id}>{member.label}: {member.statement.slice(0, 100)}</option>)}</select></label>}
+          {currentAction === "resurface" && <p>Resurfacing records attention only; it adds no assessment, warrant or mass.</p>}
           <label className="block">Scope<input className={control} required maxLength={500} value={scope} onChange={e => setScope(e.target.value)} /></label>
           <label className="block">Time scope<input className={control} maxLength={250} value={temporalScope} onChange={e => setTemporalScope(e.target.value)} /></label>
           <label className="block">Rationale<textarea className={control} required maxLength={2000} value={rationale} onChange={e => setRationale(e.target.value)} /></label>
@@ -123,7 +155,7 @@ export function BeliefWorkshop({ agent, record, onReload, onLegacyAvailability }
           <label className="block">Dissent / unresolved objection<textarea className={control} maxLength={2000} value={dissent} onChange={e => setDissent(e.target.value)} /></label>
           <button className="min-h-11 text-action-dim focus-visible:outline" type="submit">{busy ? "[recording…]" : "[record decision]"}</button>
         </fieldset>
-      </form>}
+      </form>
     </>}
   </section>
 }

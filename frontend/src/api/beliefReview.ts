@@ -1,7 +1,7 @@
 import { apiJson, BASE } from "./http"
 
 export type ReviewState = "candidate" | "awaiting_context" | "under_review" | "adopted" | "deferred" | "declined" | "superseded"
-export type ReviewAction = "adopt" | "decline" | "defer" | "request_context" | "request_review"
+export type ReviewAction = "adopt" | "decline" | "defer" | "request_context" | "request_review" | "revise" | "supersede" | "resurface"
 export type Recorded = Record<string, unknown>
 export type ReasoningKey = "encounter" | "claim_or_tension" | "comparison" | "consequence_or_challenge" | "decision_or_uncertainty"
 export interface ReviewExportItem {
@@ -24,6 +24,10 @@ export interface ReviewCommand {
   expected_state: ReviewState | null; scope: string; temporal_scope: string
   rationale: string; consequence: string; challenge: string; dissent: string[]
   assessment_ids: string[]
+  statement?: string
+  target_record_id?: string
+  expected_target_review_version?: number
+  expected_target_statement_sha256?: string
 }
 export interface ReviewDecision extends Recorded {
   id: string; agent_id: string; timestamp: string; next_state: ReviewState
@@ -34,12 +38,15 @@ export interface WorkshopReceipt {
   decision: ReviewDecision; record_snapshot: ReviewSnapshot
   relation_snapshots: Recorded[]; alternative_snapshot: Recorded | null
   counter_trace: Recorded | null; tool_authority: "none"; shared_agreement: "not_inferred"
+  linked_record_id?: string | null
 }
 export interface WorkshopView {
   agent_id: string; record: ReviewSnapshot; family: ReviewSnapshot[]; nomination_only: true
   uncompared_in_bounded_scan: number; commands: WorkshopReceipt[]; counter_traces: Recorded[]
   history_truncated: boolean; counter_traces_truncated: boolean
   command_count: number; counter_trace_count: number
+  lineage_links?: { source_record_id: string; successor_record_id: string; action: "revise" | "supersede"; source_statement_sha256: string; successor_statement_sha256: string; command_id: string; decision_id: string; timestamp: string }[]
+  lineage_count?: number; lineage_truncated?: boolean
   advisory_assessments: { receipt: Recorded; binding: string; tool_authority: "none" }[]
   participant_identity: string; tool_authority: "none"
 }

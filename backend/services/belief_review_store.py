@@ -289,7 +289,7 @@ class BeliefDecisionStore:
             raise SecurityViolation("Decision actor does not match trusted caller", entity="belief_decision")
         if value.next_state == "superseded":
             raise ConstraintViolation(
-                "Supersession requires the later linked-revision command", entity="belief_decision"
+                "Supersession requires an authenticated linked workshop command", entity="belief_decision"
             )
         write = DecisionWrite(
             value.agent_id,
