@@ -89,3 +89,17 @@ uv run pytest benchmarks/tests/test_telemetry_causal_intervention.py -q
 ```
 This is a contract harness for later counterbalanced ablation work, not an outcome comparison or policy ranking.
 
+### 7. Clef and Jev sensory comparison (`clef_jev_comparison`)
+The live runner compares Jev, Clef, and Clef-flash on a checksum-pinned set of synthetic cases covering triage, search filtering, sycophancy checks, tension nomination, and dream arbitration. It records valid structured-answer rate, abstention, task agreement, selective accuracy, multiclass Brier score, 10-bin calibration error, p50/p95 latency, provider failure class, token usage, and any provider-reported cost. The fixture labels are rule-derived examples, not independent human gold; this run cannot justify runtime promotion.
+
+Check fixture integrity without credentials:
+```bash
+uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --validate-only
+```
+
+Run one bounded pass (15 fixtures × 3 providers) with Jev credentials from the normal AAA configuration plus `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`:
+```bash
+uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --output benchmarks/runs/telemetry/clef_jev_<run-id>
+```
+Receipts contain fixture hashes and labels but omit fixture text, raw provider errors, and credentials. Provider cost remains unknown when an endpoint does not report it. The Cloudflare endpoint uses the documented Workers AI Jev/SystemOne decision interface.
+
