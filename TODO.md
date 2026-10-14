@@ -7,7 +7,7 @@
 - [x] **T86 — Freeze quality audit window** (`ecade43`): bounded audit window and invariant V139.
 - [x] **T87 — Release preflight receipt** (`da6e2f6`): API receipt for release readiness.
 - [x] **T88 — Causal selector arms** (`704c834`): deterministic current/sham/active harness; counterbalanced ablation remains open.
-- [x] **T89 — Clef/Jev comparison**: OpenRouter run completed for Jev, Clef, and Clef Flash; see [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md). Single-pass synthetic results; independent labels, repeated runs, and promotion review remain open.
+- [x] **T89 — Clef/Jev first-pass comparison**: OpenRouter run completed for Jev, Clef, and Clef Flash; decision: retain Jev for the current route and make no Clef promotion from this single-pass synthetic result. See [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md). Independent labels and repeated runs remain open.
 - [x] **T90 — EmbeddingGemma 2 retrieval harness** (`00d3a55`): synthetic CPU run completed and published as [Report 074](docs/reports/074-embeddinggemma2-retrieval/README.md); production and multimodal evaluation remain open.
 
 ---
@@ -104,10 +104,11 @@
     * [x] Run text-only synthetic 30-document / 10-query retrieval and SQLite storage diagnostic against MiniLM; see [Report 074](docs/reports/074-embeddinggemma2-retrieval/README.md). Decision: retain MiniLM for current runtime; Gemma diagnostic only, no migration.
     * [ ] Benchmark against production-shaped perception sediment and digestion embeddings (`SimpleChunkDigester`, `perception_sediment`) with independently reviewed relevance labels; evaluate MRL dimensions for recall and SQLite WAL footprint.
     * [ ] Assess multimodal capability for future image/media sediment ingestion.
-- [ ] **Cloudflare Clef & Clef-flash Evaluation & Benchmarking (Decision Models):**
+- [ ] **Cloudflare Clef & Clef-flash Follow-up Evaluation (Decision Models):**
   - Reference: [Cloudflare Blog - Clef Decision Models & RL Fine-Tuning](https://blog.cloudflare.com/clef-decision-models/) (Oct 2026, Apache 2.0).
   - Characteristics: Open-source decision models (Clef 27B, Clef-flash 9B) available through OpenRouter typed decisions and Workers AI. Clef/Flash returned probability maps through Jev's shared decision contract in Report 075.
   - Evaluation & Benchmarking Target:
+    * [x] Complete first-pass comparison with Jev; no runtime route change from diagnostic-only results (Report 075).
     * [x] Implement the checksum-pinned synthetic comparison fixture and offline validation harness in T89 (`e7fcf15`).
     * [x] Run Clef / Clef-flash against Jev via OpenRouter on frozen triage, search filtering, sycophancy, tension, and dream arbitration cases; see [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md).
     * [x] Compare observed latency, strict response validity, and indicative input cost; listed Clef pricing conflicts, and no provider-reported cost was returned.
