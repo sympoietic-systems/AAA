@@ -16,12 +16,13 @@
 
 - [ ] **Complete Report 020 & Benchmark Ablation (SPEC.md §T.37–§T.40):**
   - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts in the T88 causal selector harness (`704c834`).
-  - [ ] Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current); live run at `benchmarks/runs/telemetry/causal_selector_20261014_001` has 4/90 valid arm checkpoints; results remain pending.
+  - [ ] Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current); live run at `benchmarks/runs/telemetry/causal_selector_20261014_001` has 16/90 valid arm checkpoints and is resumed; results remain pending.
   - [x] Add atomic checkpoints/resume and T38 current/sham/active orchestration with counterbalanced order, validity gating, and a credential-free request-count preflight; completed arms reuse receipts, incomplete isolated workers restart from turn 1 (`7a9c86d`, `ba6ee1e`).
   - [x] Lock benchmark model fallback, atomically persist arm receipts, and raise apparatus output ceiling to 2048 (`ba6ee1e`, `84bcc0e`).
   - [x] Allow complete natural-length T38 participant replies while retaining completion/provenance checks; keep the 1–3 sentence gate for legacy runs (B141; saved checkpoint migrated and revalidated).
   - [x] Support comma-separated NVIDIA key fallback with bounded 3-round rate-limit retries and increasing 10s/20s backoff; full backend suite verified.
   - [x] Retry NVIDIA participant timeout/connect/TLS failures through configured key rotation and bounded backoff (B142, `823dc2e`).
+  - [x] Recover NVIDIA length truncation with same-model token-budget doubling ≤8192; automatically retry failed isolated arms ≤3 times while retaining completed receipts and clearing partial state (B143, `bde7c83`).
   - Publish Report 020 and amend ADR-097; reclassify Report 019 while preserving receipts.
 - [x] **Paskian Teachback & Operational Accommodation (ADR-098 & SPEC.md §T.44–§T.46):**
   - [x] **The 3-Beat Paskian Controller (`teachback_and_fork`):** Replace unilateral refusal and open-ended clarification with Reconstruct (Teachback) + Delimit (Agential Cut) + Accommodate (Operational Fork) in `backend/modules/sensory/intervention_policy.py`.
