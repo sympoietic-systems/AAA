@@ -47,6 +47,7 @@ INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
 PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
 NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS = 300
 APPARATUS_MAX_OUTPUT_TOKENS = 2048
+PARTICIPANT_FORMAT_VERSION = 3
 _nvidia_simulator_key_cooldowns: dict[str, float] = {}
 
 _CAUSAL_MODE_DIRECTIVES = {
@@ -240,7 +241,7 @@ def participant_request_body(
     return body
 
 
-def parse_participant_completion(data: dict[str, Any]) -> ParticipantCompletion:
+def parse_participant_completion(data: dict[str, Any], *, allow_long_replies: bool = False) -> ParticipantCompletion:
     """Parse provider output and make exclusion reasons explicit."""
 
     choices = data.get("choices")
@@ -261,7 +262,7 @@ def parse_participant_completion(data: dict[str, Any]) -> ParticipantCompletion:
         reasons.append("empty_content")
     if finish_reason != "stop":
         reasons.append("finish_reason_not_stop")
-    if not 1 <= sentence_count <= 3:
+    if sentence_count < 1 or (not allow_long_replies and sentence_count > 3):
         reasons.append("sentence_count_out_of_range")
     if not usage:
         reasons.append("missing_usage")
@@ -283,6 +284,24 @@ def parse_participant_completion(data: dict[str, Any]) -> ParticipantCompletion:
     )
 
 
+def _revalidate_participant_completion(completion: dict[str, Any], *, allow_long_replies: bool) -> dict[str, Any]:
+    """Recompute validity from immutable provider receipt fields under this run's policy."""
+
+    envelope = {
+        "choices": [
+            {
+                "message": {"content": completion.get("content", "")},
+                "finish_reason": completion.get("finish_reason"),
+                "native_finish_reason": completion.get("native_finish_reason"),
+            }
+        ],
+        "model": completion.get("model"),
+        "provider": completion.get("provider"),
+        "usage": completion.get("usage"),
+    }
+    return parse_participant_completion(envelope, allow_long_replies=allow_long_replies).to_dict()
+
+
 def _simulated_participant(
     transcript: list[dict[str, str]],
     *,
@@ -290,6 +309,7 @@ def _simulated_participant(
     api_key: str,
     api_base: str,
     participant_system: str = PARTICIPANT_SYSTEM,
+    allow_long_replies: bool = False,
     max_retries: int = 3,
 ) -> ParticipantCompletion:
     is_nvidia = "nvidia" in api_base.lower()
@@ -331,7 +351,7 @@ def _simulated_participant(
                     res_json["provider"] = "openrouter"
                 if "model" not in res_json or not res_json.get("model"):
                     res_json["model"] = model
-                return parse_participant_completion(res_json)
+                return parse_participant_completion(res_json, allow_long_replies=allow_long_replies)
             except httpx.HTTPStatusError as exc:
                 last_error = exc
                 status_code = exc.response.status_code
@@ -376,6 +396,8 @@ def _run_conversation(
     causal_arm: CausalArm | None = None,
 ) -> list[dict[str, Any]]:
     scenario = get_scenario(scenario_id)
+    allow_long_participant_replies = causal_arm is not None
+    participant_system = scenario.participant_system
     regulator = client.app.state.registry.get("homeostatic_regulator")
     if regulator is None or not hasattr(regulator, "set_intervention_policy_mode"):
         raise RuntimeError("homeostatic regulator does not expose benchmark policy selection")
@@ -447,7 +469,8 @@ def _run_conversation(
                 model=simulator_model,
                 api_key=api_key,
                 api_base=api_base,
-                participant_system=scenario.participant_system,
+                participant_system=participant_system,
+                allow_long_replies=allow_long_participant_replies,
             )
             turns[-1]["next_participant_completion"] = participant_completion.to_dict()
             if not participant_completion.content:
@@ -608,6 +631,7 @@ def _run_worker(args: argparse.Namespace) -> None:
         args.worker_repetition,
         turns,
         expected_completions=args.worker_turns - 1,
+        allow_long_participant_replies=causal_arm is not None,
     )
     _atomic_write_json(Path(args.worker_output), result)
 
@@ -624,7 +648,9 @@ def _mean_metric(turns: list[dict[str, Any]], key: str) -> float:
     return round(mean(values), 4) if values else 0.0
 
 
-def _participant_validity(turns: list[dict[str, Any]], expected_completions: int) -> dict[str, Any]:
+def _participant_validity(
+    turns: list[dict[str, Any]], expected_completions: int, *, allow_long_replies: bool = False
+) -> dict[str, Any]:
     completions = [turn["next_participant_completion"] for turn in turns if turn.get("next_participant_completion")]
     count = len(completions)
     stop_count = sum(item.get("finish_reason") == "stop" for item in completions)
@@ -638,7 +664,7 @@ def _participant_validity(turns: list[dict[str, Any]], expected_completions: int
     passed = (
         count == expected_completions
         and stop_rate >= 0.95
-        and format_rate >= 0.95
+        and (allow_long_replies or format_rate >= 0.95)
         and valid_rate >= 0.95
         and empty_count == 0
     )
@@ -648,6 +674,7 @@ def _participant_validity(turns: list[dict[str, Any]], expected_completions: int
         "valid_count": valid_count,
         "stop_rate": round(stop_rate, 4),
         "format_rate": round(format_rate, 4),
+        "format_gate_applied": not allow_long_replies,
         "valid_rate": round(valid_rate, 4),
         "empty_count": empty_count,
         "passed": passed,
@@ -680,6 +707,9 @@ def _completion_audit(runs: list[dict[str, Any]], *, require_semantic_review: bo
     apparatus_turns = [turn for run in runs for turn in run.get("turns", [])]
     apparatus_truncated = sum(bool(turn.get("truncated")) for turn in apparatus_turns)
     passed = bool(run_gates) and all(bool(gate.get("passed")) for gate in run_gates)
+    format_gate_applied = any(
+        bool(run.get("participant_validity", {}).get("format_gate_applied", True)) for run in runs
+    )
     return {
         "purpose": "participant validity audit; policy effects require a separately powered benchmark",
         "expected_completions": expected,
@@ -703,6 +733,7 @@ def _completion_audit(runs: list[dict[str, Any]], *, require_semantic_review: bo
         "gate": {
             "stop_rate": round(stop_count / max(1, expected), 4),
             "format_rate": round(format_count / max(1, expected), 4),
+            "format_gate_applied": format_gate_applied,
             "empty_count": empty_count,
             "passed": passed,
         },
@@ -740,7 +771,15 @@ def _summarize_run(
     *,
     scenario_id: str | None = None,
     expected_completions: int | None = None,
+    allow_long_participant_replies: bool = False,
 ) -> dict[str, Any]:
+    if allow_long_participant_replies:
+        for turn in turns:
+            completion = turn.get("next_participant_completion")
+            if isinstance(completion, dict):
+                turn["next_participant_completion"] = _revalidate_participant_completion(
+                    completion, allow_long_replies=True
+                )
     receipts = build_causal_receipts(turns)
     outcomes = [receipt.outcome_score for receipt in receipts if receipt.outcome_score is not None]
     uptake = [outcome.uptake for receipt in receipts for outcome in receipt.next_turn_outcomes if outcome.valid]
@@ -816,7 +855,9 @@ def _summarize_run(
         "valid_metric_turn_count": len(metric_turns),
         "excluded_invalid_turn_count": len(turns) - len(metric_turns),
         "participant_validity": _participant_validity(
-            turns, expected_completions if expected_completions is not None else max(0, len(turns) - 1)
+            turns,
+            expected_completions if expected_completions is not None else max(0, len(turns) - 1),
+            allow_long_replies=allow_long_participant_replies,
         ),
         "intervention_counts": dict(sorted(modes.items())),
         "turns": turns,
@@ -861,7 +902,7 @@ def _resume_contract(
     three_arm: bool = False,
 ) -> dict[str, Any]:
     contract = {
-        "schema_version": 1,
+        "schema_version": 3,
         "scenario_ids": scenario_ids,
         "repetitions_per_arm": repetitions,
         "turns_per_conversation": turns,
@@ -870,6 +911,9 @@ def _resume_contract(
         "participant_model": simulator_model,
         "api_base": api_base,
         "arm_order_seed": 1729,
+        "participant_format_version": PARTICIPANT_FORMAT_VERSION,
+        "participant_length_policy": "long_form_allowed" if three_arm else "one_to_three_sentences",
+        "apparatus_max_output_tokens": APPARATUS_MAX_OUTPUT_TOKENS,
     }
     if three_arm:
         contract["three_arm_selector"] = True
@@ -1036,14 +1080,88 @@ def _load_resume_receipts(out_dir: Path, expected_contract: dict[str, Any]) -> l
     if not out_dir.is_dir() or not metadata_path.is_file():
         raise ValueError("resume requires an existing run directory with metadata.json")
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    if metadata.get("resume_contract") != expected_contract:
-        raise ValueError("resume parameters do not match the original run metadata")
     if not receipts_path.exists():
-        return []
-    receipts = json.loads(receipts_path.read_text(encoding="utf-8"))
+        receipts: list[dict[str, Any]] = []
+    else:
+        receipts = json.loads(receipts_path.read_text(encoding="utf-8"))
     if not isinstance(receipts, list) or not all(isinstance(item, dict) for item in receipts):
         raise ValueError("resume telemetry_receipts.json must contain a list of run receipts")
+    if metadata.get("resume_contract") != expected_contract:
+        if not _can_migrate_t38_length_policy(metadata.get("resume_contract"), expected_contract, receipts):
+            raise ValueError("resume parameters do not match the original run metadata")
+        metadata["resume_contract"] = expected_contract
+        metadata["resume_contract_migrated_from_schema"] = 1
+        _atomic_write_json(metadata_path, metadata)
     return receipts
+
+
+def _can_migrate_t38_length_policy(
+    previous_contract: Any, expected_contract: dict[str, Any], receipts: list[dict[str, Any]]
+) -> bool:
+    """Allow only legacy T38 runs whose stored turns prove the selected model and output budget."""
+
+    if not isinstance(previous_contract, dict) or not expected_contract.get("three_arm_selector") or not receipts:
+        return False
+    added_contract_fields = {
+        "participant_format_version",
+        "participant_length_policy",
+        "apparatus_max_output_tokens",
+    }
+    legacy_expected = {key: value for key, value in expected_contract.items() if key not in added_contract_fields}
+    legacy_expected["schema_version"] = 1
+    if previous_contract != legacy_expected:
+        return False
+
+    def effective_model(name: str) -> str:
+        for prefix in ("nvidia_router/", "openrouter_router/", "google_router/", "deepseek_router/"):
+            name = name.removeprefix(prefix)
+        return name
+
+    expected_apparatus = effective_model(str(expected_contract["apparatus_model"]))
+    expected_participant = effective_model(str(expected_contract["participant_model"]))
+    expected_apparatus_provider = (
+        "model_pool_nvidia" if str(expected_contract["apparatus_model"]).startswith("nvidia_router/") else None
+    )
+    for run in receipts:
+        if run.get("policy") not in {"current", "sham", "active"}:
+            return False
+        turns = run.get("turns")
+        if not isinstance(turns, list) or len(turns) != int(expected_contract["turns_per_conversation"]):
+            return False
+        completion_count = 0
+        for index, turn in enumerate(turns):
+            if not isinstance(turn, dict) or effective_model(str(turn.get("model", ""))) != expected_apparatus:
+                return False
+            if expected_apparatus_provider and turn.get("provider") != expected_apparatus_provider:
+                return False
+            controls = turn.get("applied_controls")
+            forwarded = controls.get("forwarded") if isinstance(controls, dict) else None
+            if (
+                not isinstance(forwarded, dict)
+                or forwarded.get("max_tokens") != expected_contract["apparatus_max_output_tokens"]
+            ):
+                return False
+            completion = turn.get("next_participant_completion")
+            if completion is None:
+                if index < len(turns) - 1:
+                    return False
+                continue
+            if not isinstance(completion, dict):
+                return False
+            reasons = set(completion.get("exclusion_reasons", [])) - {"sentence_count_out_of_range"}
+            if (
+                reasons
+                or completion.get("finish_reason") != "stop"
+                or not str(completion.get("content", "")).strip()
+                or not isinstance(completion.get("usage"), dict)
+                or effective_model(str(completion.get("model", ""))) != expected_participant
+                or not completion.get("provider")
+            ):
+                return False
+            completion_count += 1
+        if completion_count != len(turns) - 1:
+            return False
+    return True
 
 
 def _scorecard(runs: list[dict[str, Any]], candidate_policy: str = "paskian") -> dict[str, Any]:
@@ -1170,7 +1288,15 @@ def main() -> None:
     if args.rescore:
         runs_path = args.rescore / "telemetry_receipts.json"
         saved_runs = json.loads(runs_path.read_text(encoding="utf-8"))
-        rescored = [_summarize_run(run["policy"], int(run["repetition"]), run["turns"]) for run in saved_runs]
+        rescored = [
+            _summarize_run(
+                run["policy"],
+                int(run["repetition"]),
+                run["turns"],
+                allow_long_participant_replies=run["policy"] in {"current", "sham", "active"},
+            )
+            for run in saved_runs
+        ]
         is_three_arm = {run["policy"] for run in rescored} == {"current", "sham", "active"}
         runs_path.write_text(json.dumps(rescored, indent=2) + "\n", encoding="utf-8")
         (args.rescore / "scorecard.json").write_text(
@@ -1263,6 +1389,19 @@ def main() -> None:
             raise ValueError("--resume requires --out to name the existing run directory")
         runs = _load_resume_receipts(out_dir, resume_contract)
         metadata = json.loads((out_dir / "metadata.json").read_text(encoding="utf-8"))
+        if args.three_arm_selector:
+            runs = [
+                _summarize_run(
+                    run["policy"],
+                    int(run["repetition"]),
+                    run["turns"],
+                    scenario_id=str(run["scenario_id"]),
+                    expected_completions=args.turns - 1,
+                    allow_long_participant_replies=True,
+                )
+                for run in runs
+            ]
+            _atomic_write_json(out_dir / "telemetry_receipts.json", runs)
     else:
         out_dir.mkdir(parents=True, exist_ok=False)
         runs = []

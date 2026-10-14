@@ -142,7 +142,7 @@ V50: controller state reconstructed from sediment or bounded by active conversat
 V51: benchmark model calls resolve from LLM-provider configuration; ⊥ reuse public AAA application URL as an OpenAI-compatible endpoint.
 V52: background semantic-knot embedding uses the registered `EmbedderModule.process` contract; integration test ⊥ mock-only legacy method.
 V53: ∀ simulated participant completion → content + finish reason + usage + model/provider recorded; empty/truncated/missing provenance → invalid outcome.
-V54: policy ranking requires participant validity ≥95% `finish_reason=stop`, ≥95% 1–3 sentences, 0 empty valid turns; gate failure → validity report only.
+V54: policy comparison requires participant validity ≥95% `finish_reason=stop`; legacy short-form also requires ≥95% 1–3 sentences; T38 sentence counts descriptive, long complete replies allowed; 0 empty valid turns; gate failure → validity report only.
 V55: causal receipt pre/post metrics independently sampled & temporally labeled; identical aliased snapshot ⊥ causal delta; unavailable post-state explicit `null`.
 V56: ∀ live benchmark arm/repetition → isolated temporary DB + conversation/controller/background state; production DB writes = 0.
 V57: control observability requires requested → forwarded/effective or explicit unsupported trace; nonempty mappings alone ≠ applied.
@@ -483,3 +483,5 @@ B138|2026-10-14|Clef adapter cleanup removed `re` still used by receipt model-la
 B139|2026-10-14|three-arm benchmark missed evaluator import; resume test double lacked arm parameter|restore import + update double; full benchmark suite 166 pass; no new invariant
 
 B140|2026-10-14|live T38 fell back to openrouter/free after NVIDIA failure; interrupted worker dirs blocked restart; 900-token cap caused empty truncation|lock benchmark fallback to requested model; atomically persist worker receipts; clear incomplete arm dirs; raise apparatus ceiling to 2048; regression tests + 168 pass; V57,V62,V67
+
+B141|2026-10-14|T38 inherited legacy 1–3 sentence gate and rejected complete provenance-bound replies|scope sentence gate to legacy; allow natural T38 reply length while retaining completion/provenance gate; verify checkpoint migration by model/provider/budget/completeness; regression tests; no new invariant; V54

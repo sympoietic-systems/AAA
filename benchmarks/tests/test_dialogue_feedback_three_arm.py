@@ -33,6 +33,113 @@ def test_three_arm_plan_is_counterbalanced_and_paired() -> None:
         api_base="https://fixture.test/v1",
         three_arm=True,
     )["arms"] == ["current", "sham", "active"]
+    contract = benchmark._resume_contract(
+        scenario_ids=["scenario-a", "scenario-b", "scenario-c"],
+        repetitions=10,
+        turns=8,
+        candidate_policy="paskian",
+        apparatus_model="fixture/apparatus",
+        simulator_model="fixture/participant",
+        api_base="https://fixture.test/v1",
+        three_arm=True,
+    )
+    assert contract["participant_format_version"] == 3
+    assert contract["participant_length_policy"] == "long_form_allowed"
+    assert contract["apparatus_max_output_tokens"] == 2048
+
+
+def test_three_arm_participant_request_preserves_natural_length() -> None:
+    body = benchmark.participant_request_body(
+        [{"role": "assistant", "content": "State the cache decision and a validation criterion."}],
+        "fixture/participant",
+        api_base="https://integrate.api.nvidia.com/v1",
+        participant_system="Act as the engineering lead. Reply to the system's latest argument in 1-3 sentences.",
+    )
+
+    assert body["messages"][0]["content"].endswith("Reply to the system's latest argument in 1-3 sentences.")
+    assert "max_tokens" not in body
+
+
+def test_t38_accepts_long_complete_participant_replies_and_reports_length_descriptively() -> None:
+    content = "First sentence. Second sentence. Third sentence. Fourth sentence. Fifth sentence."
+    parsed = benchmark.parse_participant_completion(
+        {
+            "choices": [{"message": {"content": content}, "finish_reason": "stop"}],
+            "model": "fixture/participant",
+            "provider": "nvidia",
+            "usage": {"completion_tokens": 20},
+        },
+        allow_long_replies=True,
+    )
+    short_form = benchmark.parse_participant_completion(
+        {
+            "choices": [{"message": {"content": content}, "finish_reason": "stop"}],
+            "model": "fixture/participant",
+            "provider": "nvidia",
+            "usage": {"completion_tokens": 20},
+        }
+    )
+    turns = [{"next_participant_completion": parsed.to_dict()}]
+
+    assert parsed.valid is True
+    assert short_form.valid is False
+    assert benchmark._participant_validity(turns, 1, allow_long_replies=True) == {
+        "expected_completions": 1,
+        "completion_count": 1,
+        "valid_count": 1,
+        "stop_rate": 1.0,
+        "format_rate": 0.0,
+        "format_gate_applied": False,
+        "valid_rate": 1.0,
+        "empty_count": 0,
+        "passed": True,
+    }
+    assert benchmark._participant_validity(turns, 1)["passed"] is False
+
+
+def test_t38_resume_migration_requires_matching_model_budget_and_complete_receipt() -> None:
+    expected = benchmark._resume_contract(
+        scenario_ids=["scenario"],
+        repetitions=10,
+        turns=8,
+        candidate_policy="paskian",
+        apparatus_model="nvidia_router/nvidia/nemotron-test",
+        simulator_model="nvidia/nemotron-test",
+        api_base="https://integrate.api.nvidia.com/v1",
+        three_arm=True,
+    )
+    legacy = {
+        key: value
+        for key, value in expected.items()
+        if key not in {"participant_format_version", "participant_length_policy", "apparatus_max_output_tokens"}
+    }
+    legacy["schema_version"] = 1
+    completion = {
+        "content": "One. Two. Three. Four.",
+        "finish_reason": "stop",
+        "native_finish_reason": "stop",
+        "usage": {"completion_tokens": 8},
+        "model": "nvidia/nemotron-test",
+        "provider": "nvidia",
+        "valid": False,
+        "exclusion_reasons": ["sentence_count_out_of_range"],
+    }
+    turn = {
+        "model": "nvidia/nemotron-test",
+        "provider": "model_pool_nvidia",
+        "applied_controls": {"forwarded": {"max_tokens": 2048}},
+        "next_participant_completion": completion,
+    }
+    run_turns = [dict(turn) for _ in range(7)]
+    run_turns.append({key: value for key, value in turn.items() if key != "next_participant_completion"})
+    run = {"policy": "active", "turns": run_turns}
+
+    assert benchmark._can_migrate_t38_length_policy(legacy, expected, [run]) is True
+    run["turns"][0]["provider"] = "model_pool_openrouter"
+    assert benchmark._can_migrate_t38_length_policy(legacy, expected, [run]) is False
+    run["turns"][0]["provider"] = "model_pool_nvidia"
+    run["turns"][0].pop("next_participant_completion")
+    assert benchmark._can_migrate_t38_length_policy(legacy, expected, [run]) is False
 
 
 def test_causal_scorecard_requires_valid_paired_receipts() -> None:
@@ -232,13 +339,40 @@ def test_three_arm_resume_skips_completed_selector_arms(tmp_path: Path, monkeypa
         del turn_count, simulator_model, api_base, isolation_root
         assert causal_arm == policy
         attempts.append((scenario_id, repetition, policy))
-        return {
-            "policy": policy,
-            "repetition": repetition,
-            "scenario_id": scenario_id,
-            "turns": [],
-            "participant_validity": {"passed": False},
-        }
+        turns = []
+        for turn_index in range(3):
+            turn: dict[str, Any] = {
+                "scenario_id": scenario_id,
+                "turn": turn_index + 1,
+                "latency_ms": 1.0,
+                "metrics": {
+                    "paskian_health": 0.5,
+                    "divergence_resolution_ratio": 0.5,
+                    "collapse_pressure": 0.2,
+                    "conceptual_velocity": 0.3,
+                },
+                "homeostatic": {},
+            }
+            if turn_index < 2:
+                turn["next_participant_completion"] = {
+                    "content": "A complete fixture response.",
+                    "sentence_count": 1,
+                    "finish_reason": "stop",
+                    "model": "fixture/participant",
+                    "provider": "fixture",
+                    "usage": {"completion_tokens": 4},
+                    "valid": True,
+                    "exclusion_reasons": [],
+                }
+            turns.append(turn)
+        return benchmark._summarize_run(
+            policy,
+            repetition,
+            turns,
+            scenario_id=scenario_id,
+            expected_completions=2,
+            allow_long_participant_replies=True,
+        )
 
     monkeypatch.setattr(benchmark, "_run_isolated_arm", run_arm)
     original_run_arm = benchmark._run_isolated_arm
