@@ -361,8 +361,6 @@ def _simulated_participant(
                 elif is_nvidia and status_code != 429:
                     raise
             except (httpx.TimeoutException, httpx.TransportError, httpx.RequestError) as exc:
-                if is_nvidia:
-                    raise
                 last_error = exc
 
             if is_nvidia:

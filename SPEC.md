@@ -210,6 +210,7 @@ V139: ∀ resumable quality audit → frozen UTC window + source identity + cand
 V140: ∀ release preflight → authenticated read-only runtime + DB evidence; revision/config/migration/coverage absence stays unknown or incomplete; receipt reports bounded window + scan truncation; API schema matches serialized report
 V141: ∀ external decision response → verify object/answer/probability shapes before field access; malformed envelopes become bounded per-case failures, never raw provider data
 V142: ∀ dimension-truncated retrieval vector → L2-normalize after truncation before cosine scoring or persistence
+V143: ∀ NVIDIA participant timeout/connect/TLS error → rotate configured keys, retry ≤3 rounds with 10s/20s backoff after full-key rounds; model stays fixed.
 
 ## §T
 
@@ -485,3 +486,5 @@ B139|2026-10-14|three-arm benchmark missed evaluator import; resume test double 
 B140|2026-10-14|live T38 fell back to openrouter/free after NVIDIA failure; interrupted worker dirs blocked restart; 900-token cap caused empty truncation|lock benchmark fallback to requested model; atomically persist worker receipts; clear incomplete arm dirs; raise apparatus ceiling to 2048; regression tests + 168 pass; V57,V62,V67
 
 B141|2026-10-14|T38 inherited legacy 1–3 sentence gate and rejected complete provenance-bound replies|scope sentence gate to legacy; allow natural T38 reply length while retaining completion/provenance gate; verify checkpoint migration by model/provider/budget/completeness; regression tests; no new invariant; V54
+
+B142|2026-10-14|NVIDIA participant SSL EOF escaped retry loop before fallback key or backoff|retry transport failures through configured key rotation and 3-round delay schedule; regression test simulates primary/fallback connection failures then recovery; V143

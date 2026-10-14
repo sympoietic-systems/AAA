@@ -44,6 +44,33 @@ def test_nvidia_participant_rotates_fallback_key_and_cools_failed_key(monkeypatc
     assert "fixture-fallback" not in benchmark._nvidia_simulator_key_cooldowns
 
 
+def test_nvidia_participant_retries_connection_failures_across_both_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    benchmark._nvidia_simulator_key_cooldowns.clear()
+    request_keys: list[str] = []
+    delays: list[float] = []
+
+    def connect_then_recover(*_args, **kwargs):
+        request_keys.append(kwargs["headers"]["Authorization"])
+        if len(request_keys) < 3:
+            request = httpx.Request("POST", "https://integrate.api.nvidia.com/v1/chat/completions")
+            raise httpx.ConnectError("simulated TLS EOF", request=request)
+        return _response(200)
+
+    monkeypatch.setattr(benchmark.httpx, "post", connect_then_recover)
+    monkeypatch.setattr(benchmark.time, "sleep", delays.append)
+
+    completion = benchmark._simulated_participant(
+        [],
+        model="nvidia/nemotron-3-super-120b-a12b",
+        api_key="fixture-primary,fixture-fallback",
+        api_base="https://integrate.api.nvidia.com/v1",
+    )
+
+    assert completion.valid
+    assert request_keys == ["Bearer fixture-primary", "Bearer fixture-fallback", "Bearer fixture-primary"]
+    assert delays == [10.0]
+
+
 def test_nvidia_participant_stops_after_three_rounds_and_backs_off(monkeypatch: pytest.MonkeyPatch) -> None:
     benchmark._nvidia_simulator_key_cooldowns.clear()
     request_keys: list[str] = []
