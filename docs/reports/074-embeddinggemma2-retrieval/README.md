@@ -10,6 +10,8 @@
 
 **Fixture:** `embedding-mrl-retrieval-v1`, SHA-256 `1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51`
 
+**Runtime decision:** Retain MiniLM for current embeddings (2026-10-14).
+
 ## Finding
 
 The frozen, hand-authored synthetic set produced perfect retrieval scores for EmbeddingGemma 2 at 128, 256, 512, and 768 dimensions, while MiniLM at 384 dimensions scored 0.90 Recall@1 and 0.95 MRR. The result confirms that the harness ran and that the candidate ranked these ten labeled queries well. Ten queries and thirty synthetic documents are too small and too narrowly constructed to establish production retrieval quality.
@@ -17,6 +19,8 @@ The frozen, hand-authored synthetic set produced perfect retrieval scores for Em
 On this CPU run, EmbeddingGemma 2's query encoding took about 7.1–7.3 seconds and document encoding about 38.4–39.3 seconds, compared with MiniLM's 86 ms and 334 ms. The observed model-load RSS delta was 808,886,272 bytes (about 771 MiB) for Gemma and 116,514,816 bytes (about 111 MiB) for MiniLM. Lower dimensional Gemma vectors reduced raw vector bytes, but SQLite page and index overhead meant the 128-dimensional database was 32 KiB and the 256-dimensional database 52 KiB after checkpoint; the 512- and 768-dimensional databases were both 132 KiB. These measurements describe one CPU pass on this host, not a deployment profile.
 
 No production database or runtime embedding configuration was changed. The run used text-only inputs and provides no evidence about images, audio, video, or deployment suitability.
+
+The measured CPU document-encoding time (about 38–39 seconds for only 30 documents) is too slow for the current path. Keep MiniLM in the runtime configuration; revisit Gemma only with representative hardware and corpus measurements.
 
 ## Method and boundary
 

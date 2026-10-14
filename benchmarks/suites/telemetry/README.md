@@ -90,18 +90,18 @@ uv run pytest benchmarks/tests/test_telemetry_causal_intervention.py -q
 This is a contract harness for later counterbalanced ablation work, not an outcome comparison or policy ranking.
 
 ### 7. Clef and Jev sensory comparison (`clef_jev_comparison`)
-The live runner compares Jev, Clef, and Clef-flash on a checksum-pinned set of synthetic cases covering triage, search filtering, sycophancy checks, tension nomination, and dream arbitration. It records valid structured-answer rate, abstention, task agreement, selective accuracy, multiclass Brier score, 10-bin calibration error, p50/p95 latency, provider failure class, token usage, and any provider-reported cost. The fixture labels are rule-derived examples, not independent human gold; this run cannot justify runtime promotion.
+The live runner compares Jev, Clef, and Clef-flash on a checksum-pinned set of synthetic cases covering triage, search filtering, sycophancy checks, tension nomination, and dream arbitration. Jev uses `typesafe/jev-1.13`; Clef models use OpenRouter's native decisions interface with `cloudflare/clef` and `cloudflare/clef-flash`, sharing Jev's choice/probability contract. It records valid structured-answer rate, abstention, task agreement, selective accuracy, multiclass Brier score, 10-bin calibration error, p50/p95 latency, provider failure class, token usage, and any provider-reported cost. The fixture labels are rule-derived examples, not independent human gold; [Report 075](../../../docs/reports/075-clef-jev-openrouter-comparison/README.md) reports one completed diagnostic pass, not promotion evidence.
 
 Check fixture integrity without credentials:
 ```bash
 uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --validate-only
 ```
 
-Run one bounded pass (15 fixtures × 3 providers) with Jev credentials from the normal AAA configuration plus `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`:
+Run one bounded pass (15 fixtures × 3 providers) with the OpenRouter credentials used by the normal AAA configuration (`AAA_LLM_API_KEY` or `AAA_TYPESAFE_API_KEY`):
 ```bash
 uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --output benchmarks/runs/telemetry/clef_jev_<run-id>
 ```
-Receipts contain fixture hashes and labels but omit fixture text, raw provider errors, and credentials. Provider cost remains unknown when an endpoint does not report it. The Cloudflare endpoint uses the documented Workers AI Jev/SystemOne decision interface.
+Receipts contain fixture hashes and labels but omit fixture text, raw provider errors, and credentials. Provider cost remains unknown when an endpoint does not report it. OpenRouter model identifiers/prices can change; the report records the lookup date and conflicting price listings. The OpenRouter Clef models return typed decision probability maps through the same Decisions contract used by Jev; this is distinct from comparing generated answers through Chat Completions.
 
 ### 8. EmbeddingGemma 2 vs MiniLM retrieval/storage (`embedding_mrl_retrieval`)
 The frozen 30-document / 10-query synthetic fixture compares MiniLM at 384d with EmbeddingGemma 2 at 128d, 256d, 512d, and 768d. It records Recall@1/3/5, MRR, CPU encode latency, process RSS, and benchmark-local SQLite storage. Each model/dimension uses a fresh namespace and database; no production vectors or databases are read or written. MRL outputs are L2-normalized after truncation.

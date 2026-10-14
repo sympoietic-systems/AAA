@@ -78,3 +78,4 @@ This directory serves as the **Single Source of Truth (SSOT)** for all empirical
 - [Report 072: Beliefs v2 integration readiness](072-belief-v2-integration-readiness/README.md)
 - [Report 073: Beliefs v2 legacy review replay](073-belief-v2-legacy-review/README.md)
 - [Report 074: EmbeddingGemma 2 synthetic retrieval and storage diagnostic](074-embeddinggemma2-retrieval/README.md)
+- [Report 075: Clef and Jev OpenRouter comparison](075-clef-jev-openrouter-comparison/README.md)

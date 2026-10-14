@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "run_id": "clef_jev_openrouter_20261014_comparison",
+  "generated_at": "2026-10-14T01:44:52.954616+00:00",
+  "fixture_id": "clef-jev-sensory-v1",
+  "fixture_sha256": "c61e0890dc9bb3ca1e4f83df3acf0809155ab1495a5ec0ca7431eb77b259e2d9",
+  "label_provenance": "hand-authored synthetic rule fixtures; not an independently adjudicated corpus",
+  "repeats": 1,
+  "model_keys": [
+    "jev",
+    "clef",
+    "clef-flash"
+  ],
+  "runtime_routing_changed": false,
+  "summary": {
+    "jev": {
+      "calls": 15,
+      "provider_failures": 0,
+      "invalid_answers": 7,
+      "valid_answers": 8,
+      "validity_rate": 0.5333,
+      "abstentions": 1,
+      "abstention_rate": 0.125,
+      "accuracy": 1.0,
+      "selective_accuracy": 1.0,
+      "coverage_on_decidable_cases": 1.0,
+      "multiclass_brier": 0.00068,
+      "expected_calibration_error_10_bin": 0.05,
+      "latency_ms_p50": 1765.654,
+      "latency_ms_p95": 2754.587,
+      "usage": {
+        "input_tokens": 6388,
+        "output_tokens": 631,
+        "reported_cost_usd": null,
+        "unpriced_calls": 15
+      }
+    },
+    "clef": {
+      "calls": 15,
+      "provider_failures": 0,
+      "invalid_answers": 8,
+      "valid_answers": 7,
+      "validity_rate": 0.4667,
+      "abstentions": 0,
+      "abstention_rate": 0.0,
+      "accuracy": 1.0,
+      "selective_accuracy": 1.0,
+      "coverage_on_decidable_cases": 1.0,
+      "multiclass_brier": 0.00283,
+      "expected_calibration_error_10_bin": 0.05,
+      "latency_ms_p50": 2633.489,
+      "latency_ms_p95": 3831.953,
+      "usage": {
+        "input_tokens": 3402,
+        "output_tokens": 0,
+        "reported_cost_usd": null,
+        "unpriced_calls": 15
+      }
+    },
+    "clef-flash": {
+      "calls": 15,
+      "provider_failures": 0,
+      "invalid_answers": 13,
+      "valid_answers": 2,
+      "validity_rate": 0.1333,
+      "abstentions": 0,
+      "abstention_rate": 0.0,
+      "accuracy": 1.0,
+      "selective_accuracy": 1.0,
+      "coverage_on_decidable_cases": 1.0,
+      "multiclass_brier": 0.00585,
+      "expected_calibration_error_10_bin": 0.05,
+      "latency_ms_p50": 1933.825,
+      "latency_ms_p95": 2566.387,
+      "usage": {
+        "input_tokens": 3402,
+        "output_tokens": 0,
+        "reported_cost_usd": null,
+        "unpriced_calls": 15
+      }
+    }
+  },
+  "summary_by_task": {
+    "dream_arbitration": {
+      "jev": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 1,
+        "valid_answers": 2,
+        "validity_rate": 0.6667,
+        "abstentions": 1,
+        "abstention_rate": 0.5,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0004,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1799.201,
+        "latency_ms_p95": 2754.587,
+        "usage": {
+          "input_tokens": 1367,
+          "output_tokens": 122,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.00401,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 2598.814,
+        "latency_ms_p95": 3831.953,
+        "usage": {
+          "input_tokens": 723,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef-flash": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 3,
+        "valid_answers": 0,
+        "validity_rate": 0.0,
+        "abstentions": 0,
+        "abstention_rate": null,
+        "accuracy": null,
+        "selective_accuracy": null,
+        "coverage_on_decidable_cases": null,
+        "multiclass_brier": null,
+        "expected_calibration_error_10_bin": null,
+        "latency_ms_p50": 1980.224,
+        "latency_ms_p95": 2222.881,
+        "usage": {
+          "input_tokens": 723,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      }
+    },
+    "search_filter": {
+      "jev": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0018,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1762.323,
+        "latency_ms_p95": 1931.927,
+        "usage": {
+          "input_tokens": 1288,
+          "output_tokens": 122,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 1,
+        "valid_answers": 2,
+        "validity_rate": 0.6667,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0039,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 2324.519,
+        "latency_ms_p95": 2500.111,
+        "usage": {
+          "input_tokens": 678,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef-flash": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 3,
+        "valid_answers": 0,
+        "validity_rate": 0.0,
+        "abstentions": 0,
+        "abstention_rate": null,
+        "accuracy": null,
+        "selective_accuracy": null,
+        "coverage_on_decidable_cases": null,
+        "multiclass_brier": null,
+        "expected_calibration_error_10_bin": null,
+        "latency_ms_p50": 1936.294,
+        "latency_ms_p95": 2068.273,
+        "usage": {
+          "input_tokens": 678,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      }
+    },
+    "sycophancy_check": {
+      "jev": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 1,
+        "valid_answers": 2,
+        "validity_rate": 0.6667,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0013,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1730.797,
+        "latency_ms_p95": 1797.994,
+        "usage": {
+          "input_tokens": 1222,
+          "output_tokens": 122,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.00217,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 2676.552,
+        "latency_ms_p95": 2962.106,
+        "usage": {
+          "input_tokens": 657,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef-flash": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.00531,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1870.261,
+        "latency_ms_p95": 2030.733,
+        "usage": {
+          "input_tokens": 657,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      }
+    },
+    "tension_nomination": {
+      "jev": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1691.457,
+        "latency_ms_p95": 1772.89,
+        "usage": {
+          "input_tokens": 1355,
+          "output_tokens": 143,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0028,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 2689.592,
+        "latency_ms_p95": 3121.594,
+        "usage": {
+          "input_tokens": 756,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef-flash": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 3,
+        "valid_answers": 0,
+        "validity_rate": 0.0,
+        "abstentions": 0,
+        "abstention_rate": null,
+        "accuracy": null,
+        "selective_accuracy": null,
+        "coverage_on_decidable_cases": null,
+        "multiclass_brier": null,
+        "expected_calibration_error_10_bin": null,
+        "latency_ms_p50": 1833.366,
+        "latency_ms_p95": 2566.387,
+        "usage": {
+          "input_tokens": 756,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      }
+    },
+    "triage": {
+      "jev": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 1,
+        "valid_answers": 2,
+        "validity_rate": 0.6667,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0001,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1768.263,
+        "latency_ms_p95": 1768.279,
+        "usage": {
+          "input_tokens": 1156,
+          "output_tokens": 122,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 1,
+        "valid_answers": 2,
+        "validity_rate": 0.6667,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.0015,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 2706.191,
+        "latency_ms_p95": 2830.011,
+        "usage": {
+          "input_tokens": 588,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      },
+      "clef-flash": {
+        "calls": 3,
+        "provider_failures": 0,
+        "invalid_answers": 2,
+        "valid_answers": 1,
+        "validity_rate": 0.3333,
+        "abstentions": 0,
+        "abstention_rate": 0.0,
+        "accuracy": 1.0,
+        "selective_accuracy": 1.0,
+        "coverage_on_decidable_cases": 1.0,
+        "multiclass_brier": 0.00638,
+        "expected_calibration_error_10_bin": 0.05,
+        "latency_ms_p50": 1933.825,
+        "latency_ms_p95": 1967.532,
+        "usage": {
+          "input_tokens": 588,
+          "output_tokens": 0,
+          "reported_cost_usd": null,
+          "unpriced_calls": 3
+        }
+      }
+    }
+  }
+}
