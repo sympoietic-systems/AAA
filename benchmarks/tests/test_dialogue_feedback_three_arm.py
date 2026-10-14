@@ -230,6 +230,35 @@ def test_participant_validity_excludes_invalid_completion() -> None:
     assert result["passed"] is False
 
 
+def test_apparatus_budget_validation_accepts_only_recorded_bounded_retry_sequence() -> None:
+    assert benchmark._valid_apparatus_budget_controls({"forwarded": {"max_tokens": 2048}}, 2048)
+    assert benchmark._valid_apparatus_budget_controls(
+        {
+            "requested": {"max_tokens": 2048},
+            "forwarded": {"max_tokens": 4096},
+            "truncation_retries": [{"from": 2048, "to": 4096}],
+        },
+        2048,
+    )
+    assert benchmark._valid_apparatus_budget_controls(
+        {
+            "requested": {"max_tokens": 2048},
+            "forwarded": {"max_tokens": 8192},
+            "truncation_retries": [{"from": 2048, "to": 4096}, {"from": 4096, "to": 8192}],
+        },
+        2048,
+    )
+    assert not benchmark._valid_apparatus_budget_controls(
+        {
+            "requested": {"max_tokens": 2048},
+            "forwarded": {"max_tokens": 8192},
+            "truncation_retries": [{"from": 2048, "to": 8192}],
+        },
+        2048,
+    )
+    assert not benchmark._valid_apparatus_budget_controls({"forwarded": {"max_tokens": 16384}}, 2048)
+
+
 def test_three_arm_plan_only_reports_requests_without_reading_keys(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

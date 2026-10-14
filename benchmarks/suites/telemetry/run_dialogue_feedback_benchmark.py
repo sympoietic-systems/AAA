@@ -47,6 +47,8 @@ INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
 PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
 NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS = 300
 APPARATUS_MAX_OUTPUT_TOKENS = 2048
+NVIDIA_APPARATUS_MAX_OUTPUT_TOKENS = 8192
+ISOLATED_ARM_RETRY_DELAYS_SECONDS = (10, 20)
 PARTICIPANT_FORMAT_VERSION = 3
 _nvidia_simulator_key_cooldowns: dict[str, float] = {}
 
@@ -576,12 +578,28 @@ def _run_isolated_arm(
     ]
     if causal_arm is not None:
         command.extend(("--worker-causal-arm", causal_arm))
-    subprocess.run(
-        command,
-        cwd=PROJECT_ROOT,
-        env=_worker_environment(database_path),
-        check=True,
-    )
+    for attempt in range(len(ISOLATED_ARM_RETRY_DELAYS_SECONDS) + 1):
+        try:
+            subprocess.run(
+                command,
+                cwd=PROJECT_ROOT,
+                env=_worker_environment(database_path),
+                check=True,
+            )
+            break
+        except subprocess.CalledProcessError:
+            if attempt >= len(ISOLATED_ARM_RETRY_DELAYS_SECONDS):
+                raise
+            if arm_root.exists():
+                shutil.rmtree(arm_root)
+            delay_seconds = ISOLATED_ARM_RETRY_DELAYS_SECONDS[attempt]
+            print(
+                f"arm retry scenario={scenario_id} repetition={repetition} policy={policy} "
+                f"attempt={attempt + 2}/3 delay_seconds={delay_seconds}",
+                flush=True,
+            )
+            time.sleep(delay_seconds)
+            arm_root.mkdir(parents=True, exist_ok=False)
     return cast(dict[str, Any], json.loads(output_path.read_text(encoding="utf-8")))
 
 
@@ -1120,6 +1138,7 @@ def _can_migrate_t38_length_policy(
     expected_apparatus_provider = (
         "model_pool_nvidia" if str(expected_contract["apparatus_model"]).startswith("nvidia_router/") else None
     )
+    expected_budget = int(expected_contract["apparatus_max_output_tokens"])
     for run in receipts:
         if run.get("policy") not in {"current", "sham", "active"}:
             return False
@@ -1135,8 +1154,9 @@ def _can_migrate_t38_length_policy(
             controls = turn.get("applied_controls")
             forwarded = controls.get("forwarded") if isinstance(controls, dict) else None
             if (
-                not isinstance(forwarded, dict)
-                or forwarded.get("max_tokens") != expected_contract["apparatus_max_output_tokens"]
+                not isinstance(controls, dict)
+                or not isinstance(forwarded, dict)
+                or not _valid_apparatus_budget_controls(controls, expected_budget)
             ):
                 return False
             completion = turn.get("next_participant_completion")
@@ -1160,6 +1180,36 @@ def _can_migrate_t38_length_policy(
         if completion_count != len(turns) - 1:
             return False
     return True
+
+
+def _valid_apparatus_budget_controls(controls: dict[str, Any], expected_budget: int) -> bool:
+    """Validate requested/effective token caps and any bounded NVIDIA truncation retries."""
+
+    forwarded = controls.get("forwarded")
+    if not isinstance(forwarded, dict):
+        return False
+    effective_budget = forwarded.get("max_tokens")
+    if not isinstance(effective_budget, int) or effective_budget < expected_budget:
+        return False
+    retries = controls.get("truncation_retries", [])
+    if not isinstance(retries, list):
+        return False
+    if not retries:
+        return effective_budget == expected_budget
+    requested = controls.get("requested")
+    if not isinstance(requested, dict) or requested.get("max_tokens") != expected_budget:
+        return False
+    if effective_budget > NVIDIA_APPARATUS_MAX_OUTPUT_TOKENS:
+        return False
+    prior_budget = expected_budget
+    for retry in retries:
+        if not isinstance(retry, dict):
+            return False
+        next_budget = min(prior_budget * 2, NVIDIA_APPARATUS_MAX_OUTPUT_TOKENS)
+        if retry.get("from") != prior_budget or retry.get("to") != next_budget:
+            return False
+        prior_budget = next_budget
+    return prior_budget == effective_budget
 
 
 def _scorecard(runs: list[dict[str, Any]], candidate_policy: str = "paskian") -> dict[str, Any]:

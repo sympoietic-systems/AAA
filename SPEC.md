@@ -211,6 +211,8 @@ V140: ∀ release preflight → authenticated read-only runtime + DB evidence; r
 V141: ∀ external decision response → verify object/answer/probability shapes before field access; malformed envelopes become bounded per-case failures, never raw provider data
 V142: ∀ dimension-truncated retrieval vector → L2-normalize after truncation before cosine scoring or persistence
 V143: ∀ NVIDIA participant timeout/connect/TLS error → rotate configured keys, retry ≤3 rounds with 10s/20s backoff after full-key rounds; model stays fixed.
+V144: ∀ NVIDIA completion `finish_reason=length` → retry same model with doubled `max_tokens` ≤8192; report requested + effective cap + retry history; other providers ⊥ auto-retry.
+V145: ∀ isolated benchmark arm worker failure → preserve completed arm receipts; retry ≤3 times with 10s/20s backoff; clear incomplete DB/state before retry; exhausted retries fail visibly.
 
 ## §T
 
@@ -488,3 +490,5 @@ B140|2026-10-14|live T38 fell back to openrouter/free after NVIDIA failure; inte
 B141|2026-10-14|T38 inherited legacy 1–3 sentence gate and rejected complete provenance-bound replies|scope sentence gate to legacy; allow natural T38 reply length while retaining completion/provenance gate; verify checkpoint migration by model/provider/budget/completeness; regression tests; no new invariant; V54
 
 B142|2026-10-14|NVIDIA participant SSL EOF escaped retry loop before fallback key or backoff|retry transport failures through configured key rotation and 3-round delay schedule; regression test simulates primary/fallback connection failures then recovery; V143
+
+B143|2026-10-14|NVIDIA truncation + intermittent transport errors terminated live arm and whole run|retry same model at doubled cap ≤8192; record effective cap + retries; retry isolated worker ≤3 times, deleting partial state each time; bounded recovery tests; V144,V145

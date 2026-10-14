@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import subprocess
+from pathlib import Path
+from typing import Any
+
 import httpx
 import pytest
 
@@ -125,3 +129,42 @@ def test_non_nvidia_participant_keeps_existing_retry_schedule(monkeypatch: pytes
     assert completion.valid
     assert calls == 3
     assert delays == [3.0, 6.0]
+
+
+def test_failed_isolated_arm_retries_after_backoff_and_clears_partial_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    arm_root = tmp_path / "isolated" / "r1_scenario_current"
+    calls = 0
+    delays: list[float] = []
+
+    def fail_then_write_receipt(command: list[str], **_kwargs: Any) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            (arm_root / "partial.db").write_text("failed worker state", encoding="utf-8")
+            raise subprocess.CalledProcessError(1, command)
+        assert not (arm_root / "partial.db").exists()
+        output_path = Path(command[command.index("--worker-output") + 1])
+        output_path.write_text(
+            '{"policy":"current","repetition":1,"scenario_id":"scenario"}',
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(benchmark.subprocess, "run", fail_then_write_receipt)
+    monkeypatch.setattr(benchmark.time, "sleep", delays.append)
+
+    receipt = benchmark._run_isolated_arm(
+        policy="current",
+        repetition=1,
+        turn_count=3,
+        simulator_model="fixture/participant",
+        api_base="https://fixture.test/v1",
+        isolation_root=tmp_path / "isolated",
+        scenario_id="scenario",
+        causal_arm="current",
+    )
+
+    assert receipt["policy"] == "current"
+    assert calls == 2
+    assert delays == [10]
