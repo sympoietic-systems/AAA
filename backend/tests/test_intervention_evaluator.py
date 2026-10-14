@@ -33,6 +33,17 @@ def test_v56_worker_environment_uses_fresh_database(tmp_path: Path):
     assert environment["AAA_DAEMON_ENABLED"] == "false"
 
 
+def test_worker_environment_does_not_allow_model_fallback_during_benchmark(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setenv("AAA_BENCHMARK_MODEL", "nvidia_router/nvidia/nemotron-test")
+
+    environment = _worker_environment(tmp_path / "arm" / "benchmark.db")
+
+    assert environment["AAA_LLM_MODELS"] == "nvidia_router/nvidia/nemotron-test"
+    assert environment["AAA_LLM_FALLBACK_MODEL"] == "nvidia_router/nvidia/nemotron-test"
+
+
 def test_v56_isolation_paths_cannot_escape_temporary_root(tmp_path: Path):
     inside = tmp_path / "arm" / "benchmark.db"
 

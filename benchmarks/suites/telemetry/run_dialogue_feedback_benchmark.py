@@ -7,6 +7,7 @@ import json
 import os
 import random
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,7 +18,7 @@ from datetime import UTC, datetime
 from itertools import permutations
 from pathlib import Path
 from statistics import mean, pstdev
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from dotenv import load_dotenv
@@ -479,6 +480,7 @@ def _worker_environment(database_path: Path) -> dict[str, str]:
     if benchmark_model:
         environment["AAA_LLM_MODELS"] = benchmark_model
         environment["AAA_LLM_MODEL"] = benchmark_model
+        environment["AAA_LLM_FALLBACK_MODEL"] = benchmark_model
     return environment
 
 
@@ -516,6 +518,18 @@ def _run_isolated_arm(
     """Run exactly one arm in a fresh interpreter and SQLite database."""
 
     arm_root = _assert_isolated_path(isolation_root / f"r{repetition}_{scenario_id}_{policy}", isolation_root)
+    if arm_root.exists():
+        output_path = _assert_isolated_path(arm_root / "receipt.json", isolation_root)
+        if output_path.is_file():
+            receipt = cast(dict[str, Any], json.loads(output_path.read_text(encoding="utf-8")))
+            if (
+                receipt.get("policy") == policy
+                and int(receipt.get("repetition", -1)) == repetition
+                and receipt.get("scenario_id") == scenario_id
+            ):
+                return receipt
+            raise ValueError(f"existing isolated worker receipt does not match planned arm: {arm_root}")
+        shutil.rmtree(arm_root)
     arm_root.mkdir(parents=True, exist_ok=False)
     database_path = _assert_isolated_path(arm_root / "benchmark.db", isolation_root)
     output_path = _assert_isolated_path(arm_root / "receipt.json", isolation_root)
@@ -546,7 +560,7 @@ def _run_isolated_arm(
         env=_worker_environment(database_path),
         check=True,
     )
-    return json.loads(output_path.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], json.loads(output_path.read_text(encoding="utf-8")))
 
 
 def _run_worker(args: argparse.Namespace) -> None:
@@ -594,7 +608,7 @@ def _run_worker(args: argparse.Namespace) -> None:
         turns,
         expected_completions=args.worker_turns - 1,
     )
-    Path(args.worker_output).write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    _atomic_write_json(Path(args.worker_output), result)
 
 
 def _mean_metric(turns: list[dict[str, Any]], key: str) -> float:
@@ -1325,7 +1339,7 @@ def main() -> None:
                 api_base=api_base,
                 isolation_root=isolation_root,
                 scenario_id=scenario_id,
-                causal_arm=policy if args.three_arm_selector else None,
+                causal_arm=cast(CausalArm, policy) if args.three_arm_selector else None,
             )
             runs.append(arm_receipt)
             completed_keys.add(key)

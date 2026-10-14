@@ -153,6 +153,13 @@ class TestOpenRouterProviderConfig(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(updated["llm"]["nvidia_keys"], ["primary-fixture", "fallback-fixture"])
 
+    def test_llm_fallback_model_env_override(self):
+        config = {"llm": {"fallback_model": "openrouter/free"}}
+        with patch.dict("os.environ", {"AAA_LLM_FALLBACK_MODEL": "nvidia_router/nvidia/nemotron-test"}):
+            updated = _apply_env_overrides(config)
+
+        self.assertEqual(updated["llm"]["fallback_model"], "nvidia_router/nvidia/nemotron-test")
+
     def test_sanitize_openrouter_params_elevates_when_thinking(self):
         # Thinking enabled, max_tokens <= 4096 -> elevated to 8192
         params = {"max_tokens": 2048}

@@ -159,6 +159,55 @@ def test_three_arm_plan_only_reports_requests_without_reading_keys(
     assert not (tmp_path / "prepared").exists()
 
 
+def test_worker_environment_locks_apparatus_fallback_to_benchmark_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AAA_BENCHMARK_MODEL", "nvidia_router/nvidia/nemotron-test")
+
+    environment = benchmark._worker_environment(tmp_path / "benchmark.db")
+
+    assert environment["AAA_LLM_MODELS"] == "nvidia_router/nvidia/nemotron-test"
+    assert environment["AAA_LLM_FALLBACK_MODEL"] == "nvidia_router/nvidia/nemotron-test"
+
+
+def test_interrupted_worker_directory_is_cleaned_and_completed_receipt_reused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    isolation_root = tmp_path / "isolated"
+    arm_root = isolation_root / "r1_scenario_current"
+    arm_root.mkdir(parents=True)
+    (arm_root / "partial.db").write_text("incomplete", encoding="utf-8")
+    calls = 0
+
+    def complete_worker(command: list[str], **_kwargs: Any) -> None:
+        nonlocal calls
+        calls += 1
+        assert not (arm_root / "partial.db").exists()
+        output_path = Path(command[command.index("--worker-output") + 1])
+        output_path.write_text(
+            json.dumps({"policy": "current", "repetition": 1, "scenario_id": "scenario"}),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(benchmark.subprocess, "run", complete_worker)
+    kwargs = {
+        "policy": "current",
+        "repetition": 1,
+        "turn_count": 3,
+        "simulator_model": "fixture/participant",
+        "api_base": "https://fixture.test/v1",
+        "isolation_root": isolation_root,
+        "scenario_id": "scenario",
+        "causal_arm": "current",
+    }
+
+    first = benchmark._run_isolated_arm(**kwargs)
+    second = benchmark._run_isolated_arm(**kwargs)
+
+    assert first == second
+    assert calls == 1
+
+
 def test_three_arm_resume_skips_completed_selector_arms(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     output = tmp_path / "interrupted-three-arm"
     attempts: list[tuple[str, int, str]] = []

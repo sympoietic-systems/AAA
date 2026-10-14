@@ -84,6 +84,7 @@ def _parse_json_dict(v: str) -> dict:
 ENV_OVERRIDES: list[EnvOverride] = [
     # ── Core ──
     EnvOverride("AAA_LLM_MODELS", "llm", "models", _parse_list),
+    EnvOverride("AAA_LLM_FALLBACK_MODEL", "llm", "fallback_model"),
     EnvOverride("AAA_LLM_PROVIDER", "llm", "provider"),
     EnvOverride("AAA_LLM_API_BASE", "llm", "api_base"),
     EnvOverride("AAA_LLM_TIMEOUT", "llm", "timeout", _parse_float),
