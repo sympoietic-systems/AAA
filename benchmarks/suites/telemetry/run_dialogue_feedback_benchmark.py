@@ -46,6 +46,7 @@ from benchmarks.suites.telemetry.scenarios import SCENARIOS, get_scenario
 INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
 PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
 NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS = 300
+APPARATUS_MAX_OUTPUT_TOKENS = 2048
 _nvidia_simulator_key_cooldowns: dict[str, float] = {}
 
 _CAUSAL_MODE_DIRECTIVES = {
@@ -409,7 +410,7 @@ def _run_conversation(
             json={
                 "conversation_id": conversation_id,
                 "user_message_id": message_data["user_message_id"],
-                "max_tokens": 900,
+                "max_tokens": APPARATUS_MAX_OUTPUT_TOKENS,
             },
         )
         generation_response.raise_for_status()
