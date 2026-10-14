@@ -481,3 +481,5 @@ B137|2026-10-14|EmbeddingGemma encoder normalization drifted after MRL truncatio
 B138|2026-10-14|Clef adapter cleanup removed `re` still used by receipt model-label sanitizer|restore import; focused comparison test caught NameError; mechanical cleanup, no new invariant
 
 B139|2026-10-14|three-arm benchmark missed evaluator import; resume test double lacked arm parameter|restore import + update double; full benchmark suite 166 pass; no new invariant
+
+B140|2026-10-14|live T38 fell back to openrouter/free after NVIDIA failure; interrupted worker dirs blocked restart; 900-token cap caused empty truncation|lock benchmark fallback to requested model; atomically persist worker receipts; clear incomplete arm dirs; raise apparatus ceiling to 2048; regression tests + 168 pass; V57,V62,V67
