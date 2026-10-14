@@ -117,3 +117,12 @@ uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --output be
 ```
 The 2026-10-14 CPU run completed both models on the synthetic fixture. Durable receipts, summary, and isolated SQLite stores are archived with [Report 074](../../../docs/reports/074-embeddinggemma2-retrieval/README.md); perfect Gemma scores on this small hand-authored set are diagnostic only, not evidence for model promotion or multimodal performance.
 
+### 9. Dialogue feedback control (`run_dialogue_feedback_benchmark`)
+The live runner compares `legacy` with one candidate policy (`paskian` or `progressive`) using isolated worker processes and temporary databases. Each completed scenario/repetition/policy arm is atomically checkpointed in `telemetry_receipts.json`; metadata records the run contract and completed arms. Resume with the same scenario, repetitions, turns, candidate policy, model, and API endpoint:
+
+```bash
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --scenario cache_wipe_429,unyielding_conflict,constructive_dialectic --repetitions 10 --turns 8 --out benchmarks/runs/telemetry/dialogue_feedback_<run-id> --resume
+```
+
+The initial invocation uses the same command without `--resume`. Keep the output directory for continuation. A completed arm is skipped; an arm interrupted before its receipt is written is rerun from its first turn. Calls within each conversation run sequentially, so provider RPM is only a ceiling and does not predict wall-clock runtime. The current runner does not yet orchestrate the T38 `current`/`sham`/`active` three-arm comparison; that remains a separate implementation step.
+
