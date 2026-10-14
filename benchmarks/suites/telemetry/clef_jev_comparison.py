@@ -11,7 +11,6 @@ import asyncio
 import hashlib
 import json
 import math
-import os
 import re
 import statistics
 import time
@@ -20,8 +19,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-import httpx
-
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_FIXTURE = ROOT / "benchmarks" / "data" / "clef_jev_sensory_v1.json"
 MODELS = ("jev", "clef", "clef-flash")
@@ -29,7 +26,6 @@ MAX_CASES = 100
 MAX_REPEATS = 3
 MAX_FIXTURE_BYTES = 1_000_000
 _EXPECTED_FIXTURE_SHA256 = "c61e0890dc9bb3ca1e4f83df3acf0809155ab1495a5ec0ca7431eb77b259e2d9"
-_ACCOUNT_ID = re.compile(r"[0-9a-fA-F]{32}\Z")
 
 
 class DecisionAdapter(Protocol):
@@ -38,57 +34,13 @@ class DecisionAdapter(Protocol):
     async def evaluate(self, state: dict[str, Any], questions: dict[str, dict[str, Any]]) -> dict[str, Any]: ...
 
 
-class CloudflareClefAdapter:
-    """Workers AI REST adapter normalized to the Jev/SystemOne response shape."""
-
-    def __init__(self, account_id: str, token: str, model: str, client: httpx.AsyncClient) -> None:
-        if not _ACCOUNT_ID.fullmatch(account_id):
-            raise ValueError("Cloudflare account ID must be 32 hexadecimal characters")
-        if model not in {"clef", "clef-flash"}:
-            raise ValueError("unsupported Cloudflare decision model")
-        self.model = model
-        self._token = token
-        self._client = client
-        self._url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/cloudflare/{model}"
-
-    async def evaluate(self, state: dict[str, Any], questions: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        response = await self._client.post(
-            self._url,
-            headers={"Authorization": f"Bearer {self._token}"},
-            json={"model": self.model, "state": state, "questions": questions},
-        )
-        if response.is_error:
-            return {"success": False, "error": "provider_http_error", "answers": {}, "usage": {}}
-        try:
-            data = response.json()
-        except ValueError:
-            return {"success": False, "error": "provider_invalid_json", "answers": {}, "usage": {}}
-        if not isinstance(data, dict):
-            return {"success": False, "error": "provider_invalid_body", "answers": {}, "usage": {}}
-        body: dict[str, Any] = data
-        nested_result = data.get("result")
-        if isinstance(nested_result, dict):
-            body = nested_result
-        if data.get("success") is False or body.get("success") is False:
-            return {"success": False, "error": "provider_failure", "answers": {}, "usage": {}}
-        answers = body.get("answers")
-        if not isinstance(answers, dict):
-            return {"success": False, "error": "provider_missing_answers", "answers": {}, "usage": {}}
-        return {
-            "success": True,
-            "model": body.get("model", self.model),
-            "answers": answers,
-            "usage": body.get("usage", {}),
-        }
-
-
 class JevAdapter:
-    def __init__(self, client: Any) -> None:
+    def __init__(self, client: Any, model: str | None = None) -> None:
         self.client = client
-        self.model = str(getattr(client, "model", "jev-unknown"))
+        self.model = model or str(getattr(client, "model", "jev-unknown"))
 
     async def evaluate(self, state: dict[str, Any], questions: dict[str, dict[str, Any]]) -> dict[str, Any]:
-        result = await self.client.evaluate(state=state, questions=questions)
+        result = await self.client.evaluate(state=state, questions=questions, model=self.model)
         return result if isinstance(result, dict) else {"success": False, "error": "invalid_provider_result"}
 
 
@@ -360,11 +312,7 @@ async def run_comparison(
     }
 
 
-def _build_adapters() -> tuple[dict[str, DecisionAdapter], httpx.AsyncClient]:
-    account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
-    cloudflare_token = (os.environ.get("CLOUDFLARE_API_TOKEN") or os.environ.get("CLOUDFLARE_AUTH_TOKEN") or "").strip()
-    if not account_id or not cloudflare_token:
-        raise ValueError("CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are required")
+def _build_adapters() -> dict[str, DecisionAdapter]:
     from backend.config import load_config
     from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
 
@@ -372,11 +320,10 @@ def _build_adapters() -> tuple[dict[str, DecisionAdapter], httpx.AsyncClient]:
     jev_client = TypeSafeDecisionClient.from_config(config.get("typesafe", {}))
     if not jev_client.is_configured:
         raise ValueError("Jev SystemOne credentials are not configured")
-    http_client = httpx.AsyncClient(timeout=15.0, follow_redirects=False)
     adapters: dict[str, DecisionAdapter] = {"jev": JevAdapter(jev_client)}
-    for model in ("clef", "clef-flash"):
-        adapters[model] = CloudflareClefAdapter(account_id, cloudflare_token, model, http_client)
-    return adapters, http_client
+    for label, model in (("clef", "cloudflare/clef"), ("clef-flash", "cloudflare/clef-flash")):
+        adapters[label] = JevAdapter(jev_client, model=model)
+    return adapters
 
 
 def _write_run(output: Path, packet: dict[str, Any], fixture_sha: str, result: dict[str, Any], repeats: int) -> None:
@@ -434,11 +381,7 @@ def _write_run(output: Path, packet: dict[str, Any], fixture_sha: str, result: d
 
 
 async def _run_live(repeats: int, cases: list[dict[str, Any]]) -> dict[str, Any]:
-    adapters, client = _build_adapters()
-    try:
-        return await run_comparison(adapters, cases, repeats)
-    finally:
-        await client.aclose()
+    return await run_comparison(_build_adapters(), cases, repeats)
 
 
 def main() -> None:

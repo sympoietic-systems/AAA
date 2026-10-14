@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import httpx
 import pytest
 
 from benchmarks.suites.telemetry import clef_jev_comparison as comparison
@@ -42,46 +41,27 @@ def test_t89_fixture_rejects_duplicate_ids_and_unknown_labels(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
-async def test_t89_cloudflare_adapter_normalizes_systemone_result_and_uses_fixed_endpoint() -> None:
+async def test_openrouter_clef_adapter_uses_native_decision_endpoint_and_model_override() -> None:
     seen: dict[str, object] = {}
 
-    async def handler(request: httpx.Request) -> httpx.Response:
-        seen["url"] = str(request.url)
-        seen["authorization"] = request.headers.get("authorization")
-        seen["body"] = json.loads(request.content)
-        return httpx.Response(
-            200,
-            json={
+    class FakeTypeSafeClient:
+        model = "typesafe/jev-1.13"
+
+        async def evaluate(self, **kwargs: object) -> dict[str, object]:
+            seen.update(kwargs)
+            return {
                 "success": True,
-                "result": {
-                    "model": "clef",
-                    "answers": _answers("keep", ("keep", "discard", "abstain")),
-                    "usage": {"input_tokens": 12},
-                },
-            },
-        )
+                "model": kwargs.get("model"),
+                "answers": _answers("urgent", ("urgent", "routine", "abstain")),
+            }
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        adapter = comparison.CloudflareClefAdapter("a" * 32, "test-secret", "clef", client)
-        result = await adapter.evaluate({"safe": "fixture"}, {"decision": {"type": "choice"}})
-    assert str(seen["url"]).endswith("/accounts/" + "a" * 32 + "/ai/run/@cf/cloudflare/clef")
-    assert seen["authorization"] == "Bearer test-secret"
-    assert result["success"] is True and result["model"] == "clef"
-    assert result["answers"] == _answers("keep", ("keep", "discard", "abstain"))
-    assert result["usage"] == {"input_tokens": 12}
-
-
-@pytest.mark.asyncio
-async def test_v141_clef_malformed_envelope_becomes_contained_provider_failure() -> None:
-    async def handler(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"success": True, "result": ["malformed"]})
-
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        adapter = comparison.CloudflareClefAdapter("b" * 32, "test-secret", "clef-flash", client)
-        result = await adapter.evaluate({"safe": "fixture"}, {"decision": {"type": "choice"}})
-    assert result["success"] is False
-    assert result["error"] == "provider_missing_answers"
-    assert "malformed" not in json.dumps(result)
+    client = FakeTypeSafeClient()
+    adapter = comparison.JevAdapter(client, model="cloudflare/clef-flash")
+    result = await adapter.evaluate({"message": "outage"}, {"decision": {"type": "Choice"}})
+    assert adapter.model == "cloudflare/clef-flash"
+    assert seen["model"] == "cloudflare/clef-flash"
+    assert result["success"] is True
+    assert result["answers"] == _answers("urgent", ("urgent", "routine", "abstain"))
 
 
 def test_t89_choice_validator_rejects_invalid_distribution_and_confidence_mismatch() -> None:

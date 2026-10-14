@@ -305,7 +305,7 @@ T85|x|repair stale synthesis recovery target/old failure state; separate bounded
 T86|x|freeze reply-quality audit window/source/candidate snapshot; bind resumable receipts; scope denominators + failure accounting|V139,V123,V124,I.internal
 T87|x|add authenticated read-only runtime identity + receipt-coverage endpoint and receipt command; unknown stays explicit; replace stale T55|V106,V139,V140,I.api,I.benchmark
 T88|x|finish T37 active/sham/current causal benchmark slice; bounded issue state, abstain, predicate receipts, reachable isolated arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
-T89|~|benchmark Clef/Clef-flash vs Jev on frozen non-secret fixtures; retain validity, abstention, latency, calibration, failure/cost receipts; no routing change|V30,I.benchmark
+T89|x|benchmark Clef/Clef-flash vs Jev via OpenRouter on frozen non-secret fixtures; retain validity, abstention, latency, calibration, failure/cost receipts; no routing change; Report 075|V30,I.benchmark
 T90|x|benchmark EmbeddingGemma 2 text retrieval vs MiniLM in isolated model/dimension namespace; measure recall, latency, memory/storage; no migration|V30,V142,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
@@ -478,3 +478,4 @@ B134|2026-10-13|audit regression fixture used stale sample version; strict stand
 B135|2026-10-13|release readiness service added rows_examined while response schema required scanned_rows|align Pydantic response with service field; endpoint integration test validates serialized receipt; V140; T87
 B136|2026-10-14|strict mypy exposed un-narrowed dynamic response envelopes and probability maps at the Clef benchmark boundary|narrow response objects explicitly and test malformed envelope as a contained case failure; V141; T89
 B137|2026-10-14|EmbeddingGemma encoder normalization drifted after MRL truncation|normalize each truncated vector before cosine scoring/storage; assert unit norm; V142; T90
+B138|2026-10-14|Clef adapter cleanup removed `re` still used by receipt model-label sanitizer|restore import; focused comparison test caught NameError; mechanical cleanup, no new invariant
