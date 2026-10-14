@@ -250,7 +250,7 @@ T33|x|replace aliased trigger/response snapshots; implement effective-control ob
 T34|x|isolate temp DB, controller, conversation, consolidation per arm/repetition; assert production DB untouched|V42,V50,V56,I.benchmark
 T35|x|run 2-pair × 8-turn validity probe; publish completion/format/exclusion audit; ⊥ policy ranking unless V54 passes|V53,V54,V56,I.benchmark
 T36|x|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
-T37|.|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
+T37|x|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
 T38|.|run counterbalanced ≥10-pair multi-scenario ablation; exclude invalid turns; report dispersion, state revision, disagreement depth, health|V47,V48,V53,V54,V56,V59,V61,V62,I.benchmark
 T39|.|publish Report 020 + ADR amendment; reclassify Report 019 as invalid causal ranking while preserving receipts|V48,V53,V54,V55,V56,V57,V62,I.benchmark
 T40|.|run focused/full backend gates; regenerate figures; link check; clean ephemeral artifacts|V18,V30,V53,V54,V55,V56,V57,V58,V59,V60,V61,V62,I.quality
