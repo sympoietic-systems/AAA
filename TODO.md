@@ -16,7 +16,7 @@
 
 - [ ] **Complete Report 020 & Benchmark Ablation (SPEC.md §T.37–§T.40):**
   - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts in the T88 causal selector harness (`704c834`).
-  - [ ] Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current); live run is resumable at `benchmarks/runs/telemetry/causal_selector_20261014_001` with 1/90 arm checkpoints recorded; results remain pending.
+  - [ ] Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current); live run is resumable at `benchmarks/runs/telemetry/causal_selector_20261014_001`; two valid arm checkpoints were recorded at 2026-10-14 handoff; results remain pending.
   - [x] Add atomic checkpoints/resume and T38 current/sham/active orchestration with counterbalanced order, validity gating, and a credential-free request-count preflight; completed arms reuse receipts, incomplete isolated workers restart from turn 1 (`7a9c86d`, `ba6ee1e`).
   - [x] Lock benchmark model fallback, atomically persist arm receipts, and raise apparatus output ceiling to 2048 (`ba6ee1e`, `84bcc0e`).
   - [x] Allow complete natural-length T38 participant replies while retaining completion/provenance checks; keep the 1–3 sentence gate for legacy runs (B141; live checkpoint resume validation pending).
