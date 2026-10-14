@@ -44,15 +44,23 @@ class KeyManager:
         self._exhausted: dict[str, float] = {}
 
     def get_available_key(self) -> str | None:
+        available = self.get_available_keys()
+        return available[0] if available else None
+
+    def get_available_keys(self) -> list[str]:
+        """Return currently usable keys in configured priority order."""
+
         now = time.time()
+        available: list[str] = []
         for key in self.keys:
             until = self._exhausted.get(key, 0)
             if until and now < until:
                 continue
             if key in self._exhausted:
                 del self._exhausted[key]
-            return key
-        return None
+            if key not in available:
+                available.append(key)
+        return available
 
     def mark_key_exhausted(self, key: str) -> None:
         self._exhausted[key] = time.time() + self.cooldown_seconds
@@ -172,6 +180,115 @@ class ModelPoolProvider(BaseLLMProvider):
             return "***"
         return f"{key[:4]}...{key[-4:]}"
 
+    async def _generate_nvidia_with_retries(
+        self,
+        *,
+        model: str,
+        api_base: str,
+        messages: list[LLMMessage],
+        params: dict[str, Any],
+    ) -> LLMResult:
+        """Try each available NVIDIA credential in three bounded rounds."""
+
+        key_manager = self._nvidia_key_mgr
+        available_keys = key_manager.get_available_keys()
+        if not available_keys:
+            raise RateLimitError("All NVIDIA API keys are cooling down")
+
+        transiently_failed: set[str] = set()
+        auth_rejected: set[str] = set()
+        failure_messages: list[str] = []
+        attempt_count = 0
+        max_rounds = 1 if current_scope() is not None else 3
+        for round_index in range(max_rounds):
+            for key in available_keys:
+                attempt_count += 1
+                provider = OpenAICompatibleProvider(
+                    api_key=key,
+                    model=model,
+                    api_base=api_base,
+                    provider_name="model_pool_nvidia",
+                    thinking=self._thinking,
+                    reasoning_effort=self._reasoning_effort,
+                    max_retries=0,
+                    default_params=self._default_params,
+                    timeout=self._timeout,
+                )
+                try:
+                    result = await invoke_attempt(provider, messages, **params)
+                    for failed_key in transiently_failed:
+                        key_manager.mark_key_exhausted(failed_key)
+                    return cast(LLMResult, result)
+                except AttemptBudgetExceeded:
+                    for failed_key in transiently_failed:
+                        key_manager.mark_key_exhausted(failed_key)
+                    raise
+                except RateLimitError as exc:
+                    if exc.limit_source == "upstream_provider_shared_pool":
+                        raise
+                    transiently_failed.add(key)
+                    failure_messages.append(f"rate limited ({type(exc).__name__})")
+                    logger.warning(
+                        "NVIDIA request rate limited; trying the next configured key (round %d/%d)",
+                        round_index + 1,
+                        max_rounds,
+                    )
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+                    if status_code in {401, 403}:
+                        auth_rejected.add(key)
+                        key_manager.mark_key_exhausted(key)
+                        logger.warning(
+                            "NVIDIA credential rejected with HTTP %d; cooling it down and trying another key",
+                            status_code,
+                        )
+                        continue
+                    if status_code == 429:
+                        transiently_failed.add(key)
+                        failure_messages.append(f"HTTP {status_code}")
+                        logger.warning(
+                            "NVIDIA endpoint returned HTTP %d; trying the next configured key (round %d/%d)",
+                            status_code,
+                            round_index + 1,
+                            max_rounds,
+                        )
+                        continue
+                    for failed_key in transiently_failed:
+                        key_manager.mark_key_exhausted(failed_key)
+                    raise
+                except (httpx.RequestError, TimeoutError):
+                    # V66 limits credential rotation to authentication and rate-limit failures.
+                    for failed_key in transiently_failed:
+                        key_manager.mark_key_exhausted(failed_key)
+                    raise
+                except ProviderResponseError:
+                    for failed_key in transiently_failed:
+                        key_manager.mark_key_exhausted(failed_key)
+                    raise
+
+            available_keys = [key for key in available_keys if key not in auth_rejected]
+            if round_index + 1 < max_rounds and available_keys:
+                delay_seconds = 10 * (2**round_index)
+                logger.warning(
+                    "All available NVIDIA keys failed in retry round %d/%d; retrying after %ds",
+                    round_index + 1,
+                    max_rounds,
+                    delay_seconds,
+                )
+                try:
+                    await retry_delay(delay_seconds)
+                except AttemptBudgetExceeded:
+                    for failed_key in transiently_failed:
+                        key_manager.mark_key_exhausted(failed_key)
+                    raise
+
+        for failed_key in transiently_failed:
+            key_manager.mark_key_exhausted(failed_key)
+        raise RateLimitError(
+            "NVIDIA request failed after bounded key rotation and retry rounds "
+            f"({attempt_count} attempts; failures={', '.join(failure_messages)})"
+        )
+
     async def generate(self, messages: list[LLMMessage], **params: Any) -> LLMResult:
         scope = new_request_scope() if current_scope() is None else None
         if scope is not None:
@@ -262,6 +379,31 @@ class ModelPoolProvider(BaseLLMProvider):
             if provider_type == "nvidia" and not self._nvidia_key_mgr.has_keys():
                 logger.warning("Model %s has nvidia_router/ prefix but no NVIDIA API keys are configured", model)
                 continue
+
+            if provider_type == "nvidia":
+                try:
+                    nvidia_result = await self._generate_nvidia_with_retries(
+                        model=actual_model,
+                        api_base=api_base,
+                        messages=messages,
+                        params=params,
+                    )
+                except AttemptBudgetExceeded:
+                    raise
+                except (
+                    RateLimitError,
+                    httpx.HTTPStatusError,
+                    httpx.RequestError,
+                    TimeoutError,
+                    ProviderResponseError,
+                ) as e:
+                    errors.append(f"{model}: NVIDIA request failed - {type(e).__name__}")
+                    self._mark_exhausted(model)
+                    logger.warning("NVIDIA model %s unavailable after retries (%s)", model, type(e).__name__)
+                    continue
+                self._last_model_used = model
+                self._last_model_time = time.time()
+                return nvidia_result
 
             success = False
             result = None

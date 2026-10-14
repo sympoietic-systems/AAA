@@ -164,7 +164,7 @@ When utilizing model pools (such as the `background_llm`, `vision_llm`, or `stru
 1. **State Retention**: The model pool client caches the last working model (`_last_model_used`).
 2. **Prioritization**: When a fallback switch occurs, subsequent calls prioritize the working fallback model first to avoid spinning through previously failing/rate-limited keys and endpoints.
 3. **Fallback Period Expiration**: If the elapsed time since the switch exceeds the configured `cooldown_seconds` (default: 300 seconds), priority resets and the system attempts to route to the primary/preferred model again.
-4. **Key Rotation & Cooldowns**: Individual API keys and models that hit rate limits or transient errors are put on cooldown for `cooldown_seconds` before the system will attempt to utilize them again.
+4. **Key Rotation & Cooldowns**: Individual API keys and models that hit rate limits are put on cooldown for `cooldown_seconds` (default 300) before the system will attempt to utilize them again. NVIDIA requests try each configured key in order for up to three rounds; rate-limited rounds wait 10 seconds, then 20 seconds. Authentication-rejected credentials cool immediately. Research attempt scopes use one pass to preserve their shared attempt/deadline budget. Other HTTP and transport failures do not rotate NVIDIA credentials.
 
 ## Environment Variables
 
@@ -184,7 +184,7 @@ All env vars are optional overrides. Copy `.env.example` to `.env`.
 |----------|----------|-------------|
 | `AAA_LLM_API_KEY` | openrouter | [openrouter.ai/keys](https://openrouter.ai/keys) |
 | `AAA_DEEPSEEK_API_KEY` | deepseek | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) |
-| `AAA_NVIDIA_API_KEY` | NVIDIA hosted NIM | [build.nvidia.com](https://build.nvidia.com/) |
+| `AAA_NVIDIA_API_KEY` | NVIDIA hosted NIM; ordered comma-separated keys are tried as primary then fallback | [build.nvidia.com](https://build.nvidia.com/) |
 
 The correct key is automatically selected based on `AAA_LLM_PROVIDER`.
 

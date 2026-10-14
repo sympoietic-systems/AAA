@@ -30,6 +30,8 @@ from benchmarks.suites.telemetry.scenarios import SCENARIOS, get_scenario
 
 INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
 PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
+NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS = 300
+_nvidia_simulator_key_cooldowns: dict[str, float] = {}
 
 
 @dataclass(frozen=True)
@@ -168,30 +170,76 @@ def _simulated_participant(
     participant_system: str = PARTICIPANT_SYSTEM,
     max_retries: int = 3,
 ) -> ParticipantCompletion:
-    for attempt in range(max_retries):
-        try:
-            response = httpx.post(
-                f"{api_base.rstrip('/')}/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=participant_request_body(
-                    transcript, model, api_base=api_base, participant_system=participant_system
-                ),
-                timeout=180.0,
-            )
-            response.raise_for_status()
-            res_json = response.json()
-            if "provider" not in res_json and "nvidia" in api_base:
-                res_json["provider"] = "nvidia"
-            elif "provider" not in res_json and "openrouter" in api_base:
-                res_json["provider"] = "openrouter"
-            if "model" not in res_json or not res_json.get("model"):
-                res_json["model"] = model
-            return parse_participant_completion(res_json)
-        except (httpx.TimeoutException, httpx.HTTPStatusError, httpx.TransportError, httpx.RequestError):
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(3.0 * (attempt + 1))
-    raise RuntimeError("unreachable retry state in _simulated_participant")
+    is_nvidia = "nvidia" in api_base.lower()
+    api_keys = [key.strip() for key in api_key.split(",") if key.strip()] if is_nvidia else [api_key]
+    if not api_keys:
+        raise RuntimeError("no participant API key is configured")
+
+    if is_nvidia:
+        now = time.time()
+        available_keys = [key for key in api_keys if _nvidia_simulator_key_cooldowns.get(key, 0.0) <= now]
+        while not available_keys:
+            retry_after = min(_nvidia_simulator_key_cooldowns.get(key, now) for key in api_keys) - time.time()
+            time.sleep(max(0.01, retry_after))
+            now = time.time()
+            available_keys = [key for key in api_keys if _nvidia_simulator_key_cooldowns.get(key, 0.0) <= now]
+    else:
+        available_keys = api_keys
+
+    attempts = 0
+    auth_rejected: set[str] = set()
+    last_error: Exception | None = None
+    for round_index in range(max_retries):
+        for key in available_keys:
+            attempts += 1
+            try:
+                response = httpx.post(
+                    f"{api_base.rstrip('/')}/chat/completions",
+                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                    json=participant_request_body(
+                        transcript, model, api_base=api_base, participant_system=participant_system
+                    ),
+                    timeout=180.0,
+                )
+                response.raise_for_status()
+                res_json = response.json()
+                if "provider" not in res_json and is_nvidia:
+                    res_json["provider"] = "nvidia"
+                elif "provider" not in res_json and "openrouter" in api_base:
+                    res_json["provider"] = "openrouter"
+                if "model" not in res_json or not res_json.get("model"):
+                    res_json["model"] = model
+                return parse_participant_completion(res_json)
+            except httpx.HTTPStatusError as exc:
+                last_error = exc
+                status_code = exc.response.status_code
+                if is_nvidia and status_code in {401, 403}:
+                    auth_rejected.add(key)
+                    _nvidia_simulator_key_cooldowns[key] = time.time() + NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS
+                elif is_nvidia and status_code != 429:
+                    raise
+            except (httpx.TimeoutException, httpx.TransportError, httpx.RequestError) as exc:
+                if is_nvidia:
+                    raise
+                last_error = exc
+
+            if is_nvidia:
+                _nvidia_simulator_key_cooldowns[key] = time.time() + NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS
+
+        available_keys = [key for key in available_keys if key not in auth_rejected]
+        if not available_keys or round_index + 1 >= max_retries:
+            break
+        if is_nvidia:
+            time.sleep(10.0 * (2**round_index))
+        elif round_index + 1 < max_retries:
+            time.sleep(3.0 * (round_index + 1))
+
+    if is_nvidia:
+        for key in api_keys:
+            _nvidia_simulator_key_cooldowns[key] = time.time() + NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError(f"participant completion failed after {attempts} attempts")
 
 
 def _run_conversation(

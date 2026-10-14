@@ -159,6 +159,75 @@ class TestModelPool(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(called_provider._api_base, "https://integrate.api.nvidia.com/v1")
         self.assertEqual(called_provider._model, "nvidia/nemotron-3-ultra-550b-a55b")
 
+    async def test_nvidia_rotates_keys_then_retries_with_increasing_cooldown(self):
+        provider = ModelPoolProvider(
+            api_key="default",
+            models=["nvidia_router/nvidia/nemotron-3-super-120b-a12b"],
+            fallback_model="",
+            nvidia_keys=["nvidia-primary", "nvidia-fallback"],
+            cooldown_seconds=300,
+        )
+        attempts: list[str] = []
+
+        async def fail_until_exhausted(provider_instance, messages=None, **_params):
+            del messages
+            attempts.append(provider_instance._api_key)
+            raise RateLimitError("fixture overload")
+
+        with (
+            patch(
+                "backend.modules.llm_pool.OpenAICompatibleProvider.generate",
+                autospec=True,
+                side_effect=fail_until_exhausted,
+            ),
+            patch("backend.modules.llm_pool.retry_delay", new_callable=AsyncMock) as mock_delay,
+            self.assertRaises(RateLimitError),
+        ):
+            await provider.generate([{"role": "user", "content": "hello"}])
+
+        self.assertEqual(
+            attempts,
+            [
+                "nvidia-primary",
+                "nvidia-fallback",
+                "nvidia-primary",
+                "nvidia-fallback",
+                "nvidia-primary",
+                "nvidia-fallback",
+            ],
+        )
+        self.assertEqual([call.args[0] for call in mock_delay.await_args_list], [10, 20])
+        self.assertEqual(set(provider._nvidia_key_mgr._exhausted), {"nvidia-primary", "nvidia-fallback"})
+
+    async def test_nvidia_successful_fallback_cools_failed_key(self):
+        provider = ModelPoolProvider(
+            api_key="default",
+            models=["nvidia_router/nvidia/nemotron-3-super-120b-a12b"],
+            fallback_model="",
+            nvidia_keys=["nvidia-primary", "nvidia-fallback"],
+            cooldown_seconds=300,
+        )
+        attempts: list[str] = []
+
+        async def primary_overloaded_then_fallback(provider_instance, messages=None, **_params):
+            del messages
+            attempts.append(provider_instance._api_key)
+            if provider_instance._api_key == "nvidia-primary":
+                raise RateLimitError("fixture overload")
+            return {"content": "fallback response", "thinking": None}
+
+        with patch(
+            "backend.modules.llm_pool.OpenAICompatibleProvider.generate",
+            autospec=True,
+            side_effect=primary_overloaded_then_fallback,
+        ):
+            result = await provider.generate([{"role": "user", "content": "hello"}])
+
+        self.assertEqual(result["content"], "fallback response")
+        self.assertEqual(attempts, ["nvidia-primary", "nvidia-fallback"])
+        self.assertIn("nvidia-primary", provider._nvidia_key_mgr._exhausted)
+        self.assertNotIn("nvidia-fallback", provider._nvidia_key_mgr._exhausted)
+
     @patch("backend.modules.llm_client.OpenAICompatibleProvider.generate", autospec=True)
     async def test_last_working_model_stateful_prioritization(self, mock_generate):
         provider = ModelPoolProvider(
