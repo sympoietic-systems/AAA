@@ -525,7 +525,12 @@ def _control_receipt_observable(turn: dict[str, Any]) -> bool:
 
 
 def _summarize_run(
-    policy: str, repetition: int, turns: list[dict[str, Any]], *, expected_completions: int | None = None
+    policy: str,
+    repetition: int,
+    turns: list[dict[str, Any]],
+    *,
+    scenario_id: str | None = None,
+    expected_completions: int | None = None,
 ) -> dict[str, Any]:
     receipts = build_causal_receipts(turns)
     outcomes = [receipt.outcome_score for receipt in receipts if receipt.outcome_score is not None]
@@ -538,6 +543,7 @@ def _summarize_run(
     return {
         "policy": policy,
         "repetition": repetition,
+        "scenario_id": scenario_id or (str(turns[0].get("scenario_id")) if turns else "unknown"),
         "turn_count": len(turns),
         "mean_outcome_score": round(mean(outcomes), 4) if outcomes else 0.0,
         "mean_uptake": round(mean(uptake), 4) if uptake else 0.0,
@@ -561,6 +567,91 @@ def _paired_delta_ci(candidate: list[float], baseline: list[float]) -> tuple[flo
     if len(candidate) != len(baseline):
         raise ValueError("paired arms require equal repetition counts")
     return bootstrap_mean_ci([new - old for new, old in zip(candidate, baseline, strict=True)])
+
+
+def _planned_arms(scenario_ids: list[str], repetitions: int, candidate_policy: str) -> list[dict[str, Any]]:
+    """Create stable, counterbalanced order so interrupted runs can resume exactly."""
+
+    order_rng = random.Random(1729)
+    plan: list[dict[str, Any]] = []
+    for scenario_id in scenario_ids:
+        for repetition in range(1, repetitions + 1):
+            policies = ["legacy", candidate_policy]
+            order_rng.shuffle(policies)
+            plan.extend({"scenario_id": scenario_id, "repetition": repetition, "policy": policy} for policy in policies)
+    return plan
+
+
+def _resume_contract(
+    *,
+    scenario_ids: list[str],
+    repetitions: int,
+    turns: int,
+    candidate_policy: str,
+    apparatus_model: str,
+    simulator_model: str,
+    api_base: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "scenario_ids": scenario_ids,
+        "repetitions_per_arm": repetitions,
+        "turns_per_conversation": turns,
+        "arms": ["legacy", candidate_policy],
+        "apparatus_model": apparatus_model,
+        "participant_model": simulator_model,
+        "api_base": api_base,
+        "arm_order_seed": 1729,
+    }
+
+
+def _atomic_write_json(path: Path, payload: Any) -> None:
+    """Atomically persist benchmark checkpoints across process interruption."""
+
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+            json.dump(payload, temporary_file, indent=2)
+            temporary_file.write("\n")
+        temporary_path.replace(path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
+
+
+def _receipt_key(receipt: dict[str, Any]) -> tuple[str, int, str]:
+    scenario_id = receipt.get("scenario_id")
+    if not scenario_id:
+        turns = receipt.get("turns")
+        if isinstance(turns, list) and turns and isinstance(turns[0], dict):
+            scenario_id = turns[0].get("scenario_id")
+    if not scenario_id:
+        raise ValueError("resume receipt is missing scenario_id")
+    return (str(scenario_id), int(receipt["repetition"]), str(receipt["policy"]))
+
+
+def _load_resume_receipts(out_dir: Path, expected_contract: dict[str, Any]) -> list[dict[str, Any]]:
+    metadata_path = out_dir / "metadata.json"
+    receipts_path = out_dir / "telemetry_receipts.json"
+    if not out_dir.is_dir() or not metadata_path.is_file():
+        raise ValueError("resume requires an existing run directory with metadata.json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if metadata.get("resume_contract") != expected_contract:
+        raise ValueError("resume parameters do not match the original run metadata")
+    if not receipts_path.exists():
+        return []
+    receipts = json.loads(receipts_path.read_text(encoding="utf-8"))
+    if not isinstance(receipts, list) or not all(isinstance(item, dict) for item in receipts):
+        raise ValueError("resume telemetry_receipts.json must contain a list of run receipts")
+    return receipts
 
 
 def _scorecard(runs: list[dict[str, Any]], candidate_policy: str = "paskian") -> dict[str, Any]:
@@ -650,6 +741,11 @@ def main() -> None:
     parser.add_argument("--candidate-policy", type=str, default="paskian", choices=["paskian", "progressive"])
     parser.add_argument("--participant-model", type=str, default=None, help="Override participant model")
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume a compatible interrupted run in the existing --out directory, skipping completed arms",
+    )
+    parser.add_argument(
         "--scenario",
         type=str,
         default="cache_wipe_429",
@@ -692,9 +788,6 @@ def main() -> None:
         raise RuntimeError("configured participant API key is required for the adaptive live benchmark")
     api_base = resolve_simulator_api_base()
     simulator_model = resolve_simulator_model()
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
-    out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"
-    out_dir.mkdir(parents=True, exist_ok=False)
 
     if args.scenario == "all":
         scenarios_to_run = list(SCENARIOS.keys())
@@ -706,66 +799,119 @@ def main() -> None:
     else:
         scenarios_to_run = [args.scenario]
 
-    runs: list[dict[str, Any]] = []
-    order_rng = random.Random(1729)
+    unknown_scenarios = [scenario_id for scenario_id in scenarios_to_run if scenario_id not in SCENARIOS]
+    if unknown_scenarios:
+        raise ValueError(f"Unknown scenario(s): {unknown_scenarios}; available: {list(SCENARIOS)}")
+
+    arm_plan = _planned_arms(scenarios_to_run, args.repetitions, args.candidate_policy)
+    apparatus_model = os.environ.get("AAA_BENCHMARK_MODEL", os.environ.get("AAA_LLM_MODEL", "")).strip()
+    resume_contract = _resume_contract(
+        scenario_ids=scenarios_to_run,
+        repetitions=args.repetitions,
+        turns=args.turns,
+        candidate_policy=args.candidate_policy,
+        apparatus_model=apparatus_model,
+        simulator_model=simulator_model,
+        api_base=api_base,
+    )
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"
+    if args.resume:
+        if args.out is None:
+            raise ValueError("--resume requires --out to name the existing run directory")
+        runs = _load_resume_receipts(out_dir, resume_contract)
+        metadata = json.loads((out_dir / "metadata.json").read_text(encoding="utf-8"))
+    else:
+        out_dir.mkdir(parents=True, exist_ok=False)
+        runs = []
+        metadata = {
+            "benchmark": "dialogue_feedback_control",
+            "created_at": datetime.now(UTC).isoformat(),
+            "repetitions_per_arm": args.repetitions,
+            "turns_per_conversation": args.turns,
+            "arms": ["legacy", args.candidate_policy],
+            "ablation_dimension": "intervention selection policy",
+            "participant": {
+                "type": "adaptive_llm_simulation",
+                "model": simulator_model,
+                "temperature": 0.2,
+                "reasoning_excluded": True,
+            },
+            "api_base": api_base,
+            "seed_available": False,
+            "isolation": {
+                "worker_process_per_arm": True,
+                "temporary_database_per_arm": True,
+                "production_database_unchanged": True,
+            },
+            "arm_order": arm_plan,
+            "resume_contract": resume_contract,
+            "status": "running",
+            "completed_arms": [],
+        }
+        _atomic_write_json(out_dir / "metadata.json", metadata)
+        _atomic_write_json(out_dir / "telemetry_receipts.json", runs)
+
+    planned_keys = {(str(item["scenario_id"]), int(item["repetition"]), str(item["policy"])) for item in arm_plan}
+    completed_keys: set[tuple[str, int, str]] = set()
+    for run in runs:
+        key = _receipt_key(run)
+        if key not in planned_keys:
+            raise ValueError(f"resume receipt is outside the configured run plan: {key}")
+        if key in completed_keys:
+            raise ValueError(f"resume contains duplicate completed arm receipt: {key}")
+        completed_keys.add(key)
+
+    metadata["status"] = "running"
+    metadata["completed_arms"] = [
+        {"scenario_id": scenario_id, "repetition": repetition, "policy": policy}
+        for scenario_id, repetition, policy in sorted(completed_keys)
+    ]
+    _atomic_write_json(out_dir / "metadata.json", metadata)
     production_paths = _production_database_paths()
     production_before = {str(path): _database_fingerprint(path) for path in production_paths}
     with tempfile.TemporaryDirectory(prefix="isolated_", dir=out_dir) as temporary:
         isolation_root = Path(temporary)
-        for scenario_id in scenarios_to_run:
-            for repetition in range(1, args.repetitions + 1):
-                policies = ["legacy", args.candidate_policy]
-                order_rng.shuffle(policies)
-                for policy in policies:
-                    print(
-                        f"scenario={scenario_id} repetition={repetition} policy={policy} turns={args.turns}",
-                        flush=True,
-                    )
-                    arm_receipt = _run_isolated_arm(
-                        policy=policy,
-                        repetition=repetition,
-                        turn_count=args.turns,
-                        simulator_model=simulator_model,
-                        api_base=api_base,
-                        isolation_root=isolation_root,
-                        scenario_id=scenario_id,
-                    )
-                    runs.append(arm_receipt)
-                    (out_dir / "telemetry_receipts.json").write_text(
-                        json.dumps(runs, indent=2) + "\n", encoding="utf-8"
-                    )
+        for planned_arm in arm_plan:
+            key = (
+                str(planned_arm["scenario_id"]),
+                int(planned_arm["repetition"]),
+                str(planned_arm["policy"]),
+            )
+            if key in completed_keys:
+                continue
+            scenario_id, repetition, policy = key
+            print(
+                f"scenario={scenario_id} repetition={repetition} policy={policy} turns={args.turns}",
+                flush=True,
+            )
+            arm_receipt = _run_isolated_arm(
+                policy=policy,
+                repetition=repetition,
+                turn_count=args.turns,
+                simulator_model=simulator_model,
+                api_base=api_base,
+                isolation_root=isolation_root,
+                scenario_id=scenario_id,
+            )
+            runs.append(arm_receipt)
+            completed_keys.add(key)
+            _atomic_write_json(out_dir / "telemetry_receipts.json", runs)
+            metadata["completed_arms"] = [
+                {"scenario_id": item_scenario, "repetition": item_repetition, "policy": item_policy}
+                for item_scenario, item_repetition, item_policy in sorted(completed_keys)
+            ]
+            _atomic_write_json(out_dir / "metadata.json", metadata)
     production_after = {str(path): _database_fingerprint(path) for path in production_paths}
     if production_after != production_before:
         raise RuntimeError("benchmark modified a production database")
 
-    metadata = {
-        "benchmark": "dialogue_feedback_control",
-        "created_at": datetime.now(UTC).isoformat(),
-        "repetitions_per_arm": args.repetitions,
-        "turns_per_conversation": args.turns,
-        "arms": ["legacy", args.candidate_policy],
-        "ablation_dimension": "intervention selection policy",
-        "participant": {
-            "type": "adaptive_llm_simulation",
-            "model": simulator_model,
-            "temperature": 0.2,
-            "reasoning_excluded": True,
-        },
-        "seed_available": False,
-        "isolation": {
-            "worker_process_per_arm": True,
-            "temporary_database_per_arm": True,
-            "production_database_unchanged": True,
-        },
-        "arm_order": [{"policy": run["policy"], "repetition": run["repetition"]} for run in runs],
-    }
+    metadata["status"] = "complete"
     scorecard = _scorecard(runs, candidate_policy=args.candidate_policy)
-    (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-    (out_dir / "telemetry_receipts.json").write_text(json.dumps(runs, indent=2) + "\n", encoding="utf-8")
-    (out_dir / "scorecard.json").write_text(json.dumps(scorecard, indent=2) + "\n", encoding="utf-8")
-    (out_dir / "completion_audit.json").write_text(
-        json.dumps(_completion_audit(runs), indent=2) + "\n", encoding="utf-8"
-    )
+    _atomic_write_json(out_dir / "metadata.json", metadata)
+    _atomic_write_json(out_dir / "telemetry_receipts.json", runs)
+    _atomic_write_json(out_dir / "scorecard.json", scorecard)
+    _atomic_write_json(out_dir / "completion_audit.json", _completion_audit(runs))
     print(json.dumps({"out_dir": str(out_dir), "decision": scorecard["decision"]}, indent=2))
 
 
