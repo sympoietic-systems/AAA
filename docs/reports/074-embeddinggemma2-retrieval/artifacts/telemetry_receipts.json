@@ -1,0 +1,801 @@
+[
+  {
+    "status": "complete",
+    "model_key": "minilm",
+    "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+    "software": {
+      "sentence-transformers": "6.1.0",
+      "transformers": "5.19.0",
+      "torch": "2.14.1",
+      "numpy": "2.5.4"
+    },
+    "rows": [
+      {
+        "model_key": "minilm",
+        "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+        "model_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        "dimension": 384,
+        "namespace": "minilm:1110a243fdf4:384d:cosine-f32",
+        "device": "cpu",
+        "dtype": "float32_output",
+        "query_prompt": null,
+        "document_prompt": null,
+        "text_only_encoders": null,
+        "query_encode_latency_ms": 85.768,
+        "document_encode_latency_ms": 334.138,
+        "rss_before_model_load_bytes": 451584000,
+        "rss_after_model_load_bytes": 568098816,
+        "rss_delta_model_load_bytes": 116514816,
+        "rss_after_encode_bytes": 602218496,
+        "fixture_sha256": "1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51",
+        "retrieval": {
+          "recall_at_1": 0.9,
+          "recall_at_3": 1.0,
+          "recall_at_5": 1.0,
+          "mrr": 0.95,
+          "query_count": 10,
+          "relevant_document_count": 10,
+          "per_query": [
+            {
+              "query_id": "q01",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d01",
+                "d02",
+                "d13",
+                "d27",
+                "d14"
+              ]
+            },
+            {
+              "query_id": "q02",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d03",
+                "d21",
+                "d04",
+                "d11",
+                "d02"
+              ]
+            },
+            {
+              "query_id": "q03",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d06",
+                "d14",
+                "d08",
+                "d05",
+                "d25"
+              ]
+            },
+            {
+              "query_id": "q04",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d07",
+                "d23",
+                "d19",
+                "d14",
+                "d12"
+              ]
+            },
+            {
+              "query_id": "q05",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d08",
+                "d14",
+                "d23",
+                "d07",
+                "d29"
+              ]
+            },
+            {
+              "query_id": "q06",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d15",
+                "d04",
+                "d16",
+                "d28",
+                "d13"
+              ]
+            },
+            {
+              "query_id": "q07",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d16",
+                "d20",
+                "d26",
+                "d27",
+                "d29"
+              ]
+            },
+            {
+              "query_id": "q08",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d05",
+                "d14",
+                "d20",
+                "d27",
+                "d13"
+              ]
+            },
+            {
+              "query_id": "q09",
+              "first_relevant_rank": 2,
+              "top_ids": [
+                "d05",
+                "d22",
+                "d14",
+                "d08",
+                "d06"
+              ]
+            },
+            {
+              "query_id": "q10",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d10",
+                "d29",
+                "d26",
+                "d28",
+                "d17"
+              ]
+            }
+          ]
+        },
+        "storage": {
+          "namespace": "minilm:1110a243fdf4:384d:cosine-f32",
+          "document_count": 30,
+          "dimension": 384,
+          "raw_vector_bytes": 46080,
+          "sqlite_write_ms": 0.881,
+          "database_bytes_before_checkpoint": 4096,
+          "wal_bytes_before_checkpoint": 86552,
+          "total_bytes_before_checkpoint": 90648,
+          "database_bytes_after_checkpoint": 73728,
+          "wal_bytes_after_checkpoint": 0,
+          "total_bytes_after_checkpoint": 73728,
+          "storage_path": "minilm-384d.sqlite3"
+        }
+      }
+    ]
+  },
+  {
+    "status": "complete",
+    "model_key": "embeddinggemma2",
+    "model_id": "google/embeddinggemma-2",
+    "software": {
+      "sentence-transformers": "6.1.0",
+      "transformers": "5.19.0",
+      "torch": "2.14.1",
+      "numpy": "2.5.4"
+    },
+    "rows": [
+      {
+        "model_key": "embeddinggemma2",
+        "model_id": "google/embeddinggemma-2",
+        "model_revision": "914f7f89142e33e77833254d9c9b90c3cef7303b",
+        "dimension": 128,
+        "namespace": "embeddinggemma2:914f7f89142e:128d:cosine-f32",
+        "device": "cpu",
+        "dtype": "float32_output",
+        "query_prompt": "SearchQuery",
+        "document_prompt": "Document",
+        "text_only_encoders": [
+          "text"
+        ],
+        "query_encode_latency_ms": 7125.023,
+        "document_encode_latency_ms": 39264.837,
+        "rss_before_model_load_bytes": 451473408,
+        "rss_after_model_load_bytes": 1260359680,
+        "rss_delta_model_load_bytes": 808886272,
+        "rss_after_encode_bytes": 1329905664,
+        "fixture_sha256": "1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51",
+        "retrieval": {
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "recall_at_5": 1.0,
+          "mrr": 1.0,
+          "query_count": 10,
+          "relevant_document_count": 10,
+          "per_query": [
+            {
+              "query_id": "q01",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d01",
+                "d02",
+                "d13",
+                "d14",
+                "d27"
+              ]
+            },
+            {
+              "query_id": "q02",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d03",
+                "d21",
+                "d04",
+                "d23",
+                "d16"
+              ]
+            },
+            {
+              "query_id": "q03",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d06",
+                "d14",
+                "d08",
+                "d07",
+                "d23"
+              ]
+            },
+            {
+              "query_id": "q04",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d07",
+                "d29",
+                "d14",
+                "d06",
+                "d23"
+              ]
+            },
+            {
+              "query_id": "q05",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d08",
+                "d06",
+                "d14",
+                "d22",
+                "d29"
+              ]
+            },
+            {
+              "query_id": "q06",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d15",
+                "d20",
+                "d04",
+                "d24",
+                "d05"
+              ]
+            },
+            {
+              "query_id": "q07",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d16",
+                "d21",
+                "d26",
+                "d28",
+                "d11"
+              ]
+            },
+            {
+              "query_id": "q08",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d05",
+                "d13",
+                "d14",
+                "d01",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q09",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d22",
+                "d06",
+                "d29",
+                "d14",
+                "d23"
+              ]
+            },
+            {
+              "query_id": "q10",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d10",
+                "d02",
+                "d09",
+                "d21",
+                "d28"
+              ]
+            }
+          ]
+        },
+        "storage": {
+          "namespace": "embeddinggemma2:914f7f89142e:128d:cosine-f32",
+          "document_count": 30,
+          "dimension": 128,
+          "raw_vector_bytes": 15360,
+          "sqlite_write_ms": 0.733,
+          "database_bytes_before_checkpoint": 4096,
+          "wal_bytes_before_checkpoint": 45352,
+          "total_bytes_before_checkpoint": 49448,
+          "database_bytes_after_checkpoint": 32768,
+          "wal_bytes_after_checkpoint": 0,
+          "total_bytes_after_checkpoint": 32768,
+          "storage_path": "embeddinggemma2-128d.sqlite3"
+        }
+      },
+      {
+        "model_key": "embeddinggemma2",
+        "model_id": "google/embeddinggemma-2",
+        "model_revision": "914f7f89142e33e77833254d9c9b90c3cef7303b",
+        "dimension": 256,
+        "namespace": "embeddinggemma2:914f7f89142e:256d:cosine-f32",
+        "device": "cpu",
+        "dtype": "float32_output",
+        "query_prompt": "SearchQuery",
+        "document_prompt": "Document",
+        "text_only_encoders": [
+          "text"
+        ],
+        "query_encode_latency_ms": 7306.133,
+        "document_encode_latency_ms": 38420.783,
+        "rss_before_model_load_bytes": 451473408,
+        "rss_after_model_load_bytes": 1260359680,
+        "rss_delta_model_load_bytes": 808886272,
+        "rss_after_encode_bytes": 1272524800,
+        "fixture_sha256": "1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51",
+        "retrieval": {
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "recall_at_5": 1.0,
+          "mrr": 1.0,
+          "query_count": 10,
+          "relevant_document_count": 10,
+          "per_query": [
+            {
+              "query_id": "q01",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d01",
+                "d02",
+                "d13",
+                "d27",
+                "d14"
+              ]
+            },
+            {
+              "query_id": "q02",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d03",
+                "d21",
+                "d04",
+                "d16",
+                "d23"
+              ]
+            },
+            {
+              "query_id": "q03",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d06",
+                "d08",
+                "d22",
+                "d07",
+                "d14"
+              ]
+            },
+            {
+              "query_id": "q04",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d07",
+                "d29",
+                "d14",
+                "d23",
+                "d06"
+              ]
+            },
+            {
+              "query_id": "q05",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d08",
+                "d29",
+                "d06",
+                "d22",
+                "d25"
+              ]
+            },
+            {
+              "query_id": "q06",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d15",
+                "d16",
+                "d24",
+                "d04",
+                "d28"
+              ]
+            },
+            {
+              "query_id": "q07",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d16",
+                "d28",
+                "d26",
+                "d21",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q08",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d05",
+                "d13",
+                "d20",
+                "d14",
+                "d01"
+              ]
+            },
+            {
+              "query_id": "q09",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d22",
+                "d06",
+                "d25",
+                "d08",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q10",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d10",
+                "d26",
+                "d28",
+                "d23",
+                "d21"
+              ]
+            }
+          ]
+        },
+        "storage": {
+          "namespace": "embeddinggemma2:914f7f89142e:256d:cosine-f32",
+          "document_count": 30,
+          "dimension": 256,
+          "raw_vector_bytes": 30720,
+          "sqlite_write_ms": 0.806,
+          "database_bytes_before_checkpoint": 4096,
+          "wal_bytes_before_checkpoint": 65952,
+          "total_bytes_before_checkpoint": 70048,
+          "database_bytes_after_checkpoint": 53248,
+          "wal_bytes_after_checkpoint": 0,
+          "total_bytes_after_checkpoint": 53248,
+          "storage_path": "embeddinggemma2-256d.sqlite3"
+        }
+      },
+      {
+        "model_key": "embeddinggemma2",
+        "model_id": "google/embeddinggemma-2",
+        "model_revision": "914f7f89142e33e77833254d9c9b90c3cef7303b",
+        "dimension": 512,
+        "namespace": "embeddinggemma2:914f7f89142e:512d:cosine-f32",
+        "device": "cpu",
+        "dtype": "float32_output",
+        "query_prompt": "SearchQuery",
+        "document_prompt": "Document",
+        "text_only_encoders": [
+          "text"
+        ],
+        "query_encode_latency_ms": 7138.503,
+        "document_encode_latency_ms": 38520.742,
+        "rss_before_model_load_bytes": 451473408,
+        "rss_after_model_load_bytes": 1260359680,
+        "rss_delta_model_load_bytes": 808886272,
+        "rss_after_encode_bytes": 1272725504,
+        "fixture_sha256": "1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51",
+        "retrieval": {
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "recall_at_5": 1.0,
+          "mrr": 1.0,
+          "query_count": 10,
+          "relevant_document_count": 10,
+          "per_query": [
+            {
+              "query_id": "q01",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d01",
+                "d02",
+                "d13",
+                "d27",
+                "d14"
+              ]
+            },
+            {
+              "query_id": "q02",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d03",
+                "d21",
+                "d04",
+                "d16",
+                "d23"
+              ]
+            },
+            {
+              "query_id": "q03",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d06",
+                "d08",
+                "d22",
+                "d14",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q04",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d07",
+                "d29",
+                "d14",
+                "d23",
+                "d08"
+              ]
+            },
+            {
+              "query_id": "q05",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d08",
+                "d29",
+                "d22",
+                "d06",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q06",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d15",
+                "d16",
+                "d04",
+                "d24",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q07",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d16",
+                "d26",
+                "d28",
+                "d21",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q08",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d05",
+                "d13",
+                "d20",
+                "d14",
+                "d27"
+              ]
+            },
+            {
+              "query_id": "q09",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d22",
+                "d06",
+                "d05",
+                "d08",
+                "d25"
+              ]
+            },
+            {
+              "query_id": "q10",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d10",
+                "d26",
+                "d23",
+                "d09",
+                "d29"
+              ]
+            }
+          ]
+        },
+        "storage": {
+          "namespace": "embeddinggemma2:914f7f89142e:512d:cosine-f32",
+          "document_count": 30,
+          "dimension": 512,
+          "raw_vector_bytes": 61440,
+          "sqlite_write_ms": 1.042,
+          "database_bytes_before_checkpoint": 4096,
+          "wal_bytes_before_checkpoint": 148352,
+          "total_bytes_before_checkpoint": 152448,
+          "database_bytes_after_checkpoint": 135168,
+          "wal_bytes_after_checkpoint": 0,
+          "total_bytes_after_checkpoint": 135168,
+          "storage_path": "embeddinggemma2-512d.sqlite3"
+        }
+      },
+      {
+        "model_key": "embeddinggemma2",
+        "model_id": "google/embeddinggemma-2",
+        "model_revision": "914f7f89142e33e77833254d9c9b90c3cef7303b",
+        "dimension": 768,
+        "namespace": "embeddinggemma2:914f7f89142e:768d:cosine-f32",
+        "device": "cpu",
+        "dtype": "float32_output",
+        "query_prompt": "SearchQuery",
+        "document_prompt": "Document",
+        "text_only_encoders": [
+          "text"
+        ],
+        "query_encode_latency_ms": 7059.462,
+        "document_encode_latency_ms": 39292.266,
+        "rss_before_model_load_bytes": 451473408,
+        "rss_after_model_load_bytes": 1260359680,
+        "rss_delta_model_load_bytes": 808886272,
+        "rss_after_encode_bytes": 1273552896,
+        "fixture_sha256": "1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51",
+        "retrieval": {
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "recall_at_5": 1.0,
+          "mrr": 1.0,
+          "query_count": 10,
+          "relevant_document_count": 10,
+          "per_query": [
+            {
+              "query_id": "q01",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d01",
+                "d02",
+                "d13",
+                "d27",
+                "d14"
+              ]
+            },
+            {
+              "query_id": "q02",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d03",
+                "d21",
+                "d04",
+                "d16",
+                "d23"
+              ]
+            },
+            {
+              "query_id": "q03",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d06",
+                "d22",
+                "d08",
+                "d23",
+                "d14"
+              ]
+            },
+            {
+              "query_id": "q04",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d07",
+                "d29",
+                "d23",
+                "d14",
+                "d08"
+              ]
+            },
+            {
+              "query_id": "q05",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d08",
+                "d29",
+                "d22",
+                "d20",
+                "d06"
+              ]
+            },
+            {
+              "query_id": "q06",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d15",
+                "d16",
+                "d24",
+                "d04",
+                "d20"
+              ]
+            },
+            {
+              "query_id": "q07",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d16",
+                "d26",
+                "d21",
+                "d28",
+                "d11"
+              ]
+            },
+            {
+              "query_id": "q08",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d05",
+                "d20",
+                "d13",
+                "d14",
+                "d27"
+              ]
+            },
+            {
+              "query_id": "q09",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d22",
+                "d06",
+                "d05",
+                "d08",
+                "d25"
+              ]
+            },
+            {
+              "query_id": "q10",
+              "first_relevant_rank": 1,
+              "top_ids": [
+                "d10",
+                "d26",
+                "d23",
+                "d29",
+                "d09"
+              ]
+            }
+          ]
+        },
+        "storage": {
+          "namespace": "embeddinggemma2:914f7f89142e:768d:cosine-f32",
+          "document_count": 30,
+          "dimension": 768,
+          "raw_vector_bytes": 92160,
+          "sqlite_write_ms": 1.196,
+          "database_bytes_before_checkpoint": 4096,
+          "wal_bytes_before_checkpoint": 148352,
+          "total_bytes_before_checkpoint": 152448,
+          "database_bytes_after_checkpoint": 135168,
+          "wal_bytes_after_checkpoint": 0,
+          "total_bytes_after_checkpoint": 135168,
+          "storage_path": "embeddinggemma2-768d.sqlite3"
+        }
+      }
+    ]
+  }
+]

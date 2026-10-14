@@ -115,5 +115,5 @@ The EmbeddingGemma 2 profile requires a benchmark environment with Sentence Tran
 ```bash
 uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --output benchmarks/runs/embedding_mrl_retrieval_<run-id>
 ```
-The 2026-10-14 CPU run completed both models on the synthetic fixture. Detailed per-query receipts and SQLite stores are in the ignored run directory `benchmarks/runs/embedding_mrl_retrieval_20261014_verified`; perfect Gemma scores on this small hand-authored set are diagnostic only, not evidence for model promotion or multimodal performance.
+The 2026-10-14 CPU run completed both models on the synthetic fixture. Durable receipts, summary, and isolated SQLite stores are archived with [Report 074](../../../docs/reports/074-embeddinggemma2-retrieval/README.md); perfect Gemma scores on this small hand-authored set are diagnostic only, not evidence for model promotion or multimodal performance.
 

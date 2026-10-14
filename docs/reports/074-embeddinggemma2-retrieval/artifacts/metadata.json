@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "run_id": "embedding_mrl_retrieval_20261014_verified",
+  "generated_at": "2026-10-13T16:52:18.950789+00:00",
+  "dataset_id": "embedding-mrl-retrieval-v1",
+  "fixture_sha256": "1414bf0bb9b127fe65e0a2b813ab1d3dd471cd82909873f6e240770f985f3c51",
+  "label_provenance": "hand-authored synthetic query-to-document labels; diagnostic fixture, not a general retrieval benchmark",
+  "runtime_embedding_config_changed": false,
+  "production_database_touched": false,
+  "worker_status": {
+    "minilm": "complete",
+    "embeddinggemma2": "complete"
+  },
+  "software": {
+    "minilm": {
+      "sentence-transformers": "6.1.0",
+      "transformers": "5.19.0",
+      "torch": "2.14.1",
+      "numpy": "2.5.4"
+    },
+    "embeddinggemma2": {
+      "sentence-transformers": "6.1.0",
+      "transformers": "5.19.0",
+      "torch": "2.14.1",
+      "numpy": "2.5.4"
+    }
+  },
+  "records": [
+    {
+      "model_key": "minilm",
+      "dimension": 384,
+      "recall_at_1": 0.9,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 0.95,
+      "query_encode_latency_ms": 85.768,
+      "document_encode_latency_ms": 334.138,
+      "rss_delta_model_load_bytes": 116514816,
+      "storage": {
+        "namespace": "minilm:1110a243fdf4:384d:cosine-f32",
+        "document_count": 30,
+        "dimension": 384,
+        "raw_vector_bytes": 46080,
+        "sqlite_write_ms": 0.881,
+        "database_bytes_before_checkpoint": 4096,
+        "wal_bytes_before_checkpoint": 86552,
+        "total_bytes_before_checkpoint": 90648,
+        "database_bytes_after_checkpoint": 73728,
+        "wal_bytes_after_checkpoint": 0,
+        "total_bytes_after_checkpoint": 73728,
+        "storage_path": "minilm-384d.sqlite3"
+      }
+    },
+    {
+      "model_key": "embeddinggemma2",
+      "dimension": 128,
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "query_encode_latency_ms": 7125.023,
+      "document_encode_latency_ms": 39264.837,
+      "rss_delta_model_load_bytes": 808886272,
+      "storage": {
+        "namespace": "embeddinggemma2:914f7f89142e:128d:cosine-f32",
+        "document_count": 30,
+        "dimension": 128,
+        "raw_vector_bytes": 15360,
+        "sqlite_write_ms": 0.733,
+        "database_bytes_before_checkpoint": 4096,
+        "wal_bytes_before_checkpoint": 45352,
+        "total_bytes_before_checkpoint": 49448,
+        "database_bytes_after_checkpoint": 32768,
+        "wal_bytes_after_checkpoint": 0,
+        "total_bytes_after_checkpoint": 32768,
+        "storage_path": "embeddinggemma2-128d.sqlite3"
+      }
+    },
+    {
+      "model_key": "embeddinggemma2",
+      "dimension": 256,
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "query_encode_latency_ms": 7306.133,
+      "document_encode_latency_ms": 38420.783,
+      "rss_delta_model_load_bytes": 808886272,
+      "storage": {
+        "namespace": "embeddinggemma2:914f7f89142e:256d:cosine-f32",
+        "document_count": 30,
+        "dimension": 256,
+        "raw_vector_bytes": 30720,
+        "sqlite_write_ms": 0.806,
+        "database_bytes_before_checkpoint": 4096,
+        "wal_bytes_before_checkpoint": 65952,
+        "total_bytes_before_checkpoint": 70048,
+        "database_bytes_after_checkpoint": 53248,
+        "wal_bytes_after_checkpoint": 0,
+        "total_bytes_after_checkpoint": 53248,
+        "storage_path": "embeddinggemma2-256d.sqlite3"
+      }
+    },
+    {
+      "model_key": "embeddinggemma2",
+      "dimension": 512,
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "query_encode_latency_ms": 7138.503,
+      "document_encode_latency_ms": 38520.742,
+      "rss_delta_model_load_bytes": 808886272,
+      "storage": {
+        "namespace": "embeddinggemma2:914f7f89142e:512d:cosine-f32",
+        "document_count": 30,
+        "dimension": 512,
+        "raw_vector_bytes": 61440,
+        "sqlite_write_ms": 1.042,
+        "database_bytes_before_checkpoint": 4096,
+        "wal_bytes_before_checkpoint": 148352,
+        "total_bytes_before_checkpoint": 152448,
+        "database_bytes_after_checkpoint": 135168,
+        "wal_bytes_after_checkpoint": 0,
+        "total_bytes_after_checkpoint": 135168,
+        "storage_path": "embeddinggemma2-512d.sqlite3"
+      }
+    },
+    {
+      "model_key": "embeddinggemma2",
+      "dimension": 768,
+      "recall_at_1": 1.0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "mrr": 1.0,
+      "query_encode_latency_ms": 7059.462,
+      "document_encode_latency_ms": 39292.266,
+      "rss_delta_model_load_bytes": 808886272,
+      "storage": {
+        "namespace": "embeddinggemma2:914f7f89142e:768d:cosine-f32",
+        "document_count": 30,
+        "dimension": 768,
+        "raw_vector_bytes": 92160,
+        "sqlite_write_ms": 1.196,
+        "database_bytes_before_checkpoint": 4096,
+        "wal_bytes_before_checkpoint": 148352,
+        "total_bytes_before_checkpoint": 152448,
+        "database_bytes_after_checkpoint": 135168,
+        "wal_bytes_after_checkpoint": 0,
+        "total_bytes_after_checkpoint": 135168,
+        "storage_path": "embeddinggemma2-768d.sqlite3"
+      }
+    }
+  ]
+}
