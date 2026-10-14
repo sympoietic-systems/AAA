@@ -14,17 +14,31 @@ import time
 from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
+from itertools import permutations
 from pathlib import Path
-from statistics import mean
+from statistics import mean, pstdev
 from typing import Any
 
 import httpx
 from dotenv import load_dotenv
 
 from benchmarks.common.storage import PROJECT_ROOT
+from benchmarks.suites.telemetry.causal_intervention import (
+    Arm as CausalArm,
+)
+from benchmarks.suites.telemetry.causal_intervention import (
+    Mode as CausalMode,
+)
+from benchmarks.suites.telemetry.causal_intervention import (
+    Signals as CausalSignals,
+)
+from benchmarks.suites.telemetry.causal_intervention import (
+    new_trial,
+)
 from benchmarks.suites.telemetry.intervention_evaluator import (
     bootstrap_mean_ci,
     build_causal_receipts,
+    rate_participant_turn,
 )
 from benchmarks.suites.telemetry.scenarios import SCENARIOS, get_scenario
 
@@ -32,6 +46,112 @@ INITIAL_PROMPT = SCENARIOS["cache_wipe_429"].initial_prompt
 PARTICIPANT_SYSTEM = SCENARIOS["cache_wipe_429"].participant_system
 NVIDIA_SIMULATOR_KEY_COOLDOWN_SECONDS = 300
 _nvidia_simulator_key_cooldowns: dict[str, float] = {}
+
+_CAUSAL_MODE_DIRECTIVES = {
+    CausalMode.ABSTAIN: None,
+    CausalMode.CLARIFY: "Ask one precise question that identifies the unresolved claim or constraint.",
+    CausalMode.COUNTEREXAMPLE: "Test the unresolved claim with one concrete counterexample and state its consequence.",
+    CausalMode.EXPERIMENT: "Propose one bounded experiment with an observable acceptance criterion.",
+    CausalMode.REFRAME: "Reframe the unresolved issue on a different axis and connect it to the stated goal.",
+    CausalMode.CONSOLIDATE: "Consolidate what has changed, preserve the remaining disagreement, and name the next decision.",
+    CausalMode.COMPRESS: "State the unresolved boundary and the single decision needed to continue in at most two sentences.",
+}
+_NEGATED_PROGRESS = re.compile(
+    r"\b(?:do not|don't|does not|doesn't|will not|won't|cannot|can't|refuse to|refusal to|decline to|reject to)\s+"
+    r"(?:run|conduct|perform|carry out|complete|try|do)?\s*(?:the\s+)?"
+    r"(?:test|measure|compare|experiment|implement|prototype|verify|design)\b",
+    re.I,
+)
+
+
+def _benchmark_causal_selector(regulator: Any, arm: CausalArm, scenario_id: str, turn_count: int) -> dict[str, Any]:
+    """Attach the T37 selector to one isolated benchmark worker only."""
+
+    original_process = regulator.process
+    state: dict[str, Any] = {"trial": None, "receipts": [], "previous_prompt": "", "boring_streak": 0}
+
+    async def process(payload: dict[str, Any]) -> dict[str, Any]:
+        result = await original_process(payload)
+        metrics = result.get("metrics")
+        recommendations = result.get("homeostatic_recommendations")
+        if not isinstance(metrics, dict) or not isinstance(recommendations, dict):
+            return result
+        conversation_id = str(result.get("conversation_id") or result.get("id") or "benchmark")
+        if state["trial"] is None:
+            trial = new_trial(conversation_id, arm, max_turns=turn_count)
+            trial.start_issue(scenario_id, get_scenario(scenario_id).unresolved_issue)
+            state["trial"] = trial
+
+        participant_text = str(result.get("content", ""))
+        intervention = recommendations.get("intervention")
+        intervention = intervention if isinstance(intervention, dict) else {}
+        raw_mode = str(intervention.get("mode", "abstain"))
+        try:
+            predicted_mode = CausalMode(raw_mode)
+        except ValueError:
+            predicted_mode = CausalMode.REFRAME if raw_mode in {"teachback_and_fork", "reframe"} else CausalMode.ABSTAIN
+        completion = rate_participant_turn(participant_text)
+        previous_words = set(re.findall(r"[a-z0-9]+", state["previous_prompt"].lower()))
+        current_words = set(re.findall(r"[a-z0-9]+", participant_text.lower()))
+        added_words = current_words - previous_words
+        progress_signal = completion.task_progress > 0 and not _NEGATED_PROGRESS.search(participant_text)
+        issue_advanced = progress_signal and len(added_words) >= 2
+        participant_revised = completion.uptake > 0 or issue_advanced
+        collapse_pressure = float(metrics.get("collapse_pressure", metrics.get("boringness", 0.0)) or 0.0)
+        drr = float(metrics.get("divergence_resolution_ratio", 0.5) or 0.0)
+        terms_clear = any(word in current_words for word in get_scenario(scenario_id).domain_keywords)
+        signals = CausalSignals(
+            signals_complete=True,
+            pressure=collapse_pressure >= 0.60,
+            context_over_budget=bool(metrics.get("context_over_budget", False)),
+            has_new_subclaim=bool(added_words),
+            participant_revised=participant_revised,
+            issue_advanced=issue_advanced,
+            boring_previous=bool(state["receipts"] and state["receipts"][-1].get("boring")),
+            boring_streak=int(state["boring_streak"]),
+            predicted_mode=predicted_mode,
+            term_ambiguity=bool(re.search(r"\b(what|how|which|unclear|mean)\b", participant_text, re.I)),
+            claim_stable=collapse_pressure >= 0.60 and drr < 0.50,
+            falsifiable=bool(re.search(r"\b(test|measure|evidence|benchmark|criterion)\b", participant_text, re.I)),
+            live_hypotheses=2 if "or" in current_words else 0,
+            experiment_within_budget=turn_count <= 32,
+            terms_clear=terms_clear,
+        )
+        receipt = state["trial"].select(signals)
+        state["receipts"].append(receipt)
+        state["boring_streak"] = state["boring_streak"] + 1 if receipt["boring"] else 0
+        state["previous_prompt"] = participant_text
+        recommendations["causal_selector_receipt"] = receipt
+        recommendations["intervention"] = {
+            "mode": str(receipt["mode"]),
+            "reason": str(receipt["predicate_id"]),
+            "directive": _CAUSAL_MODE_DIRECTIVES[CausalMode(str(receipt["mode"]))],
+            "observed_outcome": {"uptake": completion.uptake, "task_progress": completion.task_progress},
+            "causal_arm": arm,
+        }
+        messages = result.get("messages")
+        directive = recommendations["intervention"]["directive"]
+        if isinstance(messages, list):
+            messages[:] = [
+                message
+                for message in messages
+                if not (
+                    isinstance(message, dict)
+                    and str(message.get("content", "")).startswith("[SOMATIC REFLECTION DIRECTIVE]:")
+                )
+            ]
+            if directive:
+                index = (
+                    len(messages) - 1 if messages and messages[-1].get("role") in {"user", "human"} else len(messages)
+                )
+                messages.insert(
+                    index,
+                    {"role": "system", "content": f"[CAUSAL SELECTOR {arm}/{receipt['predicate_id']}]: {directive}"},
+                )
+        return result
+
+    regulator.process = process
+    return state
 
 
 @dataclass(frozen=True)
@@ -251,12 +371,19 @@ def _run_conversation(
     api_key: str,
     api_base: str,
     scenario_id: str = "cache_wipe_429",
+    causal_arm: CausalArm | None = None,
 ) -> list[dict[str, Any]]:
     scenario = get_scenario(scenario_id)
     regulator = client.app.state.registry.get("homeostatic_regulator")
     if regulator is None or not hasattr(regulator, "set_intervention_policy_mode"):
         raise RuntimeError("homeostatic regulator does not expose benchmark policy selection")
-    regulator.set_intervention_policy_mode(policy)
+    if causal_arm is None:
+        regulator.set_intervention_policy_mode(policy)
+        causal_state: dict[str, Any] | None = None
+    else:
+        # Hold the existing controller at one shared mode; only the benchmark selector arm varies.
+        regulator.set_intervention_policy_mode("paskian")
+        causal_state = _benchmark_causal_selector(regulator, causal_arm, scenario_id, turn_count)
 
     conversation_id = ""
     parent_message_id = None
@@ -306,6 +433,9 @@ def _run_conversation(
                 "truncated": generated.get("truncated"),
                 "next_participant_completion": None,
                 "scenario_id": scenario_id,
+                "causal_selector_receipt": (
+                    causal_state["receipts"][-1] if causal_state and causal_state["receipts"] else None
+                ),
             }
         )
         transcript.extend(({"role": "user", "content": prompt}, {"role": "assistant", "content": reply}))
@@ -381,6 +511,7 @@ def _run_isolated_arm(
     api_base: str,
     isolation_root: Path,
     scenario_id: str = "cache_wipe_429",
+    causal_arm: CausalArm | None = None,
 ) -> dict[str, Any]:
     """Run exactly one arm in a fresh interpreter and SQLite database."""
 
@@ -407,6 +538,8 @@ def _run_isolated_arm(
         "--worker-output",
         str(output_path),
     ]
+    if causal_arm is not None:
+        command.extend(("--worker-causal-arm", causal_arm))
     subprocess.run(
         command,
         cwd=PROJECT_ROOT,
@@ -419,7 +552,10 @@ def _run_isolated_arm(
 def _run_worker(args: argparse.Namespace) -> None:
     """Worker entry point; backend imports occur only after DB isolation is configured."""
 
-    if args.worker_policy not in {"legacy", "progressive", "paskian"}:
+    causal_arm = getattr(args, "worker_causal_arm", None)
+    if causal_arm is not None and causal_arm not in {"current", "sham", "active"}:
+        raise ValueError(f"unsupported worker causal arm: {causal_arm}")
+    if args.worker_policy not in {"legacy", "progressive", "paskian", "current", "sham", "active"}:
         raise ValueError(f"unsupported worker policy: {args.worker_policy}")
     if not args.worker_output or not args.worker_model or not args.worker_api_base:
         raise ValueError("worker output, model, and API base are required")
@@ -444,12 +580,13 @@ def _run_worker(args: argparse.Namespace) -> None:
             client.headers.update({"Authorization": f"Bearer {password}"})
         turns = _run_conversation(
             client,
-            policy=args.worker_policy,
+            policy=args.worker_policy if causal_arm is None else "paskian",
             turn_count=args.worker_turns,
             simulator_model=args.worker_model,
             api_key=api_key,
             api_base=args.worker_api_base,
             scenario_id=scenario_id,
+            causal_arm=causal_arm,
         )
     result = _summarize_run(
         args.worker_policy,
@@ -482,19 +619,27 @@ def _participant_validity(turns: list[dict[str, Any]], expected_completions: int
     denominator = max(1, expected_completions)
     stop_rate = stop_count / denominator
     format_rate = format_count / denominator
-    passed = count == expected_completions and stop_rate >= 0.95 and format_rate >= 0.95 and empty_count == 0
+    valid_rate = valid_count / denominator
+    passed = (
+        count == expected_completions
+        and stop_rate >= 0.95
+        and format_rate >= 0.95
+        and valid_rate >= 0.95
+        and empty_count == 0
+    )
     return {
         "expected_completions": expected_completions,
         "completion_count": count,
         "valid_count": valid_count,
         "stop_rate": round(stop_rate, 4),
         "format_rate": round(format_rate, 4),
+        "valid_rate": round(valid_rate, 4),
         "empty_count": empty_count,
         "passed": passed,
     }
 
 
-def _completion_audit(runs: list[dict[str, Any]]) -> dict[str, Any]:
+def _completion_audit(runs: list[dict[str, Any]], *, require_semantic_review: bool = False) -> dict[str, Any]:
     """Aggregate participant completion validity without ranking benchmark arms."""
 
     completions = [
@@ -547,7 +692,8 @@ def _completion_audit(runs: list[dict[str, Any]]) -> dict[str, Any]:
             "passed": passed,
         },
         "run_gates": run_gates,
-        "policy_ranking_allowed": passed,
+        "policy_ranking_allowed": passed and not require_semantic_review,
+        "semantic_review_required": require_semantic_review,
         "apparatus_completion_context": {
             "turn_count": len(apparatus_turns),
             "truncated_count": apparatus_truncated,
@@ -588,6 +734,54 @@ def _summarize_run(
     ]
     modes = Counter(receipt.intervention.get("mode", "none") for receipt in receipts)
     observable = [_control_receipt_observable(turn) for turn in turns]
+    selector_receipts = [
+        turn["causal_selector_receipt"] for turn in turns if isinstance(turn.get("causal_selector_receipt"), dict)
+    ]
+    valid_completions = [
+        completion
+        for turn in turns
+        if isinstance((completion := turn.get("next_participant_completion")), dict) and completion.get("valid")
+    ]
+    disagreement_markers = (
+        "disagree",
+        "however",
+        "but",
+        "concern",
+        "tradeoff",
+        "risk",
+        "counterexample",
+        "evidence",
+    )
+    disagreement_depth = [
+        sum(
+            bool(re.search(rf"\b{re.escape(marker)}\b", str(completion.get("content", "")), re.I))
+            for marker in disagreement_markers
+        )
+        for completion in valid_completions
+    ]
+    valid_selector_receipts = []
+    metric_turns = turns
+    if selector_receipts:
+        metric_turns = []
+        for turn_index, turn in enumerate(turns):
+            if turn_index == 0:
+                metric_turns.append(turn)  # fixed scenario prompt is a valid seeded input
+                continue
+            prior_completion = turns[turn_index - 1].get("next_participant_completion")
+            if isinstance(prior_completion, dict) and prior_completion.get("valid"):
+                metric_turns.append(turn)
+    for turn_index, turn in enumerate(turns):
+        if turn_index == 0:
+            continue  # the initial prompt is fixed by the scenario, not an LLM participant response
+        prior_completion = turns[turn_index - 1].get("next_participant_completion")
+        selector_receipt = turn.get("causal_selector_receipt")
+        if isinstance(prior_completion, dict) and prior_completion.get("valid") and isinstance(selector_receipt, dict):
+            valid_selector_receipts.append(selector_receipt)
+    state_revision_rate = (
+        mean(bool(receipt.get("participant_state_revision")) for receipt in valid_selector_receipts)
+        if valid_selector_receipts
+        else 0.0
+    )
     return {
         "policy": policy,
         "repetition": repetition,
@@ -596,18 +790,23 @@ def _summarize_run(
         "mean_outcome_score": round(mean(outcomes), 4) if outcomes else 0.0,
         "mean_uptake": round(mean(uptake), 4) if uptake else 0.0,
         "mean_task_progress": round(mean(progress), 4) if progress else 0.0,
-        "mean_drr": _mean_metric(turns, "divergence_resolution_ratio"),
-        "mean_paskian_health": _mean_metric(turns, "paskian_health"),
-        "mean_collapse_pressure": _mean_metric(turns, "collapse_pressure"),
-        "mean_conceptual_velocity": _mean_metric(turns, "conceptual_velocity"),
+        "mean_drr": _mean_metric(metric_turns, "divergence_resolution_ratio"),
+        "mean_paskian_health": _mean_metric(metric_turns, "paskian_health"),
+        "mean_collapse_pressure": _mean_metric(metric_turns, "collapse_pressure"),
+        "mean_conceptual_velocity": _mean_metric(metric_turns, "conceptual_velocity"),
         "mean_latency_ms": round(mean(float(turn["latency_ms"]) for turn in turns), 3),
         "control_observability_rate": round(sum(observable) / max(1, len(observable)), 4),
+        "state_revision_rate": round(state_revision_rate, 4),
+        "disagreement_depth_proxy": round(mean(disagreement_depth), 4) if disagreement_depth else 0.0,
+        "valid_metric_turn_count": len(metric_turns),
+        "excluded_invalid_turn_count": len(turns) - len(metric_turns),
         "participant_validity": _participant_validity(
             turns, expected_completions if expected_completions is not None else max(0, len(turns) - 1)
         ),
         "intervention_counts": dict(sorted(modes.items())),
         "turns": turns,
         "causal_receipts": [receipt.to_dict() for receipt in receipts],
+        "selector_receipts": selector_receipts,
     }
 
 
@@ -617,16 +816,21 @@ def _paired_delta_ci(candidate: list[float], baseline: list[float]) -> tuple[flo
     return bootstrap_mean_ci([new - old for new, old in zip(candidate, baseline, strict=True)])
 
 
-def _planned_arms(scenario_ids: list[str], repetitions: int, candidate_policy: str) -> list[dict[str, Any]]:
+def _planned_arms(
+    scenario_ids: list[str], repetitions: int, candidate_policy: str, *, three_arm: bool = False
+) -> list[dict[str, Any]]:
     """Create stable, counterbalanced order so interrupted runs can resume exactly."""
 
     order_rng = random.Random(1729)
     plan: list[dict[str, Any]] = []
-    for scenario_id in scenario_ids:
+    for scenario_index, scenario_id in enumerate(scenario_ids):
+        policies = ["current", "sham", "active"] if three_arm else ["legacy", candidate_policy]
+        counterbalance_orders = list(permutations(policies))
+        order_rng.shuffle(counterbalance_orders)
         for repetition in range(1, repetitions + 1):
-            policies = ["legacy", candidate_policy]
-            order_rng.shuffle(policies)
-            plan.extend({"scenario_id": scenario_id, "repetition": repetition, "policy": policy} for policy in policies)
+            order_index = (repetition - 1 + scenario_index) % len(counterbalance_orders)
+            order = counterbalance_orders[order_index]
+            plan.extend({"scenario_id": scenario_id, "repetition": repetition, "policy": policy} for policy in order)
     return plan
 
 
@@ -639,17 +843,142 @@ def _resume_contract(
     apparatus_model: str,
     simulator_model: str,
     api_base: str,
+    three_arm: bool = False,
 ) -> dict[str, Any]:
-    return {
+    contract = {
         "schema_version": 1,
         "scenario_ids": scenario_ids,
         "repetitions_per_arm": repetitions,
         "turns_per_conversation": turns,
-        "arms": ["legacy", candidate_policy],
+        "arms": ["current", "sham", "active"] if three_arm else ["legacy", candidate_policy],
         "apparatus_model": apparatus_model,
         "participant_model": simulator_model,
         "api_base": api_base,
         "arm_order_seed": 1729,
+    }
+    if three_arm:
+        contract["three_arm_selector"] = True
+    return contract
+
+
+def _causal_scorecard(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compare paired selector arms while keeping proxy measures explicit."""
+
+    arms = ("current", "sham", "active")
+    by_arm = {arm: [run for run in runs if run["policy"] == arm] for arm in arms}
+    valid = bool(runs) and all(bool(run.get("participant_validity", {}).get("passed")) for run in runs)
+    if not valid or any(not by_arm[arm] for arm in arms):
+        return {
+            "arms": {},
+            "paired_deltas": {},
+            "decision": "invalid_participant_completions" if not valid else "missing_selector_arm",
+            "participant_validity_passed": valid,
+            "promotion_allowed": False,
+        }
+    arm_keys = {arm: [(str(run["scenario_id"]), int(run["repetition"])) for run in by_arm[arm]] for arm in arms}
+    if any(len(keys) != len(set(keys)) for keys in arm_keys.values()) or not (
+        set(arm_keys["current"]) == set(arm_keys["sham"]) == set(arm_keys["active"])
+    ):
+        return {
+            "arms": {},
+            "paired_deltas": {},
+            "decision": "incomplete_or_duplicate_pairs",
+            "participant_validity_passed": valid,
+            "promotion_allowed": False,
+        }
+    pairs_per_scenario = Counter(scenario_id for scenario_id, _ in arm_keys["current"])
+    if len(pairs_per_scenario) < 3 or min(pairs_per_scenario.values(), default=0) < 10:
+        return {
+            "arms": {},
+            "paired_deltas": {},
+            "decision": "insufficient_scenarios_or_pairs",
+            "participant_validity_passed": valid,
+            "promotion_allowed": False,
+        }
+
+    def paired_metrics(candidate_runs: list[dict[str, Any]], baseline_runs: list[dict[str, Any]]) -> dict[str, Any]:
+        candidate_by_key = {(str(run["scenario_id"]), int(run["repetition"])): run for run in candidate_runs}
+        baseline_by_key = {(str(run["scenario_id"]), int(run["repetition"])): run for run in baseline_runs}
+        keys = sorted(set(candidate_by_key) & set(baseline_by_key))
+        fields = ("state_revision_rate", "disagreement_depth_proxy", "mean_paskian_health", "mean_drr")
+        return {
+            field: dict(
+                zip(
+                    ("mean", "ci_low", "ci_high"),
+                    _paired_delta_ci(
+                        [float(candidate_by_key[key][field]) for key in keys],
+                        [float(baseline_by_key[key][field]) for key in keys],
+                    ),
+                    strict=True,
+                )
+            )
+            for field in fields
+        }
+
+    contrasts = (("active", "current"), ("active", "sham"), ("sham", "current"))
+    pairwise = {
+        f"{candidate}_minus_{baseline}": paired_metrics(by_arm[candidate], by_arm[baseline])
+        for candidate, baseline in contrasts
+    }
+    scenario_ids = sorted({str(run["scenario_id"]) for run in runs})
+    scenario_pairwise: dict[str, dict[str, Any]] = {}
+    for scenario_id in scenario_ids:
+        scenario_arms = {arm: [run for run in by_arm[arm] if str(run["scenario_id"]) == scenario_id] for arm in arms}
+        scenario_pairwise[scenario_id] = {
+            f"{candidate}_minus_{baseline}": paired_metrics(scenario_arms[candidate], scenario_arms[baseline])
+            for candidate, baseline in contrasts
+        }
+
+    summaries: dict[str, Any] = {}
+    for arm, arm_runs in by_arm.items():
+        summaries[arm] = {}
+        for field in ("state_revision_rate", "disagreement_depth_proxy", "mean_paskian_health", "mean_drr"):
+            values = [float(run[field]) for run in arm_runs]
+            summaries[arm][field] = {
+                "mean": round(mean(values), 4),
+                "population_sd": round(pstdev(values), 4),
+                "min": min(values),
+                "max": max(values),
+                "values": values,
+            }
+    health_ok = all(
+        scenario_pairwise[scenario][contrast][field]["mean"] >= -0.02
+        for scenario in scenario_ids
+        for contrast in ("active_minus_sham", "active_minus_current")
+        for field in ("mean_paskian_health", "mean_drr")
+    )
+    state_revision_gain = all(
+        scenario_pairwise[scenario][contrast]["state_revision_rate"]["ci_low"] > 0
+        for scenario in scenario_ids
+        for contrast in ("active_minus_sham", "active_minus_current")
+    )
+    disagreement_preserved = all(
+        scenario_pairwise[scenario][contrast]["disagreement_depth_proxy"]["mean"] >= -0.05
+        for scenario in scenario_ids
+        for contrast in ("active_minus_sham", "active_minus_current")
+    )
+    return {
+        "arms": summaries,
+        "paired_deltas": pairwise,
+        "scenario_paired_deltas": scenario_pairwise,
+        "decision": (
+            "diagnostic_signal_only"
+            if health_ok and state_revision_gain and disagreement_preserved
+            else "inconclusive_proxy_only"
+        ),
+        "participant_validity_passed": True,
+        "promotion_allowed": False,
+        "acceptance_checks": {
+            "active_state_revision_ci_above_zero_vs_sham_and_current": state_revision_gain,
+            "health_decline_at_most_0_02_vs_sham_and_current": health_ok,
+            "disagreement_depth_proxy_decline_at_most_0_05": disagreement_preserved,
+            "promotion_blocked_without_blinded_semantic_review": True,
+        },
+        "measure_caveats": {
+            "state_revision_rate": "lexical uptake/task-progress proxy from participant turns",
+            "disagreement_depth_proxy": "count of distinct explicit disagreement/tradeoff markers; not semantic depth annotation",
+            "health": "mean controller paskian_health and divergence_resolution_ratio from live telemetry",
+        },
     }
 
 
@@ -787,6 +1116,16 @@ def main() -> None:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--turns", type=int, default=8)
     parser.add_argument("--candidate-policy", type=str, default="paskian", choices=["paskian", "progressive"])
+    parser.add_argument(
+        "--three-arm-selector",
+        action="store_true",
+        help="Run the T38 current/sham/active unresolved-issue selector comparison",
+    )
+    parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="Validate a run and print planned arms/model request count without making provider calls",
+    )
     parser.add_argument("--participant-model", type=str, default=None, help="Override participant model")
     parser.add_argument(
         "--resume",
@@ -807,6 +1146,7 @@ def main() -> None:
     parser.add_argument("--worker-model", help=argparse.SUPPRESS)
     parser.add_argument("--worker-api-base", help=argparse.SUPPRESS)
     parser.add_argument("--worker-scenario", help=argparse.SUPPRESS)
+    parser.add_argument("--worker-causal-arm", choices=["current", "sham", "active"], help=argparse.SUPPRESS)
     parser.add_argument("--worker-output", type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.worker_policy:
@@ -816,26 +1156,29 @@ def main() -> None:
         runs_path = args.rescore / "telemetry_receipts.json"
         saved_runs = json.loads(runs_path.read_text(encoding="utf-8"))
         rescored = [_summarize_run(run["policy"], int(run["repetition"]), run["turns"]) for run in saved_runs]
+        is_three_arm = {run["policy"] for run in rescored} == {"current", "sham", "active"}
         runs_path.write_text(json.dumps(rescored, indent=2) + "\n", encoding="utf-8")
         (args.rescore / "scorecard.json").write_text(
-            json.dumps(_scorecard(rescored), indent=2) + "\n", encoding="utf-8"
+            json.dumps(_causal_scorecard(rescored) if is_three_arm else _scorecard(rescored), indent=2) + "\n",
+            encoding="utf-8",
         )
         (args.rescore / "completion_audit.json").write_text(
-            json.dumps(_completion_audit(rescored), indent=2) + "\n", encoding="utf-8"
+            json.dumps(_completion_audit(rescored, require_semantic_review=is_three_arm), indent=2) + "\n",
+            encoding="utf-8",
         )
         print(json.dumps({"rescored": str(args.rescore)}, indent=2))
         return
     if args.repetitions < 2 or args.turns < 3:
         raise ValueError("benchmark requires at least 2 repetitions and 3 turns")
+    if args.three_arm_selector and args.repetitions < 10:
+        raise ValueError("T38 three-arm comparison requires at least 10 repetitions per scenario and arm")
 
     load_dotenv(PROJECT_ROOT / ".env")
     if args.participant_model:
         os.environ["AAA_BENCHMARK_PARTICIPANT_MODEL"] = args.participant_model
-    api_key = resolve_simulator_api_key()
-    if not api_key:
-        raise RuntimeError("configured participant API key is required for the adaptive live benchmark")
     api_base = resolve_simulator_api_base()
     simulator_model = resolve_simulator_model()
+    apparatus_model = os.environ.get("AAA_BENCHMARK_MODEL", os.environ.get("AAA_LLM_MODEL", "")).strip()
 
     if args.scenario == "all":
         scenarios_to_run = list(SCENARIOS.keys())
@@ -850,9 +1193,44 @@ def main() -> None:
     unknown_scenarios = [scenario_id for scenario_id in scenarios_to_run if scenario_id not in SCENARIOS]
     if unknown_scenarios:
         raise ValueError(f"Unknown scenario(s): {unknown_scenarios}; available: {list(SCENARIOS)}")
+    if args.three_arm_selector and len(scenarios_to_run) < 3:
+        raise ValueError("T38 three-arm comparison requires at least three contrasting scenarios")
 
-    arm_plan = _planned_arms(scenarios_to_run, args.repetitions, args.candidate_policy)
-    apparatus_model = os.environ.get("AAA_BENCHMARK_MODEL", os.environ.get("AAA_LLM_MODEL", "")).strip()
+    arm_plan = _planned_arms(
+        scenarios_to_run, args.repetitions, args.candidate_policy, three_arm=args.three_arm_selector
+    )
+    apparatus_generations = len(arm_plan) * args.turns
+    participant_completions = len(arm_plan) * (args.turns - 1)
+    logical_model_requests = apparatus_generations + participant_completions
+    if args.plan_only:
+        print(
+            json.dumps(
+                {
+                    "three_arm_selector": args.three_arm_selector,
+                    "scenarios": scenarios_to_run,
+                    "repetitions_per_scenario_arm": args.repetitions,
+                    "turns_per_conversation": args.turns,
+                    "arms": ["current", "sham", "active"]
+                    if args.three_arm_selector
+                    else ["legacy", args.candidate_policy],
+                    "isolated_worker_arms": len(arm_plan),
+                    "apparatus_generations": apparatus_generations,
+                    "participant_completions": participant_completions,
+                    "logical_model_requests": logical_model_requests,
+                    "participant_model": simulator_model,
+                    "apparatus_model": apparatus_model or "application-config-default",
+                    "api_base": api_base,
+                    "resume_supported": True,
+                    "provider_calls_made": 0,
+                },
+                indent=2,
+            )
+        )
+        return
+    api_key = resolve_simulator_api_key()
+    if not api_key:
+        raise RuntimeError("configured participant API key is required for the adaptive live benchmark")
+
     resume_contract = _resume_contract(
         scenario_ids=scenarios_to_run,
         repetitions=args.repetitions,
@@ -861,6 +1239,7 @@ def main() -> None:
         apparatus_model=apparatus_model,
         simulator_model=simulator_model,
         api_base=api_base,
+        three_arm=args.three_arm_selector,
     )
     timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     out_dir = args.out or PROJECT_ROOT / "benchmarks" / "runs" / "telemetry" / f"dialogue_feedback_{timestamp}"
@@ -877,8 +1256,13 @@ def main() -> None:
             "created_at": datetime.now(UTC).isoformat(),
             "repetitions_per_arm": args.repetitions,
             "turns_per_conversation": args.turns,
-            "arms": ["legacy", args.candidate_policy],
-            "ablation_dimension": "intervention selection policy",
+            "planned_logical_model_requests": logical_model_requests,
+            "arms": ["current", "sham", "active"] if args.three_arm_selector else ["legacy", args.candidate_policy],
+            "ablation_dimension": (
+                "unresolved-issue memory read (current vs write-only sham vs read-enabled active)"
+                if args.three_arm_selector
+                else "intervention selection policy"
+            ),
             "participant": {
                 "type": "adaptive_llm_simulation",
                 "model": simulator_model,
@@ -941,6 +1325,7 @@ def main() -> None:
                 api_base=api_base,
                 isolation_root=isolation_root,
                 scenario_id=scenario_id,
+                causal_arm=policy if args.three_arm_selector else None,
             )
             runs.append(arm_receipt)
             completed_keys.add(key)
@@ -955,11 +1340,16 @@ def main() -> None:
         raise RuntimeError("benchmark modified a production database")
 
     metadata["status"] = "complete"
-    scorecard = _scorecard(runs, candidate_policy=args.candidate_policy)
+    scorecard = (
+        _causal_scorecard(runs) if args.three_arm_selector else _scorecard(runs, candidate_policy=args.candidate_policy)
+    )
     _atomic_write_json(out_dir / "metadata.json", metadata)
     _atomic_write_json(out_dir / "telemetry_receipts.json", runs)
     _atomic_write_json(out_dir / "scorecard.json", scorecard)
-    _atomic_write_json(out_dir / "completion_audit.json", _completion_audit(runs))
+    _atomic_write_json(
+        out_dir / "completion_audit.json",
+        _completion_audit(runs, require_semantic_review=args.three_arm_selector),
+    )
     print(json.dumps({"out_dir": str(out_dir), "decision": scorecard["decision"]}, indent=2))
 
 

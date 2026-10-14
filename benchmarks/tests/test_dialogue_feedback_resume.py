@@ -37,8 +37,9 @@ def _configure_offline_main(monkeypatch: pytest.MonkeyPatch, attempts: list[tupl
         api_base: str,
         isolation_root: Path,
         scenario_id: str = "cache_wipe_429",
+        causal_arm: str | None = None,
     ) -> dict[str, Any]:
-        del simulator_model, api_base, isolation_root
+        del simulator_model, api_base, isolation_root, causal_arm
         attempts.append((scenario_id, repetition, policy))
         return _fake_arm_receipt(policy=policy, repetition=repetition, scenario_id=scenario_id, turn_count=turn_count)
 

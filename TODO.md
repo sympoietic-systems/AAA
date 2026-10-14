@@ -16,8 +16,8 @@
 
 - [ ] **Complete Report 020 & Benchmark Ablation (SPEC.md §T.37–§T.40):**
   - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts in the T88 causal selector harness (`704c834`).
-  - [ ] Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current).
-  - [x] Add atomic arm-level checkpoints and compatible-run resume to the existing legacy-vs-candidate live runner (`ae8bd76`); interrupted in-progress arms restart from turn 1. Three-arm T38 orchestration is still open.
+  - [ ] Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current); measured provider run is still pending.
+  - [x] Add atomic checkpoints/resume and T38 current/sham/active orchestration with counterbalanced order, validity gating, and a credential-free request-count preflight; interrupted arms restart from turn 1.
   - [x] Support comma-separated NVIDIA key fallback with bounded 3-round rate-limit retries and increasing 10s/20s backoff; full backend suite verified.
   - Publish Report 020 and amend ADR-097; reclassify Report 019 while preserving receipts.
 - [x] **Paskian Teachback & Operational Accommodation (ADR-098 & SPEC.md §T.44–§T.46):**

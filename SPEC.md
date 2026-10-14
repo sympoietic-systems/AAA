@@ -479,3 +479,5 @@ B135|2026-10-13|release readiness service added rows_examined while response sch
 B136|2026-10-14|strict mypy exposed un-narrowed dynamic response envelopes and probability maps at the Clef benchmark boundary|narrow response objects explicitly and test malformed envelope as a contained case failure; V141; T89
 B137|2026-10-14|EmbeddingGemma encoder normalization drifted after MRL truncation|normalize each truncated vector before cosine scoring/storage; assert unit norm; V142; T90
 B138|2026-10-14|Clef adapter cleanup removed `re` still used by receipt model-label sanitizer|restore import; focused comparison test caught NameError; mechanical cleanup, no new invariant
+
+B139|2026-10-14|three-arm benchmark missed evaluator import; resume test double lacked arm parameter|restore import + update double; full benchmark suite 166 pass; no new invariant

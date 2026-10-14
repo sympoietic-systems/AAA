@@ -118,11 +118,27 @@ uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --output be
 The 2026-10-14 CPU run completed both models on the synthetic fixture. Durable receipts, summary, and isolated SQLite stores are archived with [Report 074](../../../docs/reports/074-embeddinggemma2-retrieval/README.md); perfect Gemma scores on this small hand-authored set are diagnostic only, not evidence for model promotion or multimodal performance.
 
 ### 9. Dialogue feedback control (`run_dialogue_feedback_benchmark`)
-The live runner compares `legacy` with one candidate policy (`paskian` or `progressive`) using isolated worker processes and temporary databases. NVIDIA credentials may be supplied in priority order through comma-separated `AAA_NVIDIA_API_KEY` values. Rate limits and auth failures rotate keys; when all available keys are rate-limited, the runner tries up to three rounds with 10-second then 20-second waits. Exhausted keys cool for 300 seconds. Each completed scenario/repetition/policy arm is atomically checkpointed in `telemetry_receipts.json`; metadata records the run contract and completed arms. Resume with the same scenario, repetitions, turns, candidate policy, model, and API endpoint:
+The live runner supports both the earlier `legacy` versus candidate policy comparison and the T38 unresolved-issue memory ablation. The three-arm mode runs `current` (no issue memory), `sham` (write-only memory), and `active` (same writes plus memory reads). It uses one shared Paskian backend configuration across arms and a benchmark-local selector hook; no production routing or default controller behavior changes. Scenarios and repetitions are paired, and the six arm orders are rotated evenly (for 10 repetitions, each order appears once or twice per scenario).
+
+NVIDIA credentials may be supplied in priority order through comma-separated `AAA_NVIDIA_API_KEY` values. Rate limits and auth failures rotate keys; when all available keys are rate-limited, the runner tries up to three rounds with 10-second then 20-second waits. Exhausted keys cool for 300 seconds. Each completed scenario/repetition/arm is atomically checkpointed in `telemetry_receipts.json`; metadata records the run contract and completed arms. Resume with the same scenario, repetitions, turns, model, and API endpoint.
+
+Check the T38 run size without resolving credentials or making provider calls. The default T38 plan below is 90 isolated arms, 720 apparatus generations, 630 participant completions, and 1,350 logical model requests. Provider retries can increase the actual HTTP attempt count; the plan does not estimate account-specific dollar cost or wall time.
 
 ```bash
-uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --scenario cache_wipe_429,unyielding_conflict,constructive_dialectic --repetitions 10 --turns 8 --out benchmarks/runs/telemetry/dialogue_feedback_<run-id> --resume
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --three-arm-selector --plan-only --scenario cache_wipe_429,unyielding_conflict,constructive_dialectic --repetitions 10 --turns 8
 ```
 
-The initial invocation uses the same command without `--resume`. Keep the output directory for continuation. A completed arm is skipped; an arm interrupted before its receipt is written is rerun from its first turn. Calls within each conversation run sequentially, so provider RPM is only a ceiling and does not predict wall-clock runtime. The current runner does not yet orchestrate the T38 `current`/`sham`/`active` three-arm comparison; that remains a separate implementation step.
+Start the measured run with a new `--out` directory:
+
+```bash
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --three-arm-selector --scenario cache_wipe_429,unyielding_conflict,constructive_dialectic --repetitions 10 --turns 8 --out benchmarks/runs/telemetry/causal_selector_<run-id>
+```
+
+If interrupted, rerun the same command with `--resume` and the existing output directory. A completed arm is skipped; an arm interrupted before its receipt is written restarts from turn 1. Calls within each conversation run sequentially, so provider RPM is only a ceiling and does not predict wall-clock runtime. T38 rejects fewer than 10 repetitions per arm or fewer than three scenarios.
+
+The scorecard reports paired deltas, confidence intervals, arm-level dispersion, participant validity, controller health, and explicit turn exclusions. State revision and disagreement depth are labeled lexical proxies; a diagnostic signal cannot promote a policy without blinded semantic review. The existing two-policy invocation remains available:
+
+```bash
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --scenario cache_wipe_429 --repetitions 3 --turns 8 --candidate-policy paskian --out benchmarks/runs/telemetry/dialogue_feedback_<run-id>
+```
 
