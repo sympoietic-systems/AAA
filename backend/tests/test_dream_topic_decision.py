@@ -60,7 +60,7 @@ async def test_dream_topic_decision_action_execute_jev_reuse():
     mock_typesafe.is_configured = True
     mock_typesafe.evaluate.return_value = {
         "success": True,
-        "model": "typesafe/jev-1.13",
+        "model": "typesafe/jev-1.14",
         "answers": {
             "dream_topic_choice": {
                 "choice": "convo-alpha-123",
@@ -87,7 +87,7 @@ async def test_dream_topic_decision_action_execute_jev_reuse():
 
     res = await action.execute(mock_llm_provider, payload)
 
-    assert res["model"] == "typesafe/jev-1.13"
+    assert res["model"] == "typesafe/jev-1.14"
     assert res["json_data"]["decision"] == "reuse"
     assert res["json_data"]["conversation_id"] == "convo-alpha-123"
     assert res["json_data"]["confidence"] == 0.92
@@ -110,7 +110,7 @@ async def test_dream_topic_decision_action_execute_jev_new_topic():
     mock_typesafe.is_configured = True
     mock_typesafe.evaluate.return_value = {
         "success": True,
-        "model": "typesafe/jev-1.13",
+        "model": "typesafe/jev-1.14",
         "answers": {
             "dream_topic_choice": {
                 "choice": "NEW_TOPIC",
@@ -137,7 +137,7 @@ async def test_dream_topic_decision_action_execute_jev_new_topic():
 
     res = await action.execute(mock_llm_provider, payload)
 
-    assert res["model"] == "typesafe/jev-1.13"
+    assert res["model"] == "typesafe/jev-1.14"
     assert res["json_data"]["decision"] == "create"
     assert res["json_data"]["conversation_id"] is None
     assert res["json_data"]["confidence"] == 0.88

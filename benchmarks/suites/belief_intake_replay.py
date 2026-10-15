@@ -262,7 +262,7 @@ def main():
     client = TypeSafeDecisionClient(
         api_key=(values.get("AAA_TYPESAFE_API_KEY") or values.get("AAA_LLM_API_KEY") or "").split(",")[0],
         api_base=values.get("AAA_TYPESAFE_API_BASE") or "https://openrouter.ai/api/alpha",
-        model=values.get("AAA_TYPESAFE_MODEL") or "typesafe/jev-1.13",
+        model=values.get("AAA_TYPESAFE_MODEL") or "typesafe/jev-1.14",
         timeout=8,
     )
     packet = json.loads((args.source / "packet.json").read_text(encoding="utf-8"))

@@ -45,7 +45,7 @@ async def test_openrouter_clef_adapter_uses_native_decision_endpoint_and_model_o
     seen: dict[str, object] = {}
 
     class FakeTypeSafeClient:
-        model = "typesafe/jev-1.13"
+        model = "typesafe/jev-1.14"
 
         async def evaluate(self, **kwargs: object) -> dict[str, object]:
             seen.update(kwargs)
