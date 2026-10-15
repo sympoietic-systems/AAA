@@ -41,9 +41,10 @@ case "$CMD" in
         pm2 save
         echo ""
         echo -e "${GREEN}Both services started.${NC}"
-        echo "  Backend:  http://127.0.0.1:8499"
-        echo "  Frontend: http://localhost:5173"
-        echo "  Monitor:  pm2 monit"
+        echo "  Backend:   http://0.0.0.0:8499"
+        echo "  Frontend:  http://0.0.0.0:5174"
+        echo "  Tailscale: http://100.67.41.125:5174 (Frontend) | http://100.67.41.125:8499 (API)"
+        echo "  Monitor:   pm2 monit"
         pm2 status
         ;;
     stop)

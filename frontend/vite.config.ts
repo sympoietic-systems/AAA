@@ -7,25 +7,28 @@ export default defineConfig(({ mode }) => {
   // Load env file from the parent directory
   const env = loadEnv(mode, path.resolve(__dirname, '../'), 'AAA_')
   
-  const host = env.AAA_SERVER_HOST || '127.0.0.1'
-  const port = env.AAA_SERVER_PORT || '8499'
+  const backendHost = (env.AAA_SERVER_HOST && env.AAA_SERVER_HOST !== '0.0.0.0') ? env.AAA_SERVER_HOST : '127.0.0.1'
+  const backendPort = env.AAA_SERVER_PORT || '8499'
+  const frontendPort = parseInt(env.AAA_FRONTEND_PORT || process.env.PORT || '5174', 10)
 
   return {
     plugins: [react(), tailwindcss()],
     server: {
       host: '0.0.0.0',
-      allowedHosts: ['aaa.sokaris.link', '.sokaris.link', 'aaa.sympoietic.systems', '.sympoietic.systems'],
+      port: frontendPort,
+      strictPort: false,
+      allowedHosts: true,
       proxy: {
         '/api': {
-          target: `http://${host}:${port}`,
+          target: `http://${backendHost}:${backendPort}`,
           changeOrigin: false,
         },
       },
     },
     preview: {
       host: '0.0.0.0',
-      port: 5173,
-      allowedHosts: ['aaa.sokaris.link', '.sokaris.link', 'aaa.sympoietic.systems', '.sympoietic.systems'],
+      port: frontendPort,
+      allowedHosts: true,
     },
     build: {
       rollupOptions: {
@@ -55,4 +58,3 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
-

@@ -42,7 +42,7 @@ with contextlib.suppress(Exception):
     setup_logging(load_config())
 
 
-# ── App lifecycle ──────────────────────────────────────────────────────
+# ── App lifecycle ────────────────────────────────────────────────────────────
 
 
 @asynccontextmanager
@@ -210,7 +210,7 @@ async def lifespan(app: FastAPI):
             await asyncio.gather(backup_task, return_exceptions=True)
 
 
-# ── App factory ────────────────────────────────────────────────────────
+# ── App factory ──────────────────────────────────────────────────────────────
 
 
 def create_app() -> FastAPI:
@@ -225,6 +225,8 @@ def create_app() -> FastAPI:
         else [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
             "http://localhost:8499",
             "http://127.0.0.1:8499",
             "http://localhost:3000",
@@ -235,7 +237,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
-        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|100\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

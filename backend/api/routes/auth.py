@@ -10,6 +10,19 @@ from backend.core.sessions import SESSION_COOKIE
 router = APIRouter()
 
 
+def _is_secure_request(request: Request) -> bool:
+    """Determine if the request transport is HTTPS.
+
+    A cookie marked 'Secure' will be rejected by browsers if received over
+    unencrypted HTTP (RFC 6265bis). Only mark the cookie as Secure when the
+    connection is actually HTTPS or terminated as HTTPS by an upstream proxy.
+    """
+    if request.url.scheme == "https":
+        return True
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+    return forwarded_proto == "https"
+
+
 @router.get("/auth/verify", response_model=AuthStatusResponse)
 async def verify_auth(
     request: Request,
@@ -21,7 +34,7 @@ async def verify_auth(
     if not enabled:
         return {"status": "authenticated", "auth_enabled": False}
 
-    if credentials_valid(bearer_token(authorization)) or (
+    if credentials_valid(bearer_token(authorization)) or (\
         authorization is None
         and await asyncio.to_thread(get_session_store(request).valid, request.cookies.get(SESSION_COOKIE))
     ):
@@ -47,7 +60,7 @@ async def create_session(
             token,
             max_age=store.ttl,
             httponly=True,
-            secure=request.url.scheme == "https" or request.url.hostname not in {"localhost", "127.0.0.1", "::1"},
+            secure=_is_secure_request(request),
             samesite="strict",
             path="/api",
         )
@@ -58,6 +71,12 @@ async def create_session(
 async def delete_session(request: Request, response: Response) -> dict[str, str | bool]:
     require_session_origin(request)
     await asyncio.to_thread(get_session_store(request).revoke, request.cookies.get(SESSION_COOKIE))
-    response.delete_cookie(SESSION_COOKIE, path="/api", httponly=True, samesite="strict")
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/api",
+        httponly=True,
+        samesite="strict",
+        secure=_is_secure_request(request),
+    )
     response.headers["Cache-Control"] = "no-store"
     return {"status": "unauthenticated", "auth_enabled": auth_enabled()}

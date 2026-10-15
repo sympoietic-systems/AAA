@@ -1,7 +1,9 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────
-# AAA – Build & Serve Frontend (production, no HMR)
-# Usage: bash scripts/run_frontend.sh
+# AAA – Run Frontend Server (Dev with HMR or Production Preview)
+# Usage:
+#   bash scripts/run_frontend.sh dev      # Dev server with HMR (default)
+#   bash scripts/run_frontend.sh preview  # Build bundle and serve preview
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -9,6 +11,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
+
+# Ensure mise and user local bins are in PATH
+export PATH="$HOME/.local/share/mise/installs/node/26.8.1/bin:$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 
 # ── Detect Node.js ──────────────────────────────────────────
 detect_node() {
@@ -43,12 +48,19 @@ if [ ! -d "node_modules" ] || [ ! -d "node_modules/rehype-sanitize" ]; then
     npm install --no-save || npm install || echo "[WARN] npm install failed; check file permissions in $FRONTEND_DIR"
 fi
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  AAA Frontend — building production bundle..."
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-npm run build
+MODE="${1:-${AAA_FRONTEND_MODE:-dev}}"
+PORT="${AAA_FRONTEND_PORT:-5174}"
+HOST="${AAA_FRONTEND_HOST:-0.0.0.0}"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  AAA Frontend — serving on http://0.0.0.0:5173"
+echo "  AAA Frontend [Mode: $MODE]"
+echo "  Listening: http://${HOST}:${PORT}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-npx vite preview --host --port 5173
+
+if [ "$MODE" = "preview" ] || [ "$MODE" = "prod" ] || [ "$MODE" = "production" ]; then
+    echo "  Building production bundle..."
+    npm run build
+    exec npx vite preview --host "$HOST" --port "$PORT"
+else
+    exec npx vite --host "$HOST" --port "$PORT"
+fi
