@@ -34,7 +34,7 @@ async def verify_auth(
     if not enabled:
         return {"status": "authenticated", "auth_enabled": False}
 
-    if credentials_valid(bearer_token(authorization)) or (\
+    if credentials_valid(bearer_token(authorization)) or (
         authorization is None
         and await asyncio.to_thread(get_session_store(request).valid, request.cookies.get(SESSION_COOKIE))
     ):

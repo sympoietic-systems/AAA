@@ -68,6 +68,43 @@ def test_v36_session_expiry_capacity_and_rotation(monkeypatch):
     assert not store.valid(third)
 
 
+def test_v38_session_cookie_protocol_aware(monkeypatch):
+    monkeypatch.setenv("AAA_PASSWORD", "correct-password")
+    app = FastAPI()
+    app.include_router(router, prefix="/api", dependencies=[Depends(verify_password)])
+
+    # HTTP request: cookie must NOT have Secure flag
+    http_client = TestClient(app, base_url="http://localhost:5174")
+    headers = {"Origin": "http://localhost:5174", "X-AAA-CSRF": "1", "Authorization": "Bearer correct-password"}
+    res = http_client.post("/api/auth/session", headers=headers)
+    assert res.status_code == 200
+    cookie = res.headers["set-cookie"]
+    assert "HttpOnly" in cookie and "SameSite=strict" in cookie
+    assert "Secure" not in cookie
+
+    # Delete session over HTTP: deletion cookie must NOT have Secure flag
+    del_res = http_client.delete("/api/auth/session", headers={"Origin": "http://localhost:5174", "X-AAA-CSRF": "1"})
+    assert del_res.status_code == 200
+    del_cookie = del_res.headers["set-cookie"]
+    assert "Secure" not in del_cookie
+
+    # HTTPS request: cookie MUST have Secure flag
+    https_client = TestClient(app, base_url="https://localhost:5174")
+    https_headers = {"Origin": "https://localhost:5174", "X-AAA-CSRF": "1", "Authorization": "Bearer correct-password"}
+    res_https = https_client.post("/api/auth/session", headers=https_headers)
+    assert res_https.status_code == 200
+    cookie_https = res_https.headers["set-cookie"]
+    assert "Secure" in cookie_https
+
+    # Delete session over HTTPS: deletion cookie MUST have Secure flag
+    del_https = https_client.delete(
+        "/api/auth/session", headers={"Origin": "https://localhost:5174", "X-AAA-CSRF": "1"}
+    )
+    assert del_https.status_code == 200
+    del_cookie_https = del_https.headers["set-cookie"]
+    assert "Secure" in del_cookie_https
+
+
 def test_session_ttl_env_and_default(monkeypatch):
     from backend.core.sessions import DEFAULT_SESSION_TTL, get_session_ttl
 
