@@ -254,6 +254,3 @@ Instead, the dedicated CLI tool [`backend/scripts/refactor_skills_with_llm.py`](
 
   ![Somatic Alert Banner in NodeExplorer](../publish/004-boredom-as-an-agential-force/assets/004-live-ui-somatic-alert-rupture-rung2.png)
   *Visual Invariant: The `<somatic-alert>` banner rendered in live production UI over the dark matte void.*
-
-
-

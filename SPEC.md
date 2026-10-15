@@ -142,7 +142,7 @@ V50: controller state reconstructed from sediment or bounded by active conversat
 V51: benchmark model calls resolve from LLM-provider configuration; ⊥ reuse public AAA application URL as an OpenAI-compatible endpoint.
 V52: background semantic-knot embedding uses the registered `EmbedderModule.process` contract; integration test ⊥ mock-only legacy method.
 V53: ∀ simulated participant completion → content + finish reason + usage + model/provider recorded; empty/truncated/missing provenance → invalid outcome.
-V54: policy ranking requires participant validity ≥95% `finish_reason=stop`, ≥95% 1–3 sentences, 0 empty valid turns; gate failure → validity report only.
+V54: policy comparison requires participant validity ≥95% `finish_reason=stop`; legacy short-form also requires ≥95% 1–3 sentences; T38 sentence counts descriptive, long complete replies allowed; 0 empty valid turns; gate failure → validity report only.
 V55: causal receipt pre/post metrics independently sampled & temporally labeled; identical aliased snapshot ⊥ causal delta; unavailable post-state explicit `null`.
 V56: ∀ live benchmark arm/repetition → isolated temporary DB + conversation/controller/background state; production DB writes = 0.
 V57: control observability requires requested → forwarded/effective or explicit unsupported trace; nonempty mappings alone ≠ applied.
@@ -205,10 +205,17 @@ V134: fresh + retained Digest analyses -> canonical text lists before evidence/p
 V135: research outputs validate before completion; scores finite fractions; invalid plan fallback before persistence; unusable synthesis fails visibly; failed phase cannot merge/advance; retained-state validation inside failure boundary; replay/admission guards preserved
 V136: synthesis invalid JSON escapes -> bounded linear literal-backslash preservation + strict final parse; valid escapes unchanged; broken/truncated structure & malformed Unicode fail; raw response retained; repaired delivery partial + counted meta event
 V137: synthesis pool -> explicit configured primary model, no sticky/fallback model on main failure; direct providers unchanged; empty provider error -> visible execution-boundary/provider failure, raw wrapper retained, no fake answer-shape error
-V138: explicit recovery targets the selected persisted step when logical groups duplicate; reused failed step clears prior result_summary/completed_at; request timeout + frozen parent deadline remain upper bounds; old frozen revisions retain saved limits until explicit recovery/new task; current attempt limits defined in V139
+V138: explicit recovery targets the selected persisted step when logical groups duplicate; reused failed step clears prior result_summary/completed_at; synthesis attempt budget defaults300s (max300) separate from general; request timeout + frozen parent deadline remain upper bounds; old frozen revisions retain saved limits until explicit recovery/new task; current general attempt limits defined in V139
 V139: provider attempt timeout defaults600s (max600), configurable via AAA_RESEARCH_ATTEMPT_TIMEOUT_SECONDS; effective attempt ≤ configured attempt, provider HTTP timeout, remaining frozen task deadline; old frozen policies unchanged until explicit recovery/new task
 V140: configured 600s attempt accepted by policy + HTTP client; rerun reaches phase execution; timeout remains bounded by task deadline
 V141: main-model synthesis requests ≤32768 output tokens; `finish_reason=length` remains failed with raw response retained; synthesis attempt ≤ configured attempt, HTTP timeout, remaining frozen task deadline
+V142: ∀ resumable quality audit → frozen UTC window + source identity + candidate-ID snapshot; each receipt binds message ID/content hash/sample version; summary ⊆ current snapshot + selected mode; failures remain visible/retryable
+V143: ∀ release preflight → authenticated read-only runtime + DB evidence; revision/config/migration/coverage absence stays unknown or incomplete; receipt reports bounded window + scan truncation; API schema matches serialized report
+V144: ∀ external decision response → verify object/answer/probability shapes before field access; malformed envelopes become bounded per-case failures, never raw provider data
+V145: ∀ dimension-truncated retrieval vector → L2-normalize after truncation before cosine scoring or persistence
+V146: ∀ NVIDIA participant timeout/connect/TLS error → rotate configured keys, retry ≤3 rounds with 10s/20s backoff after full-key rounds; model stays fixed.
+V147: ∀ NVIDIA completion `finish_reason=length` → retry same model with doubled `max_tokens` ≤8192; report requested + effective cap + retry history; other providers ⊥ auto-retry.
+V148: ∀ isolated benchmark arm worker failure → preserve completed arm receipts; retry ≤3 times with 10s/20s backoff; clear incomplete DB/state before retry; exhausted retries fail visibly.
 
 ## §T
 
@@ -249,7 +256,7 @@ T33|x|replace aliased trigger/response snapshots; implement effective-control ob
 T34|x|isolate temp DB, controller, conversation, consolidation per arm/repetition; assert production DB untouched|V42,V50,V56,I.benchmark
 T35|x|run 2-pair × 8-turn validity probe; publish completion/format/exclusion audit; ⊥ policy ranking unless V54 passes|V53,V54,V56,I.benchmark
 T36|x|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
-T37|.|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
+T37|x|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
 T38|.|run counterbalanced ≥10-pair multi-scenario ablation; exclude invalid turns; report dispersion, state revision, disagreement depth, health|V47,V48,V53,V54,V56,V59,V61,V62,I.benchmark
 T39|.|publish Report 020 + ADR amendment; reclassify Report 019 as invalid causal ranking while preserving receipts|V48,V53,V54,V55,V56,V57,V62,I.benchmark
 T40|.|run focused/full backend gates; regenerate figures; link check; clean ephemeral artifacts|V18,V30,V53,V54,V55,V56,V57,V58,V59,V60,V61,V62,I.quality
@@ -304,6 +311,11 @@ T85|x|repair stale synthesis recovery target/old failure state; separate bounded
 T86|x|raise general provider attempt default to300s; add env override; preserve request/task deadline caps + old frozen policies; regression/full gates + docs|V139,V138,V30,I.env,I.api
 T87|x|accept600s provider timeout configuration without 400; raise attempt + HTTP defaults/max; preserve task deadline/frozen old policy; regression/full gates + docs|V140,V139,V30,I.env,I.api
 T88|x|raise only synthesis output budget to32768; preserve visible truncation failure + raw response; configure synthesis timeout for longer output; regression/gates/docs|V141,V140,V135,V30,I.api
+T89|x|freeze reply-quality audit window/source/candidate snapshot; bind resumable receipts; scope denominators + failure accounting|V142,V123,V124,I.internal
+T90|x|add authenticated read-only runtime identity + receipt-coverage endpoint and receipt command; unknown stays explicit; replace stale T55|V106,V142,V143,I.api,I.benchmark
+T91|x|finish T37 active/sham/current causal benchmark slice; bounded issue state, abstain, predicate receipts, reachable isolated arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
+T92|x|benchmark Clef/Clef-flash vs Jev via OpenRouter on frozen non-secret fixtures; retain validity, abstention, latency, calibration, failure/cost receipts; no routing change; Report 075|V30,V144,I.benchmark
+T93|x|benchmark EmbeddingGemma 2 text retrieval vs MiniLM in isolated model/dimension namespace; measure recall, latency, memory/storage; no migration|V30,V145,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 
@@ -470,9 +482,24 @@ B130|2026-10-11|synthesis model escaped citations as \[S13\] inside JSON; shared
 B131|2026-10-12|prefer_primary still allowed Nemotron fallback; provider boundary exception became empty JSON fallback then answer-shape failure|explicit main model override; classify empty provider failure before report validation; raw wrapper retained; actual pool main-success/main-failure tests; V137
 
 B132|2026-10-12|synthesis recovery selected last duplicate query-group row and reused failure retained stale summary; global60s attempt limit cut off main synthesis despite300s provider HTTP timeout|honor clicked step ID; explicitly clear nullable failure/completion fields; synthesis-specific300s limit remains capped by request timeout and frozen phase deadline; retain legacy policy until explicit recovery; V138
-
 B133|2026-10-12|slow general provider calls still capped at60s after synthesis-only timeout fix|set configurable general attempt default300s; retain provider HTTP and frozen task deadline as upper bounds; old task policy changes only after explicit recovery; V139
 
 B134|2026-10-12|600s env override rejected by 300s ProviderPolicy maximum, returning 400 before recovery|raise provider attempt + HTTP defaults/max to600s; explicitly test600s frozen policy; retain task deadline as cap; V140
 
 B135|2026-10-12|main-model synthesis consumed 16384-token output cap and OpenRouter returned finish_reason=length; retry waited pool cooldown|raise synthesis-only output cap to32768; configure 600s synthesis attempt; retain HTTP/task deadline caps and truncated-output failure; V141
+B136|2026-10-13|quality audit resume recomputed moving cutoff and summarized all retained checkpoint rows, mixing windows|freeze audit identity/window/candidate snapshot; bind and count only current-snapshot receipts; V142; T89
+B137|2026-10-13|audit regression fixture used stale sample version; strict standalone typing exposed untyped checkpoint/receipt shapes|fixture imports canonical SAMPLE_VERSION; type checkpoint/receipts and preserve explicit dynamic HTTP boundary; V30,V142; T89
+B138|2026-10-13|release readiness service added rows_examined while response schema required scanned_rows|align Pydantic response with service field; endpoint integration test validates serialized receipt; V143; T90
+B139|2026-10-14|strict mypy exposed un-narrowed dynamic response envelopes and probability maps at the Clef benchmark boundary|narrow response objects explicitly and test malformed envelope as a contained case failure; V144; T92
+B140|2026-10-14|EmbeddingGemma encoder normalization drifted after MRL truncation|normalize each truncated vector before cosine scoring/storage; assert unit norm; V145; T93
+B141|2026-10-14|Clef adapter cleanup removed `re` still used by receipt model-label sanitizer|restore import; focused comparison test caught NameError; mechanical cleanup, no new invariant
+
+B142|2026-10-14|three-arm benchmark missed evaluator import; resume test double lacked arm parameter|restore import + update double; full benchmark suite 166 pass; no new invariant
+
+B143|2026-10-14|live T38 fell back to openrouter/free after NVIDIA failure; interrupted worker dirs blocked restart; 900-token cap caused empty truncation|lock benchmark fallback to requested model; atomically persist worker receipts; clear incomplete arm dirs; raise apparatus ceiling to 2048; regression tests + 168 pass; V57,V62,V67
+
+B144|2026-10-14|T38 inherited legacy 1–3 sentence gate and rejected complete provenance-bound replies|scope sentence gate to legacy; allow natural T38 reply length while retaining completion/provenance gate; verify checkpoint migration by model/provider/budget/completeness; regression tests; no new invariant; V54
+
+B145|2026-10-14|NVIDIA participant SSL EOF escaped retry loop before fallback key or backoff|retry transport failures through configured key rotation and 3-round delay schedule; regression test simulates primary/fallback connection failures then recovery; V146
+
+B146|2026-10-14|NVIDIA truncation + intermittent transport errors terminated live arm and whole run|retry same model at doubled cap ≤8192; record effective cap + retries; retry isolated worker ≤3 times, deleting partial state each time; bounded recovery tests; V147,V148

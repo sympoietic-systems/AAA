@@ -90,6 +90,26 @@ class HealthResponse(BaseModel):
     modules: dict[str, bool]
 
 
+class ReleaseReadinessResponse(BaseModel):
+    generated_at: datetime
+    read_only: bool
+    build_revision: str | None
+    config_flags_sha256: str
+    effective_flags: dict[str, bool | int | None]
+    window_days: int
+    recent_assistant_rows: int
+    rows_examined: int
+    scan_truncated: bool
+    invalid_timestamp_rows: int
+    migration_table_available: bool
+    applied_migrations: list[str] | None
+    expected_migrations: list[str]
+    missing_migrations: list[str] | None
+    activation_provenance: dict[str, object]
+    generation_receipts: dict[str, object]
+    response_quality: dict[str, object]
+
+
 class ErrorResponse(BaseModel):
     status: str = "error"
     message: str

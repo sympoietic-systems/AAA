@@ -141,6 +141,84 @@ class TestProviderResponseValidation:
 
 class TestRetryLogic:
     @pytest.mark.asyncio
+    async def test_v144_nvidia_truncation_retries_with_larger_budget_and_records_it(self):
+        provider = _make_provider(
+            api_base="https://integrate.api.nvidia.com/v1",
+            provider_name="model_pool_nvidia",
+            max_retries=0,
+        )
+        truncated = EmptyTruncatedCompletionError("budget exhausted")
+        completed = {
+            "content": "Complete answer",
+            "model": "nvidia/nemotron-3-super-120b-a12b",
+            "truncated": False,
+            "finish_reason": "stop",
+        }
+        sent_budgets = []
+
+        async def request_with_budget(body):
+            sent_budgets.append(body["max_tokens"])
+            if len(sent_budgets) == 1:
+                raise truncated
+            return completed
+
+        with patch.object(provider, "_request_with_retry", new_callable=AsyncMock) as request:
+            request.side_effect = request_with_budget
+
+            result = await provider.generate(
+                [{"role": "user", "content": "Answer fully"}],
+                max_tokens=2048,
+            )
+
+        assert request.call_count == 2
+        assert sent_budgets == [2048, 4096]
+        assert result["generation_controls"]["requested"]["max_tokens"] == 2048
+        assert result["generation_controls"]["forwarded"]["max_tokens"] == 4096
+        assert result["generation_controls"]["truncation_retries"] == [{"from": 2048, "to": 4096}]
+
+    @pytest.mark.asyncio
+    async def test_v144_non_nvidia_truncation_does_not_retry(self):
+        provider = _make_provider(max_retries=0)
+        with (
+            patch.object(
+                provider,
+                "_request_with_retry",
+                new_callable=AsyncMock,
+                side_effect=EmptyTruncatedCompletionError("budget exhausted"),
+            ) as request,
+            pytest.raises(EmptyTruncatedCompletionError),
+        ):
+            await provider.generate(
+                [{"role": "user", "content": "Answer fully"}],
+                max_tokens=2048,
+            )
+
+        assert request.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_v144_nvidia_truncation_stops_at_eight_thousand_tokens(self):
+        provider = _make_provider(
+            api_base="https://integrate.api.nvidia.com/v1",
+            provider_name="model_pool_nvidia",
+            max_retries=0,
+        )
+        with (
+            patch.object(
+                provider,
+                "_request_with_retry",
+                new_callable=AsyncMock,
+                side_effect=EmptyTruncatedCompletionError("budget exhausted"),
+            ) as request,
+            pytest.raises(EmptyTruncatedCompletionError),
+        ):
+            await provider.generate(
+                [{"role": "user", "content": "Answer fully"}],
+                max_tokens=8192,
+            )
+
+        assert request.call_count == 1
+
+    @pytest.mark.asyncio
     async def test_retries_on_429_and_raises_rate_limit_error(self):
         p = _make_provider(max_retries=1)
 

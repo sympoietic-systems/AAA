@@ -82,3 +82,63 @@ Quantifies:
 - **Conciliatory Padding Ratio ($R_{\text{pad}}$):** Verifies polite agreement boilerplate is eliminated.
 - **Recovery to Flow:** Confirms whether Collapse Pressure drops $< 0.35$ following human accommodation.
 
+### 6. Causal selector harness (`causal_intervention`)
+The deterministic T37 harness provides bounded, process-local `current`, write-only `sham`, and memory-reading `active` conversation arms. It records selector predicate, prior mode/outcome, mode coverage and memory read/write adherence without persisting conversation text or connecting to production routing. Verify its guard reachability and arm isolation with:
+```bash
+uv run pytest benchmarks/tests/test_telemetry_causal_intervention.py -q
+```
+This is a contract harness for later counterbalanced ablation work, not an outcome comparison or policy ranking.
+
+### 7. Clef and Jev sensory comparison (`clef_jev_comparison`)
+The live runner compares Jev, Clef, and Clef-flash on a checksum-pinned set of synthetic cases covering triage, search filtering, sycophancy checks, tension nomination, and dream arbitration. Jev uses `typesafe/jev-1.13`; Clef models use OpenRouter's native decisions interface with `cloudflare/clef` and `cloudflare/clef-flash`, sharing Jev's choice/probability contract. It records valid structured-answer rate, abstention, task agreement, selective accuracy, multiclass Brier score, 10-bin calibration error, p50/p95 latency, provider failure class, token usage, and any provider-reported cost. The fixture labels are rule-derived examples, not independent human gold; [Report 075](../../../docs/reports/075-clef-jev-openrouter-comparison/README.md) reports one completed diagnostic pass, not promotion evidence.
+
+Check fixture integrity without credentials:
+```bash
+uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --validate-only
+```
+
+Run one bounded pass (15 fixtures × 3 providers) with the OpenRouter credentials used by the normal AAA configuration (`AAA_LLM_API_KEY` or `AAA_TYPESAFE_API_KEY`):
+```bash
+uv run python -m benchmarks.suites.telemetry.clef_jev_comparison --output benchmarks/runs/telemetry/clef_jev_<run-id>
+```
+Receipts contain fixture hashes and labels but omit fixture text, raw provider errors, and credentials. Provider cost remains unknown when an endpoint does not report it. OpenRouter model identifiers/prices can change; the report records the lookup date and conflicting price listings. The OpenRouter Clef models return typed decision probability maps through the same Decisions contract used by Jev; this is distinct from comparing generated answers through Chat Completions.
+
+### 8. EmbeddingGemma 2 vs MiniLM retrieval/storage (`embedding_mrl_retrieval`)
+The frozen 30-document / 10-query synthetic fixture compares MiniLM at 384d with EmbeddingGemma 2 at 128d, 256d, 512d, and 768d. It records Recall@1/3/5, MRR, CPU encode latency, process RSS, and benchmark-local SQLite storage. Each model/dimension uses a fresh namespace and database; no production vectors or databases are read or written. MRL outputs are L2-normalized after truncation.
+
+Validate the fixture without loading model weights:
+```bash
+uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --validate-only
+```
+
+The EmbeddingGemma 2 profile requires a benchmark environment with Sentence Transformers ≥6.1, Transformers ≥5.19, and TorchVision installed; the repository's locked default model stack may predate the architecture. Run with:
+```bash
+uv run python -m benchmarks.suites.telemetry.embedding_mrl_retrieval --output benchmarks/runs/embedding_mrl_retrieval_<run-id>
+```
+The 2026-10-14 CPU run completed both models on the synthetic fixture. Durable receipts, summary, and isolated SQLite stores are archived with [Report 074](../../../docs/reports/074-embeddinggemma2-retrieval/README.md); perfect Gemma scores on this small hand-authored set are diagnostic only, not evidence for model promotion or multimodal performance.
+
+### 9. Dialogue feedback control (`run_dialogue_feedback_benchmark`)
+The live runner supports both the earlier `legacy` versus candidate policy comparison and the T38 unresolved-issue memory ablation. The three-arm mode runs `current` (no issue memory), `sham` (write-only memory), and `active` (same writes plus memory reads). It uses one shared Paskian backend configuration across arms and a benchmark-local selector hook; benchmark workers lock the apparatus fallback to the selected model, so provider failure stops an arm instead of silently changing models. Apparatus generations allow up to 2,048 output tokens to reduce empty reasoning-truncation failures while retaining explicit truncation handling. T38 participants may answer at natural length; sentence count is reported descriptively, while validity still requires complete, non-empty replies with model/provider/usage provenance. This T38-specific length policy and the apparatus output ceiling are part of the resume contract. No production routing or default controller behavior changes. Scenarios and repetitions are paired, and the six arm orders are rotated evenly (for 10 repetitions, each order appears once or twice per scenario).
+
+NVIDIA credentials may be supplied in priority order through comma-separated `AAA_NVIDIA_API_KEY` values. Rate limits and auth failures rotate keys; when all available keys are rate-limited, the runner tries up to three rounds with 10-second then 20-second waits. Exhausted keys cool for 300 seconds. Each completed scenario/repetition/arm is atomically checkpointed in `telemetry_receipts.json`; metadata records the run contract and completed arms. Resume with the same scenario, repetitions, turns, model, and API endpoint. T38 accepts complete participant replies at natural length; sentence counts remain descriptive. Legacy short-form runs retain the 1–3 sentence validity gate.
+
+Check the T38 run size without resolving credentials or making provider calls. The default T38 plan below is 90 isolated arms, 720 apparatus generations, 630 participant completions, and 1,350 logical model requests. Provider retries can increase the actual HTTP attempt count; the plan does not estimate account-specific dollar cost or wall time.
+
+```bash
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --three-arm-selector --plan-only --scenario cache_wipe_429,unyielding_conflict,constructive_dialectic --repetitions 10 --turns 8
+```
+
+Start the measured run with a new `--out` directory:
+
+```bash
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --three-arm-selector --scenario cache_wipe_429,unyielding_conflict,constructive_dialectic --repetitions 10 --turns 8 --out benchmarks/runs/telemetry/causal_selector_<run-id>
+```
+
+If interrupted, rerun the same command with `--resume` and the existing output directory. Completed arms and durable worker receipts are reused; an arm interrupted before its receipt is written restarts from turn 1 after its incomplete isolated worker directory is removed. Calls within each conversation run sequentially, so provider RPM is only a ceiling and does not predict wall-clock runtime. T38 rejects fewer than 10 repetitions per arm or fewer than three scenarios.
+
+The scorecard reports paired deltas, confidence intervals, arm-level dispersion, participant validity, controller health, and explicit turn exclusions. State revision and disagreement depth are labeled lexical proxies; a diagnostic signal cannot promote a policy without blinded semantic review. The existing two-policy invocation remains available:
+
+```bash
+uv run python -m benchmarks.suites.telemetry.run_dialogue_feedback_benchmark --scenario cache_wipe_429 --repetitions 3 --turns 8 --candidate-policy paskian --out benchmarks/runs/telemetry/dialogue_feedback_<run-id>
+```
+

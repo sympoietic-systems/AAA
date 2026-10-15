@@ -2,13 +2,27 @@
 
 > **Governance:** Adhere to [`GOAL.md`](GOAL.md) and [`docs/PDR.md`](docs/PDR.md). Active implementation tasks under Spec-Driven Development live in [`SPEC.md`](SPEC.md).
 
+## Recent Verified Deliveries (2026-10-14)
+
+- [x] **T86 — Freeze quality audit window** (`ecade43`): bounded audit window and invariant V139.
+- [x] **T87 — Release preflight receipt** (`da6e2f6`): API receipt for release readiness.
+- [x] **T88 — Causal selector arms** (`704c834`): deterministic current/sham/active harness; counterbalanced ablation remains open.
+- [x] **T89 — Clef/Jev first-pass comparison**: OpenRouter run completed for Jev, Clef, and Clef Flash; decision: retain Jev for the current route and make no Clef promotion from this single-pass synthetic result. See [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md). Independent labels and repeated runs remain open.
+- [x] **T90 — EmbeddingGemma 2 retrieval harness** (`00d3a55`): synthetic CPU run completed and published as [Report 074](docs/reports/074-embeddinggemma2-retrieval/README.md); production and multimodal evaluation remain open.
+
 ---
 
 ## 1. Active Focus: Causal Feedback Control & Initial Operational Closure
 
 - [ ] **Complete Report 020 & Benchmark Ablation (SPEC.md §T.37–§T.40):**
-  - Implement bounded unresolved-issue state, `abstain` move, and predicate receipts.
-  - Run counterbalanced $\ge 10$-pair multi-scenario ablation (active vs sham vs current).
+  - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts in the T88 causal selector harness (`704c834`).
+  - [x] Run counterbalanced ≥10-pair, 3-scenario ablation (active vs sham vs current): 90/90 arms complete; participant validity passed; scorecard `inconclusive_proxy_only`; semantic review + Report 020 remain pending. Receipts: `benchmarks/runs/telemetry/causal_selector_20261014_001`.
+  - [x] Add atomic checkpoints/resume and T38 current/sham/active orchestration with counterbalanced order, validity gating, and a credential-free request-count preflight; completed arms reuse receipts, incomplete isolated workers restart from turn 1 (`7a9c86d`, `ba6ee1e`).
+  - [x] Lock benchmark model fallback, atomically persist arm receipts, and raise apparatus output ceiling to 2048 (`ba6ee1e`, `84bcc0e`).
+  - [x] Allow complete natural-length T38 participant replies while retaining completion/provenance checks; keep the 1–3 sentence gate for legacy runs (B141; saved checkpoint migrated and revalidated).
+  - [x] Support comma-separated NVIDIA key fallback with bounded 3-round rate-limit retries and increasing 10s/20s backoff; full backend suite verified.
+  - [x] Retry NVIDIA participant timeout/connect/TLS failures through configured key rotation and bounded backoff (B142, `823dc2e`).
+  - [x] Recover NVIDIA length truncation with same-model token-budget doubling ≤8192; automatically retry failed isolated arms ≤3 times while retaining completed receipts and clearing partial state (B143, `bde7c83`).
   - Publish Report 020 and amend ADR-097; reclassify Report 019 while preserving receipts.
 - [x] **Paskian Teachback & Operational Accommodation (ADR-098 & SPEC.md §T.44–§T.46):**
   - [x] **The 3-Beat Paskian Controller (`teachback_and_fork`):** Replace unilateral refusal and open-ended clarification with Reconstruct (Teachback) + Delimit (Agential Cut) + Accommodate (Operational Fork) in `backend/modules/sensory/intervention_policy.py`.
@@ -89,6 +103,23 @@
 - [ ] **Expertise Afferent Coupling Sensor (`ExpertiseEngine`):**
   - Use Jev `Choice` over active domains on emitted turns to detect domain coupling ($p_{\text{coupling}}$) and accrete mass with diminishing returns without requiring explicit `<aaa-note>` regex tags.
   - Dynamic Expertise Routing: Route top 2–3 resonant expertise domains into the prompt with full descriptions, compressing remaining domains.
+- [ ] **EmbeddingGemma 2 Evaluation & Benchmarking (Multimodal Unified Embeddings):**
+  - Reference: [Google Blog - EmbeddingGemma 2](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) (Oct 2026, Apache 2.0).
+  - Characteristics: 740M total (modular: 270M text/code, 170M vision, 300M audio), 8K context window, Matryoshka Representation Learning (MRL: 128d, 256d, 512d, 768d), task-steering instruction prefixes.
+  - Evaluation & Benchmarking Target:
+    * [x] Run text-only synthetic 30-document / 10-query retrieval and SQLite storage diagnostic against MiniLM; see [Report 074](docs/reports/074-embeddinggemma2-retrieval/README.md). Decision: retain MiniLM for current runtime; Gemma diagnostic only, no migration.
+    * [ ] Benchmark against production-shaped perception sediment and digestion embeddings (`SimpleChunkDigester`, `perception_sediment`) with independently reviewed relevance labels; evaluate MRL dimensions for recall and SQLite WAL footprint.
+    * [ ] Assess multimodal capability for future image/media sediment ingestion.
+- [ ] **Cloudflare Clef & Clef-flash Follow-up Evaluation (Decision Models):**
+  - Reference: [Cloudflare Blog - Clef Decision Models & RL Fine-Tuning](https://blog.cloudflare.com/clef-decision-models/) (Oct 2026, Apache 2.0).
+  - Characteristics: Open-source decision models (Clef 27B, Clef-flash 9B) available through OpenRouter typed decisions and Workers AI. Clef/Flash returned probability maps through Jev's shared decision contract in Report 075.
+  - Evaluation & Benchmarking Target:
+    * [x] Complete first-pass comparison with Jev; no runtime route change from diagnostic-only results (Report 075).
+    * [x] Implement the checksum-pinned synthetic comparison fixture and offline validation harness in T89 (`e7fcf15`).
+    * [x] Run Clef / Clef-flash against Jev via OpenRouter on frozen triage, search filtering, sycophancy, tension, and dream arbitration cases; see [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md).
+    * [x] Compare observed latency, strict response validity, and indicative input cost; listed Clef pricing conflicts, and no provider-reported cost was returned.
+    * [ ] Repeat with more cases/runs and independently reviewed labels before considering any runtime route change.
+    * [ ] Evaluate Cloudflare's RL fine-tuning platform using historical AAA telemetry/dialogue sediment for domain-calibrated decision weights.
 - [ ] **Pre-Emptive Sycophancy Triage & Anti-Slop Membrane:**
   - Parallel sub-150ms pre-turn evaluation:
     - $p_{\text{sycophancy\_risk}}$: Probability turn baits passive assistant compliance.

@@ -39,6 +39,8 @@ from backend.modules.providers.openrouter_utils import (
 
 logger = logging.getLogger(__name__)
 
+NVIDIA_MAX_OUTPUT_TOKENS = 8192
+
 
 class OpenAICompatibleProvider(BaseLLMProvider):
     def __init__(
@@ -464,7 +466,29 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             body.get("thinking") or body.get("chat_template_kwargs"),
         )
 
-        result = await self._request_with_retry(body)
+        truncation_retries: list[dict[str, int]] = []
+        while True:
+            try:
+                result = await self._request_with_retry(body)
+                break
+            except EmptyTruncatedCompletionError:
+                current_max_tokens = body.get("max_tokens")
+                if (
+                    not is_nvidia
+                    or not isinstance(current_max_tokens, int)
+                    or current_max_tokens <= 0
+                    or current_max_tokens >= NVIDIA_MAX_OUTPUT_TOKENS
+                ):
+                    raise
+                next_max_tokens = min(current_max_tokens * 2, NVIDIA_MAX_OUTPUT_TOKENS)
+                truncation_retries.append({"from": current_max_tokens, "to": next_max_tokens})
+                logger.warning(
+                    "Retrying truncated NVIDIA completion with larger output budget: model=%s from=%d to=%d",
+                    self._model,
+                    current_max_tokens,
+                    next_max_tokens,
+                )
+                body["max_tokens"] = next_max_tokens
         forwarded: dict[str, Any] = {}
         unsupported: list[str] = []
         for key in requested_controls:
@@ -479,6 +503,8 @@ class OpenAICompatibleProvider(BaseLLMProvider):
             "unsupported": unsupported,
             "status": "forwarded" if forwarded else "unsupported",
         }
+        if truncation_retries:
+            result["generation_controls"]["truncation_retries"] = truncation_retries
         return result
 
     async def validate_connection(self) -> bool:
