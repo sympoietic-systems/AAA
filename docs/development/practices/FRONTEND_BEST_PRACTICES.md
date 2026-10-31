@@ -103,3 +103,16 @@ Global HTML tag selectors (`h1`, `h2`, `pre`, `p`, etc.) inside custom CSS style
     /* DO THIS: */
     .markdown-body h1, .prose h1 { font-size: 1.5rem; }
     ```
+
+---
+
+## 8. Stack-Safe Deep Graph Traversal & Force Simulation
+Conversations in AAA can scale to thousands of nodes with deep, unbranched or deeply nested parent-child chains (e.g., 2,000+ sequential messages). In JavaScript engines (such as V8), recursive functions consume call-stack frames that overflow at ~10,000 frames or much less depending on local scope size (`RangeError: Maximum call stack size exceeded`), which crashes the entire route into error fallback.
+
+### Guidelines
+*   **Iterative Tree & Graph Traversals**: Never use call-stack recursion to compute node depths, subtree weights, or spatial coordinates on tree or DAG structures.
+*   **Explicit Work Stacks**: Implement depth and hierarchical metrics using explicit iterative stacks (e.g. `connectionCloudLayout.ts`).
+    - Use an explicit depth queue/stack to compute node distances from roots.
+    - Compute subtree weights via post-order traversal ordering (visiting children before parents) using depth-sorted arrays or an iterative two-stack post-order algorithm.
+    - Distribute child coordinates (angles, radial offsets, bounding boxes) iteratively by stacking child intervals rather than recursing down each branch.
+*   **Stress-Test Deep Lineages**: Cover graph layout algorithms with unit stress tests simulating linear chains of at least 20,000 nodes without stack overflow (see `connectionCloudLayout.test.ts`).

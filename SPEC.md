@@ -164,6 +164,8 @@ V71: $CPI_t$ clamps velocity to $\le 0.35$ when teachback ratio $\mathcal{T}_t <
 V72: conversational scenarios classify into 5 distinct relational archetypes (`conflict|dialectic|repetition|symbiosis|compliance`); participant validity permits calibrated multi-sentence technical proposals while enforcing stop token and non-empty responses.
 V73: epistemic sycophancy (hollow agreement with zero task progress/actionability) triggers the 3-rung Pole Vacancy escalation ladder (`diffractive_probe` -> `sycophancy_rupture` -> `quiesce`); refusal strictly preserves metric honesty without laundering $DRR$ or suppressing boringness; refusal telemetry emits isolated `<somatic-alert>` tags rendered as high-visibility refusal banners, preventing belief nucleation from `<aaa-note>` or hidden silence from `<scar-fold>`.
 
+V74: frontend graph, tree, and DAG traversals must use iterative stack-safe loops; recursive traversal ⊥ bounded call stack failure on arbitrarily deep chains (≥ 20,000 nodes).
+
 V100: Message insertion honors outer atomic rollback; invalid parent fails structurally; committed parent visible across worker connections.
 
 V101: Skill audit reads checkpointed snapshot in SQLite URI read-only mode; activation gaps ≠ lifetime nonuse; archived skills ∉ pruning candidates; probe failure ≠ skill failure.
@@ -507,4 +509,4 @@ B146|2026-10-14|NVIDIA truncation + intermittent transport errors terminated liv
 
 B149|2026-10-31|navigation waited on unindexed belief histories and synchronous belief/skill reads; traits downloaded the full belief ledger; PM2 served development modules|index belief event history; offload reads and ecosystem computation; provide health-only request; defer notification title lookup; default PM2 frontend to production bundle; regression assertions cover worker threads, query plan, auth and lazy requests; V15,V23
 
-B150|2026-10-31|deep conversation connection-cloud layout overflowed the browser stack at 2,084 parent levels, replacing the entire nodes page with the route error fallback|replace recursive weights/depth/position traversals with explicit iterative stacks; preserve existing branch coordinates; regression tests cover 20,000-message chains, multiple roots and missing parents; reproduce against the affected 2,088-node conversation before rollout; V15
+B150|2026-10-31|deep conversation connection-cloud layout overflowed the browser stack at 2,084 parent levels, replacing the entire nodes page with the route error fallback|replace recursive weights/depth/position traversals with explicit iterative stacks; preserve existing branch coordinates; regression tests cover 20,000-message chains, multiple roots and missing parents; reproduce against the affected 2,088-node conversation before rollout; V15,V74

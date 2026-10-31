@@ -20,7 +20,7 @@ frontend/src/
 ├── api/             # API client services, explicit transport, typed response contracts
 ├── components/      # UI components and view layouts
 │   ├── pages/       # Route-level views (NodesPage, ResearchPage, AgentPage, SearchPage, LoginPage)
-│   ├── panels/      # Resizable side panels (ConnectionCloud, SidePanel, SearchTab, SedimentSection)
+│   ├── panels/      # Resizable side panels (ConnectionCloud, connectionCloudLayout, SidePanel, SearchTab, SedimentSection)
 │   ├── shared/      # Cross-cutting components (NotableMarkdown, ConversationTitleBar, NotesSection)
 │   └── UI/          # Base terminal primitives (UnifiedHeader, UnifiedFooter, TerminalButton)
 ├── config/          # Visual tokens, palette constants, and CSS variable mappings
@@ -67,6 +67,7 @@ npm run preview
 2. **Untrusted Content**: Raw HTML requires the shared Markdown sanitization policy. Do not enable KaTeX trust or allow arbitrary CSS. Print sanitized rendered content through `printContent`; append user text as DOM text nodes.
 3. **Fail-Closed Auth**: Outages and network disconnects set auth status to `"unavailable"` with a retry screen rather than bypassing authentication.
 4. **React 19 Ref & Effect Discipline**: Never mutate refs during render. Never perform synchronous state mutations directly in `useEffect` setup bodies.
+5. **Stack-Safe Graph Traversals**: Client-side graph or tree algorithms (such as radial position and subtree calculations in `connectionCloudLayout.ts`) must use iterative stack-safe loops rather than call-stack recursion, guaranteeing that conversations with deep sequential parent-child chains (thousands of nodes) layout without call-stack overflow (`RangeError: Maximum call stack size exceeded`).
 
 ## Browser sessions and quality gates
 

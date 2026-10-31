@@ -2,7 +2,12 @@
 
 > **Governance:** Adhere to [`GOAL.md`](GOAL.md) and [`docs/PDR.md`](docs/PDR.md). Active implementation tasks under Spec-Driven Development live in [`SPEC.md`](SPEC.md).
 
-## Recent Verified Deliveries (2026-10-14)
+## Recent Verified Deliveries (2026-10-31)
+
+- [x] **T91 / B149 — Navigation loading & search performance** (`603096e`, `0c2fd56`): offloaded synchronous belief/skill reads, compact serialization, worker pool with admission control and GIL yielding, event history indexes, and code-split frontend bundles (B149, ADR-096, V15, V23).
+- [x] **T92 / B150 — Deep conversation layout stack safety** (`369b581`, `4613391`): iterative depth, subtree-weight, and radial target calculations in `connectionCloudLayout.ts`; scales to 20,000-message chains without call-stack overflow; verified on live 2,088-node conversation `nomadic-synthesis-third-order-ghost` (B150, V74).
+
+## Prior Verified Deliveries (2026-10-14)
 
 - [x] **T86 — Freeze quality audit window** (`ecade43`): bounded audit window and invariant V139.
 - [x] **T87 — Release preflight receipt** (`da6e2f6`): API receipt for release readiness.

@@ -138,6 +138,7 @@ In alignment with our commitments to **minimality** and **non-simulation** (no g
 ### Risks
 * **Graph Complexity**: If a conversation has hundreds of nodes and cross-links, a force-directed layout can become clustered. This is mitigated by restricting visual rendering to the active conversation and using node dimming for historical decay.
 * **Recursive SQL Query Overhead**: Querying ancestor paths recursively could slow down performance. However, SQLite handles recursive CTEs extremely quickly (under 1ms for tree depths < 1000).
+* **Deep Conversation Call-Stack Overflow (Amended 2026-10-31)**: Conversations with thousands of nodes and sequential parent chains (e.g. 2,084 deep levels) cause call-stack overflows if layout calculations (depth, subtree weight, radial angles) are recursive (`RangeError: Maximum call stack size exceeded`). All graph layout traversals must use explicit iterative stacks (`connectionCloudLayout.ts`), preserving deterministic coordinates while scaling to 20,000+ nodes safely without route crashes.
 
 ---
 
