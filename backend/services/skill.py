@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import uuid
@@ -14,6 +15,9 @@ class SkillService:
         self._state = state
 
     async def get_skills(self) -> dict:
+        return await asyncio.to_thread(self._get_skills)
+
+    def _get_skills(self) -> dict:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
         if not skill_repo:

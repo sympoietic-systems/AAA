@@ -753,7 +753,8 @@ class BeliefDynamicsEngine(ProcessingModule):
         )
 
     async def compute_ecosystem_health(self, agent_id: str = "symbia") -> dict:
-        health, new_beta = EcosystemManager.compute_ecosystem_health(
+        health, new_beta = await asyncio.to_thread(
+            EcosystemManager.compute_ecosystem_health,
             self._belief_repo,
             agent_id=agent_id,
             source_weights=self._source_weights,

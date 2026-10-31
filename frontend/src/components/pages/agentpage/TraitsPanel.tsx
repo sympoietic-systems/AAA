@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from "react"
-import { getAgent, getPersonality, getBeliefs, updateAspirationalTraits } from "../../../api/client"
+import { getAgent, getPersonality, getBeliefHealth, updateAspirationalTraits } from "../../../api/client"
 import type { SomaticStateInfo, EcosystemSnapshot } from "../../../api/client"
 import { HealthMetrics } from "./shared/HealthMetrics"
 
@@ -28,7 +28,7 @@ export const TraitsPanel = memo(function TraitsPanel() {
     Promise.all([
       getPersonality().catch(() => null),
       getAgent().catch(() => null),
-      getBeliefs(null as any).catch(() => null),
+      getBeliefHealth().catch(() => null),
     ]).then(([p, a, b]) => {
       setAspirationalTraits(p?.aspirational_traits ?? EMPTY_TRAITS)
       setAgentFlux(!!a?.agent_flux)

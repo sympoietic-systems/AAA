@@ -225,6 +225,9 @@ pm2 restart aaa-frontend
 
 Each service runs as a separate PM2 app for independent monitoring, logging, and restart control. Configuration is in `ecosystem.config.cjs`.
 
+PM2 builds and serves the frontend production bundle by default. For local hot reload, use `pm2 start ecosystem.config.cjs --only aaa-frontend --env development`.
+When updating an existing PM2 installation, reload the configuration with `pm2 startOrRestart ecosystem.config.cjs --only aaa-frontend --update-env`; a plain process restart retains the previously saved arguments and environment.
+
 **Option C — Raw (manual)**
 
 ```bash

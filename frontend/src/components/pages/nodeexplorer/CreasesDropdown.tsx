@@ -23,13 +23,13 @@ export const CreasesDropdown = memo(function CreasesDropdown({ conversations, on
   
   const [localConversations, setLocalConversations] = useState<ConversationInfo[]>([])
 
-  // Fetch conversations locally if not passed down as a prop
+  // Resolve notification titles only when the dropdown is opened.
   useEffect(() => {
-    if (conversations) return
+    if (conversations || !creasesOpen) return
     listConversations(undefined, undefined, 100, 0)
       .then((res) => setLocalConversations(res.conversations))
       .catch(() => {})
-  }, [conversations])
+  }, [conversations, creasesOpen])
 
   const resolvedConversations = conversations ?? localConversations
 

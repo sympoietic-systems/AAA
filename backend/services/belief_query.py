@@ -1,5 +1,6 @@
 """Belief read/query use cases."""
 
+import asyncio
 import logging
 from datetime import UTC
 from typing import cast
@@ -17,7 +18,29 @@ logger = logging.getLogger(__name__)
 
 
 class BeliefQueryUseCases(BeliefUseCase):
+    async def get_health(self, agent_id: str = "symbia") -> BeliefResult:
+        """Agent health without materializing belief histories or proposal receipts."""
+        ecosystem = None
+        engine = getattr(self._state, "belief_metabolism", None)
+        if engine and getattr(self._state, "belief_repo", None):
+            ecosystem = await engine.compute_ecosystem_health(agent_id)
+        return {"somatic": None, "ecosystem": ecosystem}
+
     async def get_beliefs(self, conversation_id: str | None = None, agent_id: str = "symbia") -> BeliefResult:
+        result = await asyncio.to_thread(self._get_beliefs, conversation_id, agent_id)
+        belief_repo = getattr(self._state, "belief_repo", None)
+        if not belief_repo:
+            return result
+        result["proto_beliefs"] = await recurrence_projection(result["proto_beliefs"], belief_repo, agent_id)
+        engine = getattr(self._state, "belief_metabolism", None)
+        if engine:
+            try:
+                result["ecosystem"] = await engine.compute_ecosystem_health(agent_id)
+            except Exception:
+                logger.exception("Error computing ecosystem health")
+        return result
+
+    def _get_beliefs(self, conversation_id: str | None, agent_id: str) -> BeliefResult:
         state = self._state
         belief_repo = cast(BeliefQueryRepository | None, getattr(state, "belief_repo", None))
         engine = getattr(state, "belief_metabolism", None)
@@ -77,7 +100,6 @@ class BeliefQueryUseCases(BeliefUseCase):
             elif p.status == "rejected":
                 ghosts_list.append(proposal_data)
 
-        proto_beliefs_list = await recurrence_projection(proto_beliefs_list, belief_repo, agent_id)
         somatic_state = None
         attractor_window = []
         spectral_margin = []
@@ -132,13 +154,6 @@ class BeliefQueryUseCases(BeliefUseCase):
                     except Exception as e:
                         logger.error("Error computing UI attractor window: %s", e)
 
-        ecosystem = None
-        if engine:
-            try:
-                ecosystem = await engine.compute_ecosystem_health(agent_id)
-            except Exception as e:
-                logger.error("Error computing ecosystem health: %s", e)
-
         return {
             "beliefs": beliefs_list,
             "proto_beliefs": proto_beliefs_list,
@@ -146,7 +161,7 @@ class BeliefQueryUseCases(BeliefUseCase):
             "somatic": somatic_state,
             "attractor_window": attractor_window,
             "spectral_margin": spectral_margin,
-            "ecosystem": ecosystem,
+            "ecosystem": None,
         }
 
     async def get_belief_timeseries(
@@ -154,6 +169,9 @@ class BeliefQueryUseCases(BeliefUseCase):
         belief_id: str,
         days: int = 30,
     ) -> BeliefResult:
+        return await asyncio.to_thread(self._get_belief_timeseries, belief_id, days)
+
+    def _get_belief_timeseries(self, belief_id: str, days: int) -> BeliefResult:
         """Return bucketed mass/confidence timeseries for a belief chart.
 
         Bucketing: hourly if span <= 7 days, daily if span > 7 days.

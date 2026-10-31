@@ -117,7 +117,11 @@ def test_comparator_detects_changed_metrics(mock_linear_dialogue):
         assert deltas[i].abs_delta >= deltas[i + 1].abs_delta
 
 
-def test_visualizer_and_runner(tmp_path, mock_linear_dialogue):
+def test_visualizer_and_runner(tmp_path, mock_linear_dialogue, monkeypatch):
+    monkeypatch.setattr(
+        "benchmarks.suites.telemetry.runner.resolve_embeddings",
+        lambda dataset, cache_dir=None: np.eye(len(dataset.messages), 384, dtype=np.float32),
+    )
     ds_file = tmp_path / "test_dialogue.json"
     with open(ds_file, "w", encoding="utf-8") as f:
         json.dump({"messages": mock_linear_dialogue}, f)

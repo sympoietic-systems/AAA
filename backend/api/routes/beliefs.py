@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from backend.api.deps import get_belief_repo, get_belief_service, require_agent_flux
@@ -41,6 +41,14 @@ class EditStatementRequest(BaseModel):
 
 class SynthesizeMergeRequest(BaseModel):
     target_belief_id: str
+
+
+@router.get("/beliefs/health")
+async def get_belief_health(
+    agent_id: str = Query(default="symbia", min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    service=Depends(get_belief_service),
+):
+    return await service.get_health(agent_id=agent_id)
 
 
 @router.get("/beliefs")

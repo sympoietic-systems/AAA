@@ -3,6 +3,13 @@ import type { BeliefsResponse, BeliefNodeInfo, BeliefEventInfo, BeliefProposalIn
 
 export { type BeliefsResponse, type BeliefNodeInfo, type BeliefEventInfo, type BeliefProposalInfo, type BeliefTimeseriesResponse }
 
+export async function getBeliefHealth(agentId = "symbia"): Promise<Pick<BeliefsResponse, "somatic" | "ecosystem">> {
+  const query = new URLSearchParams({ agent_id: agentId })
+  const res = await apiFetch(`${BASE}/beliefs/health?${query}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
 export async function getBeliefProposals(agentId: string = "symbia"): Promise<BeliefProposalInfo[]> {
   const res = await apiFetch(`${BASE}/beliefs/proposals?agent_id=${agentId}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

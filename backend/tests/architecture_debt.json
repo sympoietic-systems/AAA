@@ -221,7 +221,8 @@
       "BeliefProposalUseCases.synthesize_merge_statement": 2
     },
     "backend/services/belief_query.py": {
-      "BeliefQueryUseCases.get_beliefs": 2
+      "BeliefQueryUseCases._get_beliefs": 1,
+      "BeliefQueryUseCases.get_beliefs": 1
     },
     "backend/services/belief_serializer.py": {
       "_parse_source_trace": 1
