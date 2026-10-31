@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-31",
+  "host": "100.111.85.100",
+  "checkout": "/srv/apps/AAA",
+  "deployed_revision": "0c2fd56",
+  "implementation_revision": "603096e",
+  "previous_revision": "d2a2346",
+  "pm2_owner": "www-data",
+  "restarted_services": [
+    "aaa-backend",
+    "aaa-frontend"
+  ],
+  "database_migration": false,
+  "method": "single authenticated probes through localhost frontend proxy; no model calls; not percentile estimates",
+  "checks": {
+    "health": {
+      "status": 200,
+      "bytes": 281,
+      "seconds": 0.1344
+    },
+    "conversations": {
+      "status": 200,
+      "seconds": 0.0643
+    },
+    "full_skills": {
+      "status": 200,
+      "bytes": 572619,
+      "seconds": 0.1119
+    },
+    "compact_skills": {
+      "status": 200,
+      "bytes": 275751,
+      "seconds": 0.0527
+    },
+    "full_beliefs": {
+      "status": 200,
+      "bytes": 2326729,
+      "seconds": 0.7349
+    },
+    "compact_beliefs": {
+      "status": 200,
+      "bytes": 104785,
+      "seconds": 0.0832
+    },
+    "selected_belief_history": {
+      "status": 200,
+      "seconds": 0.0172
+    },
+    "history": {
+      "status": 200,
+      "seconds": 0.0114
+    },
+    "cross_agent_history": {
+      "status": 404
+    },
+    "anonymous_skills": {
+      "status": 401
+    },
+    "thinking_and_context_detail": "passed",
+    "session_and_csrf": "passed",
+    "concurrent_glitch_search": {
+      "status": 200,
+      "seconds": 0.279
+    },
+    "concurrent_conversations": {
+      "status": 200,
+      "seconds": 0.0255
+    }
+  },
+  "public_login": {
+    "javascript_requests": 6,
+    "decoded_javascript_bytes": 253016,
+    "markdown_or_math_requested": false,
+    "entry": "/assets/index-CoC5aQyh.js"
+  },
+  "limitations": [
+    "No authenticated public-browser polling/math smoke test",
+    "Overload/cancellation exercised locally rather than by saturating live traffic"
+  ]
+}

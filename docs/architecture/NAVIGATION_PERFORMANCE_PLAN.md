@@ -1,6 +1,6 @@
 # Navigation Performance Implementation Plan
 
-Status: implemented and locally verified; production follow-up rollout pending. Date: 2026-10-31.
+Status: implemented, deployed and verified in production. Date: 2026-10-31.
 
 The [performance spec](../systems/NAVIGATION_PERFORMANCE_SPEC.md) owns contracts,
 acceptance criteria, and task statuses. This plan explains execution order and
@@ -104,6 +104,6 @@ them only if the follow-up measurements identify a remaining material bottleneck
 
 ## Implementation result
 
-All seven tasks are complete locally. [Verification, measurements and the separate
+All seven tasks are complete and the rollout is recorded. [Verification, measurements and the separate
 rollout procedure](../guides/NAVIGATION_PERFORMANCE_FOLLOWUP.md) record the accepted
-implementation and its limits. Production remains on the previously deployed baseline.
+implementation and its limits. Production runs the tested follow-up; the rollout receipt records the deployed revision.

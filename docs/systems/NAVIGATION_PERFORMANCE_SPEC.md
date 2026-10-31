@@ -1,6 +1,6 @@
 # Navigation Performance Follow-up Specification
 
-Status: implemented and locally verified; follow-up production rollout pending. Date: 2026-10-31.
+Status: implemented, deployed and verified in production. Date: 2026-10-31.
 
 Owner: this file owns this follow-up's requirements, interfaces, invariants, and
 task statuses. IDs are file-scoped. Root [SPEC.md](../../SPEC.md) owns shared

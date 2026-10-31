@@ -1,8 +1,7 @@
 # Navigation performance follow-up: implementation receipt
 
 Date: 2026-10-31. Baseline: `d2a2346`. Implemented on the isolated
-`perf/navigation-loading` branch. Production rollout was authorized after local verification; live results will be
-recorded below after deployment.
+`perf/navigation-loading` branch. Production deployment and live verification completed on 2026-10-31.
 The primary checkout's unrelated staged refactor was preserved.
 
 ## Behavior
@@ -101,7 +100,7 @@ test cleanup removes shared `*test*.db` files, so concurrent runs interfere.
 
 ## Separate production rollout
 
-The following procedure is authorized for this follow-up. Do not replay the
+The following procedure was executed for this follow-up. Do not replay the
 previous rollout's migration or rebuild from the dirty primary checkout.
 
 1. SSH as `root@100.111.85.100`. Verify `/srv/apps/AAA` is still the live checkout,
@@ -134,4 +133,45 @@ Deployment authorized on 2026-10-31. Preflight confirmed a clean `/srv/apps/AAA`
 checkout at `d2a2346`, with both AAA services online under `www-data`. The frontend
 uses `/usr/bin/bash scripts/run_frontend.sh` in production mode. Deploy only the
 tested `perf/navigation-loading` revision; preserve the prior bundle and revision.
-Live verification results will be added after restart.
+The server fast-forwarded to `0c2fd56` (performance implementation `603096e`),
+built successfully as `www-data`, then restarted only `aaa-backend` and
+`aaa-frontend` and saved the PM2 process configuration. Both services returned
+online. A transient 502 during the frontend startup build cleared when preview
+started; the final public login and API checks succeeded.
+
+Rollback artifacts are retained at
+`/srv/apps/AAA-rollbacks/navigation-followup-20261031/`: the prior revision
+`d2a2346` and `frontend-dist.tar.gz`. The existing database backup remains intact;
+no database migration was introduced or manually applied.
+
+Single post-restart probes through the production frontend proxy returned:
+
+| Probe | Result | Elapsed |
+| --- | --- | ---: |
+| Health | 200; 281 B | 134 ms |
+| Compact skills | 200; 275,751 B versus 572,619 B full | 53 ms |
+| Compact beliefs | 200; 104,785 B versus 2,326,729 B full | 83 ms |
+| Selected belief history | 200; 42,083 B | 17 ms |
+| History list | 200; 24,712 B | 11 ms |
+| Glitch search, no model call | 200 | 279 ms |
+| Overlapping conversation list | 200 | 26 ms |
+
+Default full content remains present; compact skill records omit both content
+fields and carry `content_loaded=false`. Cross-agent belief history returned 404,
+anonymous skills returned 401, thinking/context detail remained accessible, and
+list responses continued to omit their raw content. Cookie session creation,
+verification and revocation passed, and cross-origin mutation was rejected with
+403. No skill edits or conversation writes were used for validation.
+
+The actual public login browser requested six JavaScript resources totaling
+253,016 decoded bytes, with no Markdown/KaTeX request. It serves
+`/assets/index-CoC5aQyh.js`, matching the tested production build. These are live
+sanity probes, not latency percentiles or an end-to-end speed guarantee.
+Authenticated visible/hidden polling and overload/cancellation were covered by
+local deterministic tests; those interactions were not repeated in an authenticated
+public browser session. Public content/math checks remain a useful user smoke test.
+
+Aggregate live evidence is in
+[`navigation-production-receipt.json`](../../benchmarks/navigation-production-receipt.json).
+The subsequent documentation-only commit records these results; it does not require
+another service restart.
