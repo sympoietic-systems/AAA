@@ -9,6 +9,7 @@ Close conversation telemetry loop: metrics select observable, provider-supported
 Revalidate conversation benchmark after participant cap removal; prove sensor referents before controller promotion.
 Enact Paskian conversational coupling (ADR-098): 3-beat teachback & operational fork replace unilateral refusal/clarification; ground velocity via Conversational Progress Index ($CPI_t$); validate positive causal task progress in live benchmark.
 Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-assisted selection, optional agential subresearch, bounded provider failure, verifiable diffractive synthesis; contract → [RESEARCH_SPEC.md](docs/systems/RESEARCH_SPEC.md).
+Navigation performance follow-up: planning contract → [NAVIGATION_PERFORMANCE_SPEC.md](docs/systems/NAVIGATION_PERFORMANCE_SPEC.md); execution sequence → [NAVIGATION_PERFORMANCE_PLAN.md](docs/architecture/NAVIGATION_PERFORMANCE_PLAN.md). Tasks are file-scoped and pending; creating these documents does not start implementation or rollout.
 
 ## §C
 

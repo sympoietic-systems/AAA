@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-31",
+  "baseline_revision": "d2a2346",
+  "baseline_source": "public production /login",
+  "candidate_source": "local production preview /login",
+  "method": "settled resource timing decoded sizes; cached transfers prevent network-latency comparisons",
+  "baseline": {
+    "route": "/login",
+    "js": 901412,
+    "resources": [
+      {
+        "file": "index-gX-0eCis.js",
+        "decoded": 14290,
+        "initiator": "script"
+      },
+      {
+        "file": "rolldown-runtime-S-ySWqyJ.js",
+        "decoded": 694,
+        "initiator": "other"
+      },
+      {
+        "file": "vendor-katex-DtBJCNVk.js",
+        "decoded": 288133,
+        "initiator": "other"
+      },
+      {
+        "file": "vendor-markdown-BdpfhTnZ.js",
+        "decoded": 308752,
+        "initiator": "other"
+      },
+      {
+        "file": "vendor-katex-D1Bj3pDB.css",
+        "decoded": 29797,
+        "initiator": "link"
+      },
+      {
+        "file": "vendor-react-CGnZ8NrJ.js",
+        "decoded": 235315,
+        "initiator": "other"
+      },
+      {
+        "file": "index-BC7ZQZY3.css",
+        "decoded": 88568,
+        "initiator": "link"
+      },
+      {
+        "file": "LoginPage-DDDRnSu-.js",
+        "decoded": 1925,
+        "initiator": "script"
+      },
+      {
+        "file": "UI-DV3_AQny.js",
+        "decoded": 52303,
+        "initiator": "script"
+      }
+    ],
+    "javascript_request_count": 7,
+    "gzip_javascript_bytes": 271784
+  },
+  "candidate": {
+    "route": "/login",
+    "js": 253016,
+    "resources": [
+      {
+        "file": "index-CoC5aQyh.js",
+        "decoded": 15868,
+        "initiator": "script"
+      },
+      {
+        "file": "rolldown-runtime-S-ySWqyJ.js",
+        "decoded": 694,
+        "initiator": "other"
+      },
+      {
+        "file": "vendor-react-VWxiGp_R.js",
+        "decoded": 232252,
+        "initiator": "other"
+      },
+      {
+        "file": "http-DTZJSdEb.js",
+        "decoded": 1227,
+        "initiator": "other"
+      },
+      {
+        "file": "index-BC7ZQZY3.css",
+        "decoded": 88568,
+        "initiator": "link"
+      },
+      {
+        "file": "LoginPage-CjqQQOaM.js",
+        "decoded": 1941,
+        "initiator": "script"
+      },
+      {
+        "file": "UnifiedFooter-DwlZySgD.js",
+        "decoded": 1034,
+        "initiator": "script"
+      }
+    ],
+    "javascript_request_count": 6,
+    "gzip_javascript_bytes": 81213
+  }
+}

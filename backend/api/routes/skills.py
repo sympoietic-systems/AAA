@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from backend.api.deps import get_app_state, get_belief_repo, get_skill_repo, get_skill_service, require_agent_flux
 from backend.api.exceptions import ServiceException
@@ -41,8 +41,8 @@ async def get_skills(request: Request, service=Depends(get_skill_service)):
 
 
 @router.get("/skills/db")
-async def get_db_skills(request: Request, service=Depends(get_skill_service)):
-    result = await service.get_skills()
+async def get_db_skills(request: Request, include_content: bool = Query(True), service=Depends(get_skill_service)):
+    result = await service.get_skills(include_content=include_content)
     logger.info(
         "GET /skills/db: always_active=%d, on_demand=%d, all=%d",
         len(result.get("always_active", [])),

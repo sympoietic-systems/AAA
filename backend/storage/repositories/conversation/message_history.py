@@ -94,10 +94,10 @@ class MessageHistoryRepository(BaseRepository):
                 (conversation_id,) + ((exclude_message_id,) if exclude_message_id is not None else ()) + (limit, offset)
             )
             rows = conn.execute(
-                f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification, cl.parent_message_id,
-                          cl.active_skills, cl.active_beliefs, cl.context_sent, cl.quality_status, cl.quality_receipt,
+                          cl.active_skills, cl.active_beliefs, cl.quality_status, cl.quality_receipt,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -113,10 +113,10 @@ class MessageHistoryRepository(BaseRepository):
             ).fetchall()
         else:
             rows = conn.execute(
-                """SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+                """SELECT cl.id, cl.timestamp, cl.speaker, cl.content,
                           cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                           cl.structural_signature, cl.structural_justification, cl.parent_message_id,
-                          cl.active_skills, cl.active_beliefs, cl.context_sent, cl.quality_status, cl.quality_receipt,
+                          cl.active_skills, cl.active_beliefs, cl.quality_status, cl.quality_receipt,
                           (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                           cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                           cm.agent_divergence, cm.deficit,
@@ -145,10 +145,10 @@ class MessageHistoryRepository(BaseRepository):
             return []
         placeholders = ",".join("?" * len(ids))
         rows = conn.execute(
-            f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content, cl.thinking,
+            f"""SELECT cl.id, cl.timestamp, cl.speaker, cl.content,
                       cl.content_tokens, cl.thinking_tokens, cl.model_used, cl.provider_used,
                       cl.structural_signature, cl.structural_justification, cl.parent_message_id,
-                      cl.active_skills, cl.active_beliefs, cl.context_sent, cl.quality_status, cl.quality_receipt,
+                      cl.active_skills, cl.active_beliefs, cl.quality_status, cl.quality_receipt,
                       (cl.context_sent IS NOT NULL AND cl.context_sent != '') AS has_context,
                       cm.s_t, cm.novelty, cm.rolling_entropy, cm.coupling,
                       cm.agent_divergence, cm.deficit,

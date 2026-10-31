@@ -49,3 +49,9 @@ export async function getSkillEvents(limit = 50): Promise<SkillEventInfo[]> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export async function getDbSkillSummaries(): Promise<import("./types").DbSkillSummaryResponse> {
+  const res = await apiFetch(`${BASE}/skills/db?include_content=false`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

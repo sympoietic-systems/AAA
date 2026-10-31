@@ -14,10 +14,10 @@ class SkillService:
     def __init__(self, state):
         self._state = state
 
-    async def get_skills(self) -> dict:
-        return await asyncio.to_thread(self._get_skills)
+    async def get_skills(self, include_content: bool = True) -> dict:
+        return await asyncio.to_thread(self._get_skills, include_content)
 
-    def _get_skills(self) -> dict:
+    def _get_skills(self, include_content: bool = True) -> dict:
         state = self._state
         skill_repo = getattr(state, "skill_repo", None)
         if not skill_repo:
@@ -31,11 +31,11 @@ class SkillService:
         proposed = [s for s in all_skills if s.lifecycle_stage == "nucleation"]
 
         return {
-            "always_active": [self._format_skill(s) for s in always_active],
-            "on_demand": [self._format_skill(s) for s in on_demand],
-            "collapsed": [self._format_skill(s) for s in collapsed],
-            "proposed": [self._format_skill(s) for s in proposed],
-            "all": [self._format_skill(s) for s in all_skills],
+            "always_active": [self._format_skill(s, include_content) for s in always_active],
+            "on_demand": [self._format_skill(s, include_content) for s in on_demand],
+            "collapsed": [self._format_skill(s, include_content) for s in collapsed],
+            "proposed": [self._format_skill(s, include_content) for s in proposed],
+            "all": [self._format_skill(s, include_content) for s in all_skills],
         }
 
     async def update_skill_details(
@@ -228,7 +228,7 @@ class SkillService:
             sections.append("Follow the instructions below when this skill is active.\n")
         return "".join(sections)
 
-    def _format_skill(self, skill: SkillNode) -> dict:
+    def _format_skill(self, skill: SkillNode, include_content: bool = True) -> dict:
         trigger_keywords = []
         try:
             trigger_keywords = json.loads(skill.trigger_keywords) if skill.trigger_keywords else []
@@ -254,8 +254,11 @@ class SkillService:
             "id": skill.id,
             "name": skill.name,
             "description": skill.description,
-            "content": skill.content,
-            "short_content": skill.short_content,
+            **(
+                {"content": skill.content, "short_content": skill.short_content}
+                if include_content
+                else {"content_loaded": False}
+            ),
             "always_active": skill.always_active,
             "trigger_keywords": trigger_keywords,
             "lifecycle_stage": skill.lifecycle_stage,

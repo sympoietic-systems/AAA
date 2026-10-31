@@ -1,3 +1,4 @@
+import "katex/dist/katex.min.css"
 import type { Options } from "react-markdown"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize from "rehype-sanitize"

@@ -4,6 +4,7 @@ import { checkAuthStatus, verifyPassword, logout, getAgent } from "./api/client"
 import type { AuthCheckResult } from "./api/auth"
 import { SESSION_EXPIRED_EVENT } from "./api/http"
 import { setNotificationSession } from "./stores/notificationStore"
+import { setTelemetrySession } from "./stores/pollingChannel"
 import { RouteErrorBoundary } from "./components/shared/RouteErrorBoundary"
 
 const TeaserPreview = lazy(() => import("./components/TeaserPreview").then(m => ({ default: m.TeaserPreview })))
@@ -44,12 +45,14 @@ export default function App() {
 
   useEffect(() => {
     setNotificationSession(authState.authenticated)
-    return () => setNotificationSession(false)
-  }, [authState.authenticated])
+    setTelemetrySession(authState.authenticated || !authState.authEnabled)
+    return () => { setNotificationSession(false); setTelemetrySession(false) }
+  }, [authState.authenticated, authState.authEnabled])
 
   useEffect(() => {
     const expire = () => {
       setNotificationSession(false)
+      setTelemetrySession(false)
       setAuthState({ status: "locked", authenticated: false, authEnabled: true })
     }
     window.addEventListener(SESSION_EXPIRED_EVENT, expire)
@@ -76,6 +79,7 @@ export default function App() {
     try {
       await logout()
       setNotificationSession(false)
+      setTelemetrySession(false)
       setAuthState({ status: "locked", authenticated: false, authEnabled: true })
       navigate("/")
     } catch (error) {

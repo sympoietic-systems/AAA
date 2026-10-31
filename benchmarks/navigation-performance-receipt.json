@@ -1,0 +1,76 @@
+{
+  "scope": "synthetic seeded archive; cached query embedding; no network/models",
+  "python": "3.13.16",
+  "numpy": "2.4.6",
+  "messages": 4000,
+  "samples": 20,
+  "baseline": {
+    "median_seconds": 0.8407877790014027,
+    "p95_seconds": 0.9119268828930217,
+    "event_loop_p95_seconds": 0.9111731714587659,
+    "mean_seconds": 0.8459741414510062,
+    "stdev_seconds": 0.041595477388933724,
+    "queries_per_second": 1.1820692276537084
+  },
+  "candidate": {
+    "median_seconds": 0.0639634399994975,
+    "p95_seconds": 0.08847595001716412,
+    "event_loop_p95_seconds": 0.03650110789499024,
+    "mean_seconds": 0.07496105290338165,
+    "stdev_seconds": 0.04115053897413398,
+    "queries_per_second": 13.340260859047884
+  },
+  "speedup": 13.144818024296505,
+  "peak_process_rss_kib": 846688,
+  "date": "2026-10-31",
+  "baseline_revision": "d2a2346",
+  "environment": {
+    "machine": "x86_64",
+    "kernel": "7.2.8-9-omarchy",
+    "logical_cpus": 8,
+    "node": "v26.8.1",
+    "vite": "8.0.13"
+  },
+  "gates": {
+    "median_at_least_50_percent_faster": true,
+    "event_loop_p95_at_most_50ms": true
+  },
+  "payloads": {
+    "python": "3.13.16",
+    "samples": 20,
+    "warmup": 1,
+    "skills": {
+      "count": 89,
+      "full_bytes": 688450,
+      "compact_bytes": 99092,
+      "full": {
+        "median_seconds": 0.0008277064916910604,
+        "p95_seconds": 0.00110624500666745
+      },
+      "compact": {
+        "median_seconds": 0.0007934814930194989,
+        "p95_seconds": 0.0008744520018808544
+      }
+    },
+    "history": {
+      "count": 50,
+      "full_string_chars": 2243940,
+      "compact_string_chars": 43940,
+      "full": {
+        "median_seconds": 0.004171502499957569,
+        "p95_seconds": 0.004734026995720342
+      },
+      "compact": {
+        "median_seconds": 0.0039387540018651634,
+        "p95_seconds": 0.004188531980616972
+      }
+    },
+    "peak_process_rss_kib": 830072
+  },
+  "rejected_candidate": {
+    "description": "batched worker without periodic GIL yield",
+    "median_seconds": 0.06788642999890726,
+    "event_loop_p95_seconds": 0.056687551820185186,
+    "gate_passed": false
+  }
+}
