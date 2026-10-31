@@ -49,6 +49,20 @@ tests, build and lint. Backend Ruff checks and the configured strict mypy slice
 deprecation warning. Regression checks cover worker-thread execution, the indexed
 query plan, health endpoint authorization/validation, and deferred frontend reads.
 
+## Production verification
+
+The tested commit was deployed to `100.111.85.100` on 2026-10-31 after an online
+database backup passed its integrity check. Before deployment, beliefs took 2.631
+seconds and an overlapping conversation-list request took 3.316 seconds. After
+deployment, the overlapping conversation request took 0.102 seconds. A subsequent
+check through the frontend proxy returned conversations in 0.020 seconds, beliefs
+in 0.308 seconds, and health in 0.048 seconds (281 bytes). These are individual
+server-local probes, not browser latency percentiles.
+
+The live browser loaded the built frontend; authenticated API proxy checks passed,
+anonymous protected requests returned 401, and migration 070 was recorded. Both
+AAA services were online under the existing `www-data` PM2 instance.
+
 ## Rollout
 
 After updating the checkout, back up the production database, apply migration 070
@@ -65,3 +79,14 @@ This builds before serving and fails on build errors. Confirm the HTML reference
 `/assets/` rather than `/src/`, confirm API proxy/auth behavior, and time the
 authenticated health, beliefs and conversation endpoints. Preserve the previous
 commit and bundle for rollback; the added index can remain during code rollback.
+
+An older PM2 entry may execute the shell script directly. `startOrRestart` can
+retain that executable while updating its arguments to the new Bash layout,
+passing the script path as its own mode argument. If HTML still references `/src/`,
+recreate only the frontend entry:
+
+```bash
+pm2 delete aaa-frontend
+pm2 start ecosystem.config.cjs --only aaa-frontend
+pm2 save
+```

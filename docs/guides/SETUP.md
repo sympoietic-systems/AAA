@@ -227,6 +227,7 @@ Each service runs as a separate PM2 app for independent monitoring, logging, and
 
 PM2 builds and serves the frontend production bundle by default. For local hot reload, use `pm2 start ecosystem.config.cjs --only aaa-frontend --env development`.
 When updating an existing PM2 installation, reload the configuration with `pm2 startOrRestart ecosystem.config.cjs --only aaa-frontend --update-env`; a plain process restart retains the previously saved arguments and environment.
+If the existing entry executes `scripts/run_frontend.sh` directly instead of `/usr/bin/bash`, recreate only that entry with `pm2 delete aaa-frontend` followed by `pm2 start ecosystem.config.cjs --only aaa-frontend` and `pm2 save`. PM2 can retain the old executable while updating arguments, which leaves this older launch layout in development mode. Verify the served HTML references `/assets/`.
 
 **Option C — Raw (manual)**
 
