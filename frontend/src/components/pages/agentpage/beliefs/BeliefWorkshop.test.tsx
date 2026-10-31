@@ -242,7 +242,11 @@ it("V13 V20 keeps a nondefault agent through deep-link list, receipt, decision a
     expect(screen.queryByRole("button", { name: "[ refine ]" })).toBeNull()
     fireEvent.click(screen.getByRole("button", { name: "[record decision]" }))
     await screen.findByText(/Recorded decision d1/)
-    await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/beliefs?agent_id=other"))).toHaveLength(2))
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => {
+      const request = new URL(String(url))
+      return request.pathname === "/api/beliefs" && request.searchParams.get("agent_id") === "other"
+        && request.searchParams.get("include_history") === "false"
+    })).toHaveLength(2))
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/agents/other/assessments/a1"))).toBe(true)
     expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/agents/other/records/claim/decisions") && init?.method === "POST")).toBe(true)
   } finally { window.history.replaceState(null, "", originalUrl) }

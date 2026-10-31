@@ -1,14 +1,19 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest"
 import type { BeliefEventInfo, BeliefNodeInfo } from "../../../../api/types"
 import { BeliefDetail } from "./BeliefDetail"
+import { getBeliefHistory, getBeliefTimeseries } from "../../../../api/client"
+import { apiFetch } from "../../../../api/http"
 
 vi.mock("../../../../api/http", () => ({ apiFetch: vi.fn().mockResolvedValue({ json: async () => [] }) }))
 vi.mock("../../../../api/beliefReview", () => ({ getBeliefReview: vi.fn().mockRejectedValue(new Error("Review unavailable in legacy fixture")) }))
-vi.mock("../../../../api/client", () => ({ getBeliefTimeseries: vi.fn().mockResolvedValue({ points: [], span_days: 0, bucket_size: "none" }) }))
+vi.mock("../../../../api/client", () => ({
+  getBeliefTimeseries: vi.fn().mockResolvedValue({ points: [], span_days: 0, bucket_size: "none" }),
+  getBeliefHistory: vi.fn().mockResolvedValue({ events: [], admission_history: [] }),
+}))
 vi.mock("../../../UI/StructuralAutopoieticGlyph", () => ({ StructuralAutopoieticGlyph: () => null }))
 vi.mock("../../../UI/BeliefTimelineChart", () => ({ BeliefTimelineChart: () => null }))
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.clearAllMocks() })
 
 function show(events: BeliefEventInfo[]) {
   const belief: BeliefNodeInfo = {
@@ -43,4 +48,35 @@ it("V17 displays the measured mass delta rather than rounded legacy rationale", 
   show([{ ...base, delta_mass: -0.002, confidence_delta: 0, impact_quantity: "ontological_mass", impact_unit: "mass" }])
   expect(screen.getByText("(-0.002)")).toBeTruthy()
   expect(screen.queryByText("(+0.150)")).toBeNull()
+})
+
+const compactBelief: BeliefNodeInfo = {
+  id: "compact", label: "Compact", statement: "Load only selected history.", category: "methodological",
+  confidence: 0.8, ontological_mass: 1, version: 1, vector_16d: "[]", origin: "authored",
+  lifecycle_stage: "crystallized", last_reinforced_at: null, updated_at: null, events: [], history_loaded: false,
+}
+
+it("loads selected history and defers chart and version requests until their tabs open", async () => {
+  render(<BeliefDetail belief={compactBelief} activeBeliefs={[]} onUpdate={vi.fn()} onDelete={vi.fn()} agentFlux={false} />)
+  await waitFor(() => expect(getBeliefHistory).toHaveBeenCalledWith("compact", "symbia"))
+  expect(getBeliefTimeseries).not.toHaveBeenCalled()
+  expect(apiFetch).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole("button", { name: /Chart/ }))
+  await waitFor(() => expect(getBeliefTimeseries).toHaveBeenCalledWith("compact", 30))
+  fireEvent.click(screen.getByRole("button", { name: /Version History/ }))
+  await waitFor(() => expect(apiFetch).toHaveBeenCalledWith("/api/beliefs/compact/versions"))
+})
+
+it("ignores a previous agent's late history response", async () => {
+  let finishOld!: (value: { events: BeliefEventInfo[] }) => void
+  vi.mocked(getBeliefHistory).mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve }))
+  vi.mocked(getBeliefHistory).mockResolvedValueOnce({ events: [{ ...base, description: "Current agent history" }] })
+  const props = { belief: compactBelief, activeBeliefs: [], onUpdate: vi.fn(), onDelete: vi.fn(), agentFlux: false }
+  const view = render(<BeliefDetail {...props} agentId="old-agent" />)
+  view.rerender(<BeliefDetail {...props} agentId="new-agent" />)
+  fireEvent.click(screen.getByRole("button", { name: /Log/ }))
+  expect(await screen.findByText("Current agent history")).toBeTruthy()
+  await act(async () => finishOld({ events: [{ ...base, description: "Stale agent history" }] }))
+  expect(screen.queryByText("Stale agent history")).toBeNull()
+  expect(screen.getByText("Current agent history")).toBeTruthy()
 })

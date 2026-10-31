@@ -30,9 +30,14 @@ beliefs with histories gave these medians:
 These are local read-path measurements, not production latency or an end-to-end
 reproduction of the reported minute-long delay. The original local conversation
 list query took about 6 ms. Production data volume, disk contention and network
-latency still need measurement during rollout. The full beliefs view continues to
-include bounded event histories; fetching only a selected belief's history is a
-possible later improvement.
+latency still need measurement during rollout. Existing API callers still receive bounded histories by default. The Beliefs tab
+now requests `include_history=false` and retrieves only a selected belief's
+histories through `GET /api/beliefs/{belief_id}/history?agent_id=symbia`. Compact
+items carry `history_loaded=false` so omitted histories are distinct from empty
+histories. The detail view ignores responses from a previous selection or agent;
+version and chart requests wait until their respective tabs are opened. A local
+read-path check reduced the list from 2.49 MB to 133 KB (about 95%) and from
+101 ms to 7 ms, before network transfer.
 
 Reproduce without modifying the source database:
 
@@ -43,7 +48,7 @@ uv run python -m scripts.benchmark_navigation --database /path/to/aaa.db --sampl
 The command copies SQLite into a temporary directory, compares indexed and
 unindexed reads there, emits aggregate JSON, and removes the copy on exit.
 
-Validation: the full Python suite passed 1,266 tests; the frontend passed 169
+Validation: the full Python suite passed 1,270 tests; the frontend passed 171
 tests, build and lint. Backend Ruff checks and the configured strict mypy slice
 (120 source files) passed. The Python suite retains one third-party `mobi`
 deprecation warning. Regression checks cover worker-thread execution, the indexed

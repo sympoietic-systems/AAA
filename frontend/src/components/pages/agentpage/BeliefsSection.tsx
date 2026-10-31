@@ -77,7 +77,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
   const detailRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    getBeliefs(undefined, agentId)
+    getBeliefs(undefined, agentId, false)
       .then(setData)
       .catch(e => setError(e.message || "Failed to fetch beliefs"))
 
@@ -289,7 +289,7 @@ function BeliefsSectionComponent({ initialSelectedId }: BeliefsSectionProps) {
               onUpdate={handleUpdate}
               onDelete={handleDeleteSuccess}
               onReload={() => {
-                getBeliefs(undefined, agentId)
+                getBeliefs(undefined, agentId, false)
                   .then(setData)
                   .catch(e => setError(e.message || "Failed to fetch beliefs"))
               }}

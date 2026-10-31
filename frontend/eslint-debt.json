@@ -16,7 +16,6 @@
   "src/components/pages/agentpage/TraitsPanel.tsx|@typescript-eslint/no-explicit-any|2": 1,
   "src/components/pages/agentpage/beliefs/BeliefDetail.tsx|@typescript-eslint/no-explicit-any|2": 12,
   "src/components/pages/agentpage/beliefs/BeliefDetail.tsx|no-empty|2": 1,
-  "src/components/pages/agentpage/beliefs/BeliefDetail.tsx|react-hooks/exhaustive-deps|1": 1,
   "src/components/pages/agentpage/beliefs/BeliefDetail.tsx|react-hooks/set-state-in-effect|2": 3,
   "src/components/pages/agentpage/beliefs/NewBeliefForm.tsx|@typescript-eslint/no-explicit-any|2": 1,
   "src/components/pages/agentpage/daily/DailyDetailPanel.tsx|@typescript-eslint/no-explicit-any|2": 1,

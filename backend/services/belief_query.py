@@ -26,8 +26,10 @@ class BeliefQueryUseCases(BeliefUseCase):
             ecosystem = await engine.compute_ecosystem_health(agent_id)
         return {"somatic": None, "ecosystem": ecosystem}
 
-    async def get_beliefs(self, conversation_id: str | None = None, agent_id: str = "symbia") -> BeliefResult:
-        result = await asyncio.to_thread(self._get_beliefs, conversation_id, agent_id)
+    async def get_beliefs(
+        self, conversation_id: str | None = None, agent_id: str = "symbia", include_history: bool = True
+    ) -> BeliefResult:
+        result = await asyncio.to_thread(self._get_beliefs, conversation_id, agent_id, include_history)
         belief_repo = getattr(self._state, "belief_repo", None)
         if not belief_repo:
             return result
@@ -40,7 +42,7 @@ class BeliefQueryUseCases(BeliefUseCase):
                 logger.exception("Error computing ecosystem health")
         return result
 
-    def _get_beliefs(self, conversation_id: str | None, agent_id: str) -> BeliefResult:
+    def _get_beliefs(self, conversation_id: str | None, agent_id: str, include_history: bool = True) -> BeliefResult:
         state = self._state
         belief_repo = cast(BeliefQueryRepository | None, getattr(state, "belief_repo", None))
         engine = getattr(state, "belief_metabolism", None)
@@ -62,7 +64,7 @@ class BeliefQueryUseCases(BeliefUseCase):
             if b.lifecycle_stage not in ("crystallized", "senescence"):
                 continue
 
-            events = belief_repo.get_events_for_belief(b.id)
+            events = belief_repo.get_events_for_belief(b.id) if include_history else []
             if b.ontological_mass >= 1.5:
                 cat = "foundational"
             elif b.ontological_mass >= 1.2:
@@ -85,7 +87,8 @@ class BeliefQueryUseCases(BeliefUseCase):
                     "last_reinforced_at": b.last_reinforced_at.isoformat() if b.last_reinforced_at else None,
                     "updated_at": b.updated_at.isoformat() if b.updated_at else None,
                     "events": [serialize_belief_event(e) for e in events],
-                    "admission_history": belief_repo.get_admission_history(b.id),
+                    "admission_history": belief_repo.get_admission_history(b.id) if include_history else [],
+                    "history_loaded": include_history,
                 }
             )
 
@@ -162,6 +165,18 @@ class BeliefQueryUseCases(BeliefUseCase):
             "attractor_window": attractor_window,
             "spectral_margin": spectral_margin,
             "ecosystem": None,
+        }
+
+    async def get_belief_history(self, belief_id: str, agent_id: str = "symbia") -> BeliefResult:
+        return await asyncio.to_thread(self._get_belief_history, belief_id, agent_id)
+
+    def _get_belief_history(self, belief_id: str, agent_id: str) -> BeliefResult:
+        repo = cast(BeliefQueryRepository | None, getattr(self._state, "belief_repo", None))
+        if not repo or not repo.get_belief(agent_id, belief_id):
+            raise LookupError("Belief not found")
+        return {
+            "events": [serialize_belief_event(event) for event in repo.get_events_for_belief(belief_id)],
+            "admission_history": repo.get_admission_history(belief_id),
         }
 
     async def get_belief_timeseries(

@@ -34,8 +34,9 @@ export async function synthesizeMergeStatement(proposalId: string, targetBeliefI
   return res.json()
 }
 
-export async function getBeliefs(conversationId?: string, agentId = "symbia"): Promise<BeliefsResponse> {
+export async function getBeliefs(conversationId?: string, agentId = "symbia", includeHistory = true): Promise<BeliefsResponse> {
   const query = new URLSearchParams()
+  if (!includeHistory) query.set("include_history", "false")
   if (conversationId) query.set("conversation_id", conversationId)
   if (agentId !== "symbia") query.set("agent_id", agentId)
   const params = query.size ? `?${query}` : ""
@@ -69,6 +70,13 @@ export async function revertBelief(beliefId: string, version: number): Promise<{
 
 export async function getBeliefTimeseries(beliefId: string, days: number = 30): Promise<BeliefTimeseriesResponse> {
   const res = await apiFetch(`${BASE}/beliefs/${beliefId}/timeseries?days=${days}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function getBeliefHistory(beliefId: string, agentId = "symbia"): Promise<Pick<BeliefNodeInfo, "events" | "admission_history">> {
+  const query = new URLSearchParams({ agent_id: agentId })
+  const res = await apiFetch(`${BASE}/beliefs/${encodeURIComponent(beliefId)}/history?${query}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

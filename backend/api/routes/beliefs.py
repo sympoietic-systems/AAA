@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel
 
 from backend.api.deps import get_belief_repo, get_belief_service, require_agent_flux
@@ -56,12 +56,27 @@ async def get_beliefs(
     request: Request,
     conversation_id: str | None = None,
     agent_id: str = "symbia",
+    include_history: bool = Query(default=True),
     belief_repo=Depends(get_belief_repo),
     service=Depends(get_belief_service),
 ):
     if not belief_repo:
         raise HTTPException(status_code=503, detail="Belief repository not initialized")
-    return await service.get_beliefs(conversation_id=conversation_id, agent_id=agent_id)
+    return await service.get_beliefs(
+        conversation_id=conversation_id, agent_id=agent_id, include_history=include_history
+    )
+
+
+@router.get("/beliefs/{belief_id}/history")
+async def get_belief_history(
+    belief_id: str = Path(min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    agent_id: str = Query(default="symbia", min_length=1, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$"),
+    service=Depends(get_belief_service),
+):
+    try:
+        return await service.get_belief_history(belief_id, agent_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Belief not found") from exc
 
 
 @router.get("/beliefs/proposals")

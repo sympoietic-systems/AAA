@@ -1,6 +1,6 @@
 import { apiFetch } from "../../../../api/http"
 import { useState, useEffect, useRef, useCallback, memo } from "react"
-import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement, getBeliefTimeseries } from "../../../../api/client"
+import { updateBelief, deleteBelief, revertBelief, vetBeliefProposal, refineBeliefProposal, synthesizeMergeStatement, getBeliefTimeseries, getBeliefHistory } from "../../../../api/client"
 import type { BeliefNodeInfo, BeliefTimeseriesPoint } from "../../../../api/client"
 import { computeLineDiff } from "../../../../utils/diff"
 import { formatTime, formatDateTimeFull } from "../../../../utils/dateFormat"
@@ -85,6 +85,22 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
 
   const [versions, setVersions] = useState<any[]>([])
   const [expandedVersions, setExpandedVersions] = useState<Record<number, boolean>>({})
+  const [history, setHistory] = useState<{
+    key: string; data: Pick<BeliefNodeInfo, "events" | "admission_history"> | null; error: string | null
+  } | null>(null)
+  const historyKey = `${agentId}/${belief?.id}`
+  const historyPending = belief?.history_loaded === false && history?.key !== historyKey
+  const historyError = history?.key === historyKey ? history.error : null
+  useEffect(() => {
+    if (!belief || belief.is_proposal || belief.history_loaded !== false) return
+    let current = true
+    const key = `${agentId}/${belief.id}`
+    getBeliefHistory(belief.id, agentId)
+      .then(data => { if (current) setHistory({ key, data, error: null }) })
+      .catch(error => { if (current) setHistory({ key, data: null, error: String(error) }) })
+    return () => { current = false }
+  }, [belief, agentId])
+
   const [activeTab, setActiveTab] = useState<DetailTab>("details")
   const [timeseriesPoints, setTimeseriesPoints] = useState<BeliefTimeseriesPoint[]>([])
   const [timeseriesSpanDays, setTimeseriesSpanDays] = useState(0)
@@ -132,23 +148,32 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       else if (activeBeliefs && activeBeliefs.length > 0) setTargetBeliefId(activeBeliefs[0].id)
       return
     }
-    apiFetch(`/api/beliefs/${belief.id}/versions`)
-      .then(res => res.json()).then(data => { if (Array.isArray(data)) setVersions(data) })
-      .catch(e => console.error("Failed to load belief versions:", e))
   }, [belief, activeBeliefs])
 
-  // Fetch timeseries when belief changes or chart tab selected
+  useEffect(() => {
+    if (!belief || belief.is_proposal || activeTab !== "version") return
+    let current = true
+    apiFetch(`/api/beliefs/${encodeURIComponent(belief.id)}/versions`)
+      .then(res => res.json()).then(data => { if (current && Array.isArray(data)) setVersions(data) })
+      .catch(e => console.error("Failed to load belief versions:", e))
+    return () => { current = false }
+  }, [belief, activeTab])
+
+  // Fetch chart data only when the chart is opened.
   useEffect(() => {
     setTimeseriesPoints([]); setTimeseriesSpanDays(0); setTimeseriesBucket("none")
-    if (!belief || belief.is_proposal) return
+    if (!belief || belief.is_proposal || activeTab !== "chart") return
+    let current = true
     getBeliefTimeseries(belief.id, 30)
       .then(data => {
+        if (!current) return
         setTimeseriesPoints(data.points)
         setTimeseriesSpanDays(data.span_days)
         setTimeseriesBucket(data.bucket_size)
       })
       .catch(e => console.error("Failed to load belief timeseries:", e))
-  }, [belief?.id])
+    return () => { current = false }
+  }, [belief, activeTab])
 
   if (!belief) {
     return (
@@ -158,7 +183,9 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
     )
   }
 
-  const b = belief
+  const b = history?.key === historyKey && history.data
+    ? { ...belief, ...history.data, history_loaded: true }
+    : belief
   const catColor = getCategoryColor(b.category)
   const stage = b.lifecycle_stage || "crystallized"
   const stageColor = getBeliefStageColor(stage)
@@ -488,13 +515,15 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
         </div>
       </div>
 
+      {historyPending && <p className="text-[#666]">Loading belief history…</p>}
+      {historyError && <p className="text-[#ef4444]">Failed to load belief history: {historyError}</p>}
       {errorMsg && <div className="text-[#ef4444]">{errorMsg}</div>}
 
       {/* Tab bar: Details • Log • Version • Chart */}
       <TerminalTabs
         tabs={[
           { key: "details", label: "Details" },
-          { key: "log", label: "Log", badge: b.events?.length ?? 0 },
+          { key: "log", label: "Log", badge: b.history_loaded === false ? undefined : b.events?.length ?? 0 },
           { key: "version", label: "Version History", badge: versions.length },
           { key: "chart", label: "Chart", badge: timeseriesPoints.length || undefined },
         ]}
@@ -531,7 +560,7 @@ export const BeliefDetail = memo(function BeliefDetail({ belief, activeBeliefs =
       {activeTab === "log" && (
         <div>
           <div className="text-[#555] font-mono text-[10px] uppercase">[ Metabolism Events ]</div>
-          {(!b.events || b.events.length === 0) ? (
+          {historyPending || historyError ? null : (!b.events || b.events.length === 0) ? (
             <div className="text-[#444] italic mt-0.5 font-mono">No metabolic events logged</div>
           ) : (
             <div className="space-y-2 max-h-[320px] overflow-y-auto mt-1">

@@ -32,7 +32,11 @@ def timings(call, samples):
 
 async def payload_timings(query, samples):
     result = {}
-    for name, call in (("full_beliefs", query.get_beliefs), ("health", query.get_health)):
+    for name, call in (
+        ("full_beliefs", query.get_beliefs),
+        ("compact_beliefs", lambda: query.get_beliefs(include_history=False)),
+        ("health", query.get_health),
+    ):
         values = []
         size = 0
         for _ in range(samples):
