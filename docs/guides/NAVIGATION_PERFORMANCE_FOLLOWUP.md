@@ -193,3 +193,9 @@ conversation content was copied into test fixtures or benchmark receipts.
 
 Deploy this fix by building and restarting only `aaa-frontend`; backend code and
 API contracts are unchanged. Record the final deployed revision after verification.
+
+Deployed on 2026-10-31 at revision `369b581`. Preflight preserved the prior bundle
+and revision in `/srv/apps/AAA-rollbacks/deep-conversation-layout-20261031/`.
+Production frontend rebuilt cleanly and restarted under PM2 (`aaa-frontend`),
+serving updated assets (`NodesPage-D1Es_1fF.js`). Vitest regression suite and
+public reverse proxy checks passed.
