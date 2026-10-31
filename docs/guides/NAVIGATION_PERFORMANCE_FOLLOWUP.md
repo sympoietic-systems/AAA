@@ -175,3 +175,21 @@ Aggregate live evidence is in
 [`navigation-production-receipt.json`](../../benchmarks/navigation-production-receipt.json).
 The subsequent documentation-only commit records these results; it does not require
 another service restart.
+
+## Deep conversation crash follow-up
+
+A reported conversation with 2,088 nodes and a 2,084-level parent chain crashed
+inside the recursive connection-cloud position assignment with `RangeError:
+Maximum call stack size exceeded`. Both its tree and selected-message path APIs
+returned 200; this was a frontend layout failure rather than a failed history read.
+
+The cloud now uses iterative depth, subtree-weight and position traversals. It
+preserves the deployed coordinate calculations and node ordering. Regression tests
+cover a 20,000-message chain, frozen branch/multiple-root coordinates and missing
+parents. The new helper is included in strict TypeScript checking. A production
+build rendered the original conversation at message 3720 through a loopback-only,
+read-only proxy and displayed all 2,088 nodes without the route fallback. No
+conversation content was copied into test fixtures or benchmark receipts.
+
+Deploy this fix by building and restarting only `aaa-frontend`; backend code and
+API contracts are unchanged. Record the final deployed revision after verification.

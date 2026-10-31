@@ -12,6 +12,7 @@
     "src/hooks/useArchiveSearch.ts", "src/hooks/useConversationFiles.ts", "src/hooks/useNotes.ts",
     "src/stores/notificationStore.ts", "src/stores/pollingChannel.ts", "src/components/pages/researchpage/shared/useTaskPolling.ts",
     "src/components/shared/RouteErrorBoundary.tsx",
-    "src/components/panels/leftpanel/ConnectionCloudRenderer.ts"
+    "src/components/panels/leftpanel/ConnectionCloudRenderer.ts",
+    "src/components/panels/leftpanel/connectionCloudLayout.ts"
   ]
 }

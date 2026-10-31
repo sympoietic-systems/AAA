@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState, memo } from "react"
 
+import { assignRadialTargets } from "./connectionCloudLayout"
 import { drawConnectionCloud } from "./ConnectionCloudRenderer"
 
 
@@ -250,135 +251,8 @@ function ConnectionCloud({
     const totalNodes = newNodes.length
     const cx = dimensions.width / 2
     const cy = dimensions.height / 2
-    const baseRadius = Math.min(dimensions.width, dimensions.height) * 0.45
 
-    // Build parent-child mapping for structure
-    const nodeMap = new Map<string, SimNode>()
-    newNodes.forEach((n) => nodeMap.set(n.id, n))
-
-    const childrenMap = new Map<string, string[]>()
-    const childToParent = new Map<string, string>()
-
-    newNodes.forEach((n) => {
-      if (n.parentMsgId !== null && n.parentMsgId !== undefined) {
-        const parentId = String(n.parentMsgId)
-        if (nodeMap.has(parentId)) {
-          childToParent.set(n.id, parentId)
-          if (!childrenMap.has(parentId)) {
-            childrenMap.set(parentId, [])
-          }
-          childrenMap.get(parentId)!.push(n.id)
-        }
-      }
-    })
-
-    // Identify roots
-    const roots = newNodes.filter((n) => !childToParent.has(n.id)).map((n) => n.id)
-
-    // Calculate subtree weights (count of leaf descendants)
-    const subtreeWeights = new Map<string, number>()
-    const calculateWeight = (id: string): number => {
-      const children = childrenMap.get(id) || []
-      if (children.length === 0) {
-        subtreeWeights.set(id, 1)
-        return 1
-      }
-      let weight = 0
-      children.forEach((childId) => {
-        weight += calculateWeight(childId)
-      })
-      subtreeWeights.set(id, weight)
-      return weight
-    }
-    roots.forEach((rootId) => calculateWeight(rootId))
-
-    // Calculate depths
-    const nodeDepths = new Map<string, number>()
-    const calculateDepths = (id: string, depth: number) => {
-      nodeDepths.set(id, depth)
-      const children = childrenMap.get(id) || []
-      children.forEach((childId) => calculateDepths(childId, depth + 1))
-    }
-    roots.forEach((rootId) => calculateDepths(rootId, 0))
-
-    let maxDepth = 0
-    nodeDepths.forEach((d) => {
-      if (d > maxDepth) maxDepth = d
-    })
-
-    // Assign positions recursively with spiral/zigzag layout to prevent overlaps
-    const assignPositions = (
-      id: string,
-      minAngle: number,
-      maxAngle: number,
-      parentAngle: number,
-      direction: 1 | -1
-    ) => {
-      const node = nodeMap.get(id)
-      if (!node) return
-
-      const depth = nodeDepths.get(id) || 0
-      const radius = depth > 0 ? 20 + (depth / (maxDepth || 1)) * (baseRadius - 20) : 0
-
-      let angle = parentAngle
-      let nextDirection = direction
-      const isFullCircle = (maxAngle - minAngle) >= 2 * Math.PI - 0.01
-
-      if (depth > 0) {
-        const targetSpacing = 28
-        const step = radius > 0 ? Math.min(0.6, targetSpacing / radius) : 0.6
-
-        if (isFullCircle) {
-          angle = parentAngle + step
-        } else {
-          angle = parentAngle + direction * step
-          if (angle > maxAngle) {
-            angle = maxAngle - (angle - maxAngle)
-            nextDirection = -1
-          } else if (angle < minAngle) {
-            angle = minAngle + (minAngle - angle)
-            nextDirection = 1
-          }
-        }
-      }
-
-      const clampedAngle = isFullCircle ? angle : Math.max(minAngle, Math.min(maxAngle, angle))
-
-      node.targetX = cx + radius * Math.cos(clampedAngle)
-      node.targetY = cy + radius * Math.sin(clampedAngle)
-
-      const children = childrenMap.get(id) || []
-      if (children.length > 0) {
-        const totalWeight = subtreeWeights.get(id) || 1
-        const angleSpan = maxAngle - minAngle
-        let currentAngle = minAngle
-
-        children.forEach((childId) => {
-          const childWeight = subtreeWeights.get(childId) || 1
-          const childSpan = (childWeight / totalWeight) * angleSpan
-          const nextAngle = currentAngle + childSpan
-          assignPositions(childId, currentAngle, nextAngle, clampedAngle, nextDirection)
-          currentAngle = nextAngle
-        })
-      }
-    }
-
-    // Distribute roots around 360 degrees
-    if (roots.length > 0) {
-      let totalRootWeight = 0
-      roots.forEach((r) => {
-        totalRootWeight += subtreeWeights.get(r) || 1
-      })
-
-      let currentAngle = 0
-      roots.forEach((rootId) => {
-        const rootWeight = subtreeWeights.get(rootId) || 1
-        const rootSpan = (rootWeight / totalRootWeight) * 2 * Math.PI
-        const centerAngle = currentAngle + rootSpan / 2
-        assignPositions(rootId, currentAngle, currentAngle + rootSpan, centerAngle, 1)
-        currentAngle += rootSpan
-      })
-    }
+    assignRadialTargets(newNodes, dimensions.width, dimensions.height)
 
     // Apply target positions to nodes and recover previous positions to prevent jumpiness
     for (let i = 0; i < totalNodes; i++) {
