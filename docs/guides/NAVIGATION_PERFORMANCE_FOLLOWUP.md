@@ -1,7 +1,8 @@
 # Navigation performance follow-up: implementation receipt
 
 Date: 2026-10-31. Baseline: `d2a2346`. Implemented on the isolated
-`perf/navigation-loading` branch. This follow-up has **not** been deployed.
+`perf/navigation-loading` branch. Production rollout was authorized after local verification; live results will be
+recorded below after deployment.
 The primary checkout's unrelated staged refactor was preserved.
 
 ## Behavior
@@ -100,7 +101,7 @@ test cleanup removes shared `*test*.db` files, so concurrent runs interfere.
 
 ## Separate production rollout
 
-This procedure is prepared, not executed for this follow-up. Do not replay the
+The following procedure is authorized for this follow-up. Do not replay the
 previous rollout's migration or rebuild from the dirty primary checkout.
 
 1. SSH as `root@100.111.85.100`. Verify `/srv/apps/AAA` is still the live checkout,
@@ -126,3 +127,11 @@ previous rollout's migration or rebuild from the dirty primary checkout.
 7. Roll back on contract/auth drift, leaked request chains, instability or increased
    stalls. Restore the previous code revision and saved bundle, then restart the
    same services. Do not restore/delete the database; this change has no migration.
+
+## Production rollout record
+
+Deployment authorized on 2026-10-31. Preflight confirmed a clean `/srv/apps/AAA`
+checkout at `d2a2346`, with both AAA services online under `www-data`. The frontend
+uses `/usr/bin/bash scripts/run_frontend.sh` in production mode. Deploy only the
+tested `perf/navigation-loading` revision; preserve the prior bundle and revision.
+Live verification results will be added after restart.
