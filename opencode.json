@@ -8,7 +8,8 @@
     "aaa-consultant": {
       "type": "local",
       "command": ["uv", "run", "python", "backend/mcp_server.py"],
-      "enabled": true
+      "enabled": true,
+      "cwd": "."
     }
   }
 }
