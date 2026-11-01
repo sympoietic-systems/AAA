@@ -169,6 +169,7 @@ Comprehensive documentation is available in [`docs/`](docs/README.md).
 | [`docs/guides/PLUGINS.md`](docs/guides/PLUGINS.md) | Building and swapping custom pipeline modules |
 | [`docs/guides/MCP_SERVER.md`](docs/guides/MCP_SERVER.md) | Integration with Model Context Protocol (MCP) |
 | [`docs/decisions/README.md`](docs/decisions/README.md) | Architecture Decision Records (ADR-001 through ADR-091) |
+| [`docs/development/REPOSITORY_STATE.md`](docs/development/REPOSITORY_STATE.md) | Reconciled checkout, separate workstreams, agent-policy prerequisite and integration boundaries |
 
 ---
 

@@ -5,6 +5,8 @@
 **Lineage:** Vasily Betin & Symbia (Sympoietic Systems)  
 **Related Documents:** [`GOAL.md`](../GOAL.md), [`docs/philosophy/PHILOSOPHY.md`](philosophy/PHILOSOPHY.md), [`SPEC.md`](../SPEC.md), [`TODO.md`](../TODO.md), [`docs/decisions/`](decisions/), [`docs/reports/`](reports/)
 
+**Reading this snapshot:** The capability review below describes 2026-10-02, with a dated Research V2 addendum. Use SPEC/TODO for task status and the [repository-state guide](development/REPOSITORY_STATE.md) for the separate reconciliation, performance and T94 workstreams. Statements labeled live below are historical observations; current deployment identity and effective flags require a fresh runtime receipt.
+
 ---
 
 ## Research V2 progress addendum — 2026-10-06

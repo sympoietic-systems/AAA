@@ -4,9 +4,11 @@ This is the central documentation repository for the **Autopoietic Agentic Assem
 
 > **Governance & Rules:** All documentation must adhere to [`.agents/protocols/DOCUMENTATION.md`](../.agents/protocols/DOCUMENTATION.md) and [`DOCUMENTATION_STANDARDS.md`](DOCUMENTATION_STANDARDS.md).
 >
-> **North Star:** [`GOAL.md`](GOAL.md) (Canonical Project Goals, Invariants & Strategic Horizons).
+> **North Star:** [`GOAL.md`](../GOAL.md) (Canonical Project Goals, Invariants & Strategic Horizons).
 >
-> **Project Direction Record (PDR):** [`PDR.md`](PDR.md) (Comprehensive audit through ADR-103, operational capabilities, gap analysis, and trajectory).
+> **Project Direction Record (PDR):** [`PDR.md`](PDR.md) (Dated 2026-10-02 direction snapshot with a Research V2 addendum; not a current deployment receipt).
+>
+> **Checkout and branch inventory:** [Repository state](development/REPOSITORY_STATE.md) (2026-11-01 reconciliation, separate performance and T94 workstreams, and integration boundaries).
 
 ---
 
@@ -39,6 +41,7 @@ Deep-dive specifications for individual subsystems.
 - [MEMORY_SYSTEM.md](systems/MEMORY_SYSTEM.md) — Rhizomatic memory, semantic knots, and sedimentation.
 - [BELIEF_SYSTEM.md](systems/BELIEF_SYSTEM.md) — Belief graph, attractors, and ontological bifurcation.
 - [BELIEF_SPEC.md](systems/BELIEF_SPEC.md) — Beliefs v2 implementation tasks, invariants, dependencies, and release gates.
+- [HISTORICAL_REVISION_SPEC.md](systems/HISTORICAL_REVISION_SPEC.md) — Planned experiment for source-bound revision, cross-session retention, and useful transfer under controlled history access.
 - [DYNAMIC_PERSONALITY_SYSTEM.md](systems/DYNAMIC_PERSONALITY_SYSTEM.md) — Dynamic autopoietic personality cascade: architecture, data flow, and implementation.
 - [SKILL_SYSTEM.md](systems/SKILL_SYSTEM.md) — Autonomous skill nucleation, accretion, and refinement.
 - [DREAM_DAEMON.md](systems/DREAM_DAEMON.md) — Background cognitive cycles and somatic drift.

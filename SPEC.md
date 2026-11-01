@@ -9,6 +9,7 @@ Close conversation telemetry loop: metrics select observable, provider-supported
 Revalidate conversation benchmark after participant cap removal; prove sensor referents before controller promotion.
 Enact Paskian conversational coupling (ADR-098): 3-beat teachback & operational fork replace unilateral refusal/clarification; ground velocity via Conversational Progress Index ($CPI_t$); validate positive causal task progress in live benchmark.
 Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-assisted selection, optional agential subresearch, bounded provider failure, verifiable diffractive synthesis; contract → [RESEARCH_SPEC.md](docs/systems/RESEARCH_SPEC.md).
+Plan consequential historical revision: source-bound encounter → fresh-session retention + transfer; relevant/withheld/irrelevant-history ablation; contract → [HISTORICAL_REVISION_SPEC.md](docs/systems/HISTORICAL_REVISION_SPEC.md). Plan only in this checkout; separate implementation/development-pilot work → [repository state](docs/development/REPOSITORY_STATE.md).
 
 ## §C
 
@@ -316,6 +317,7 @@ T90|x|add authenticated read-only runtime identity + receipt-coverage endpoint a
 T91|x|finish T37 active/sham/current causal benchmark slice; bounded issue state, abstain, predicate receipts, reachable isolated arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
 T92|x|benchmark Clef/Clef-flash vs Jev via OpenRouter on frozen non-secret fixtures; retain validity, abstention, latency, calibration, failure/cost receipts; no routing change; Report 075|V30,V144,I.benchmark
 T93|x|benchmark EmbeddingGemma 2 text retrieval vs MiniLM in isolated model/dimension namespace; measure recall, latency, memory/storage; no migration|V30,V145,I.benchmark
+T94|.|consequential historical revision experiment; staged tasks T1–T6 and acceptance owned by docs/systems/HISTORICAL_REVISION_SPEC.md; plan only in this checkout, separate implementation/development-pilot work in codex/t94-historical-revision; see docs/development/REPOSITORY_STATE.md; held-out execution blocked|V30,V56,V106,V143,I.benchmark
 T75|.|future TODO: obtain genuine scans + independent page references; evaluate OCR/specialists, reading order/citations, VPS resource/cost/model-license fit; promote parser only after reviewed evidence|V114,V118,V120,I.benchmark
 T78|x|source-bound belief candidates; exact dedupe + Jev shadow + chat/dream parity + immutable completed receipts; reviewed admission UI + timestamped traces/creases; docs + regression/full gates; local verification report 046; production unverified|V126,V127,V107,V23,V30,I.api,I.domain
 

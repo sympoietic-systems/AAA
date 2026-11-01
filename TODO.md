@@ -14,6 +14,8 @@
 
 ## 1. Active Focus: Causal Feedback Control & Initial Operational Closure
 
+- [ ] **Consequential historical revision (SPEC T94):** Follow [the experiment plan](docs/systems/HISTORICAL_REVISION_SPEC.md): pin runtime/config and history paths; freeze task families and independent outcome criteria; implement isolated relevant/withheld/irrelevant-history arms; pilot before held-out evaluation. Include warranted retention and uncertainty; no production enablement. This checkout contains the plan only. Implementation and development-pilot work exists in the separate `codex/t94-historical-revision` worktree; see [repository state](docs/development/REPOSITORY_STATE.md) before starting or duplicating work. Held-out execution remains blocked.
+
 - [x] **Close causal-selector evaluation (SPEC.md §T.37–§T.40; implementation T91):**
   - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts (`704c834`).
   - [x] Run counterbalanced ≥10-pair, 3-scenario ablation (active vs sham vs current): all 90 arms complete; 630/630 participant completions valid; scorecard `inconclusive_proxy_only`. Source receipts: `benchmarks/runs/telemetry/causal_selector_20261014_001`; review closeout: [Report 076](docs/reports/076-causal-selector-semantic-review/README.md).
