@@ -507,3 +507,9 @@ B146|2026-10-14|NVIDIA truncation + intermittent transport errors terminated liv
 B147|2026-10-16|personality loader refactor read identity fields at YAML root, dropping nested research synthesis protocols|resolve core identity and context protocols under `personality`; preserve root-level compatibility; regression test loads real configured contexts; isolate the persona test's structural scorer
 
 B148|2026-10-16|telemetry visualizer test loaded a real embedding model and emitted hardware warnings|inject deterministic embeddings so the visualizer contract test stays offline and hardware-independent
+
+B149|2026-10-31|belief history reads scanned the growing event ledger on the event loop, delaying unrelated navigation|index belief_id + descending timestamp; offload belief reads, timeseries and ecosystem health; regression assertions enforce worker threads and indexed history query plans
+
+B151|2026-11-01|belief-read worker extraction moved one existing broad catch into `_get_beliefs`, but the debt ratchet still assigned both catches to `get_beliefs`|split the existing two-catch allowance across the async and worker boundaries, one each; preserve total debt and the architecture growth test; V29,V31
+
+B152|2026-11-01|pending test relocation dropped consultation message-agent assertions and left its SQLite connection open|restore both message identity/speaker assertions and close the isolated test connection deterministically; V17,V18
