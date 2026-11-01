@@ -25,6 +25,12 @@ The system can now tell whether generation controls crossed the provider boundar
 
 The rejected ladder remains useful as an experimental surface. Its failure prevents a velocity-only change from entering production. Future intervention tests must use a participant that reacts to the generated response; fixed prompt sequences remain valid for resistance and trajectory analysis but cannot measure uptake causally.
 
+## Post-decision evidence addendum (2026-10-16)
+
+The T38 current/sham/active unresolved-issue ablation and its blinded semantic review do not justify promoting the active arm. The complete OpenRouter Gemini 3.8 Flash Medium review rated 630 outcomes across 30 matched cases. Active minus current averaged −0.0857 on the 0–4 scale (95% case-bootstrap interval −0.3000 to 0.1190). The interval includes no difference, and the scorecard’s lexical progress and controller-health comparisons were also inconclusive. Keep the existing production route; do not promote the active T38 arm. This benchmark does not establish that the T38 `current` arm is identical to the complete legacy production controller.
+
+The tested active path stores an opaque issue digest and uses its presence as a Boolean trigger for a generic reframe or counterexample when heuristic signals indicate a stall. It does not pass unresolved-issue content into the model prompt. The run therefore evaluates the intervention trigger, not contentful issue retrieval. A follow-up may test a bounded record of the unresolved question, constraints, and resolving evidence, gated on stalled progress and compared against current under matched prompt and token budgets. Promotion still requires a clear semantic gain and acceptable controller health. See [Report 076](../reports/076-causal-selector-semantic-review/README.md).
+
 ## Verification contracts
 
 - `backend/tests/modules/test_intervention_evaluator.py`: causal ordering, deterministic bootstrap intervals, provider endpoint/model contracts.

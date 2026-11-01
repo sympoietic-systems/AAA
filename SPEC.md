@@ -257,9 +257,9 @@ T34|x|isolate temp DB, controller, conversation, consolidation per arm/repetitio
 T35|x|run 2-pair × 8-turn validity probe; publish completion/format/exclusion audit; ⊥ policy ranking unless V54 passes|V53,V54,V56,I.benchmark
 T36|x|build labeled dead-loop/productive-focus/spiral/disagreement corpus; validate boringness conjunction + state-revision evaluator|V44,V46,V58,V59,I.benchmark
 T37|x|add bounded unresolved-issue state, `abstain`, predicate receipts, mode reachability; implement active/sham/current arms|V45,V50,V58,V60,V61,I.internal,I.benchmark
-T38|.|run counterbalanced ≥10-pair multi-scenario ablation; exclude invalid turns; report dispersion, state revision, disagreement depth, health|V47,V48,V53,V54,V56,V59,V61,V62,I.benchmark
-T39|.|publish Report 020 + ADR amendment; reclassify Report 019 as invalid causal ranking while preserving receipts|V48,V53,V54,V55,V56,V57,V62,I.benchmark
-T40|.|run focused/full backend gates; regenerate figures; link check; clean ephemeral artifacts|V18,V30,V53,V54,V55,V56,V57,V58,V59,V60,V61,V62,I.quality
+T38|x|run counterbalanced ≥10-pair multi-scenario ablation; all 90 arms and 630/630 participant completions valid; scorecard inconclusive_proxy_only; semantic review closed in T39; receipts at benchmarks/runs/telemetry/causal_selector_20261014_001|V47,V48,V53,V54,V56,V59,V61,V62,I.benchmark
+T39|x|complete blinded review closeout and publish Report 076; OpenRouter Gemini 3.8 Flash Medium validated 630/630 ratings over 30/30 cases, active−current −0.0857 [−0.3000, 0.1190]; disclose prior partial passes and reviewer limits; preserve Reports 019/020 receipts; amend ADR-097; retain current production route and block active promotion|V48,V53,V54,V55,V56,V57,V62,I.benchmark
+T40|x|Ruff/format/mypy passed; full suite 1,266 passed (one third-party warning); regenerated Report 019/020 figures; their 7 local links resolve; broader report scan found 17 stale links in unrelated reports; cleaned test/tool caches|V18,V30,V53,V54,V55,V56,V57,V58,V59,V60,V61,V62,I.quality
 T41|x|recover empty truncated LLM completions; preserve credentials on nested retry provider errors; emit bounded dream-budget transitions|V66,V67,I.error
 T42|x|unfilter skill-beliefs in UI, tag `[Skill]` vs `[Belief]`, resolve skill targets gracefully in `merge_proposal` and `synthesize_merge_statement`|V68,I.api
 T43|x|add PDF content detection and fallback extraction via `SimpleChunkDigester` and `pdfplumber` in `RhizomeWebProbe.crawl`|V69,I.domain
@@ -281,7 +281,7 @@ T52|x|persist assembly provenance and audit coverage; review stale skill probes|
 
 T53|x|guard belief context; export independent annotation corpus; implement held-out calibration gates|V107,V103,V56
 T54|x|export real research queries; capture raw pools; independent annotation + frozen three-arm comparisons|V108,V102,V56
-T55|.|apply migration 051 before provenance writers; verify target-like upgrade + new writes|V106,I.db
+T55|x|superseded by T90's read-only runtime identity and receipt-coverage gate; effective deployment migration state remains unknown until the target is queried|V106,I.db
 T56|.|collect prospective activation receipts; audit coverage without inferring response influence|V106,V101
 T57|.|independently label belief pairs; run frozen held-out Jev comparison + shadow; review thresholds|V107,V103,V56
 T58|.|acquire raw research pools; independently label; evaluate held-out arms + downstream citation/usefulness|V108,V102,V56

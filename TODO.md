@@ -2,28 +2,29 @@
 
 > **Governance:** Adhere to [`GOAL.md`](GOAL.md) and [`docs/PDR.md`](docs/PDR.md). Active implementation tasks under Spec-Driven Development live in [`SPEC.md`](SPEC.md).
 
-## Recent Verified Deliveries (2026-10-14)
+## Recent Verified Deliveries (2026-10-14–15)
 
-- [x] **T86 — Freeze quality audit window** (`ecade43`): bounded audit window and invariant V139.
-- [x] **T87 — Release preflight receipt** (`da6e2f6`): API receipt for release readiness.
-- [x] **T88 — Causal selector arms** (`704c834`): deterministic current/sham/active harness; counterbalanced ablation remains open.
-- [x] **T89 — Clef/Jev first-pass comparison**: OpenRouter run completed for Jev, Clef, and Clef Flash; decision: retain Jev for the current route and make no Clef promotion from this single-pass synthetic result. See [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md). Independent labels and repeated runs remain open.
-- [x] **T90 — EmbeddingGemma 2 retrieval harness** (`00d3a55`): synthetic CPU run completed and published as [Report 074](docs/reports/074-embeddinggemma2-retrieval/README.md); production and multimodal evaluation remain open.
+- [x] **T89 — Freeze quality-audit window** (`ecade43`): bounded audit window and invariant V139.
+- [x] **T90 — Release-readiness receipt** (`da6e2f6`): authenticated read-only runtime identity and receipt-coverage endpoint; production state remains unknown until queried.
+- [x] **T91 — Causal selector and run** (`704c834`): current/sham/active harness and 90-arm counterbalanced run; semantic review closed in [Report 076](docs/reports/076-causal-selector-semantic-review/README.md); active remains unpromoted and production retains the existing route.
+- [x] **T92 — Clef/Jev first-pass comparison**: OpenRouter run completed for Jev, Clef, and Clef Flash; retain Jev on the current route. See [Report 075](docs/reports/075-clef-jev-openrouter-comparison/README.md). Independent labels and repeated runs remain open.
+- [x] **T93 — EmbeddingGemma 2 retrieval harness** (`00d3a55`): synthetic CPU run completed and published as [Report 074](docs/reports/074-embeddinggemma2-retrieval/README.md); production-shaped evaluation remains open.
 
 ---
 
 ## 1. Active Focus: Causal Feedback Control & Initial Operational Closure
 
-- [ ] **Complete Report 020 & Benchmark Ablation (SPEC.md §T.37–§T.40):**
-  - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts in the T88 causal selector harness (`704c834`).
-  - [x] Run counterbalanced ≥10-pair, 3-scenario ablation (active vs sham vs current): 90/90 arms complete; participant validity passed; scorecard `inconclusive_proxy_only`; semantic review + Report 020 remain pending. Receipts: `benchmarks/runs/telemetry/causal_selector_20261014_001`.
+- [x] **Close causal-selector evaluation (SPEC.md §T.37–§T.40; implementation T91):**
+  - [x] Implement bounded unresolved-issue state, `abstain` move, and predicate receipts (`704c834`).
+  - [x] Run counterbalanced ≥10-pair, 3-scenario ablation (active vs sham vs current): all 90 arms complete; 630/630 participant completions valid; scorecard `inconclusive_proxy_only`. Source receipts: `benchmarks/runs/telemetry/causal_selector_20261014_001`; review closeout: [Report 076](docs/reports/076-causal-selector-semantic-review/README.md).
   - [x] Add atomic checkpoints/resume and T38 current/sham/active orchestration with counterbalanced order, validity gating, and a credential-free request-count preflight; completed arms reuse receipts, incomplete isolated workers restart from turn 1 (`7a9c86d`, `ba6ee1e`).
   - [x] Lock benchmark model fallback, atomically persist arm receipts, and raise apparatus output ceiling to 2048 (`ba6ee1e`, `84bcc0e`).
   - [x] Allow complete natural-length T38 participant replies while retaining completion/provenance checks; keep the 1–3 sentence gate for legacy runs (B141; saved checkpoint migrated and revalidated).
   - [x] Support comma-separated NVIDIA key fallback with bounded 3-round rate-limit retries and increasing 10s/20s backoff; full backend suite verified.
   - [x] Retry NVIDIA participant timeout/connect/TLS failures through configured key rotation and bounded backoff (B142, `823dc2e`).
   - [x] Recover NVIDIA length truncation with same-model token-budget doubling ≤8192; automatically retry failed isolated arms ≤3 times while retaining completed receipts and clearing partial state (B143, `bde7c83`).
-  - Publish Report 020 and amend ADR-097; reclassify Report 019 while preserving receipts.
+  - [x] Complete a blinded OpenRouter review with Gemini 3.8 Flash Medium: 30/30 calls and 630/630 ratings validated. Active−current averaged −0.0857 [−0.3000, 0.1190] on the 0–4 scale; all semantic-review intervals include zero. Preserve the earlier partial review results as separate model judgments; they are not human gold.
+  - [x] Publish Report 076 and amend ADR-097. Report 019’s proxy-only conclusion remains; Reports 019/020 and their receipts remain intact. Keep the active T38 arm unpromoted and the existing production route unchanged.
 - [x] **Paskian Teachback & Operational Accommodation (ADR-098 & SPEC.md §T.44–§T.46):**
   - [x] **The 3-Beat Paskian Controller (`teachback_and_fork`):** Replace unilateral refusal and open-ended clarification with Reconstruct (Teachback) + Delimit (Agential Cut) + Accommodate (Operational Fork) in `backend/modules/sensory/intervention_policy.py`.
   - [x] **Conversational Progress Index ($CPI_t$):** Formulate $CPI_t = v_t \cdot (0.35 + 0.65 \cdot \mathcal{T}_t) \cdot \text{Actionability}_t$ in `backend/modules/metrics/health.py` to discount ungrounded velocity and prevent empty philosophical drift from scoring as high vitality.
@@ -80,8 +81,7 @@
   - **Activate Pairwise Tension Matrix:** Investigate why `belief_tensions` has 0 rows populated despite 56 beliefs and 91 proposals. Enable or schedule the pairwise cosine tension evaluator to detect ideological collisions.
   - **Transduction Classifier Accuracy:** Benchmark Jev classifiers on the 56 beliefs, 91 proposals, and 65 skills to test automated triage into `temper`, `crystallize`, and `contradict` lanes.
   - **Property Graph Dry-Run:** Benchmark in-memory Kùzu/LadybugDB traversal speeds and knot-gravity warping on the 3.6k production memory graph.
-- [ ] **Track 5: Storage & Transaction Concurrency Hardening:**
-  - **Foreign Key Race Fix (`parent_message_id`):** Fix the race condition in `backend/storage/repositories/message.py:61` (responsible for the 3 historical `IntegrityError` collisions when parent message commits lag behind streaming apparatus inserts).
+- [x] **Message-tree transaction integrity (SPEC T47):** Parent validation and transaction race coverage are implemented; see `backend/tests/storage/test_message_integrity.py`.
 
 ---
 
@@ -284,7 +284,7 @@
 - [x] Persist assembly-owned activation provenance and review stale-skill probes; Report 028. Migration 051 and prospective coverage remain pending.
 - [x] Add belief-context abstention and prepare an independently labelable 240-pair packet; Report 029. No labeled corpus exists yet.
 - [x] Prepare research screening annotation/acquisition and held-out comparison workflow; Report 030. Exported 100/131 queries; historical sources are selected survivors, not raw gold pools.
-- [ ] Apply additive migration 051 before deploying provenance-writing code; verify rollout against a target-like database (SPEC T55).
+- [x] Replace stale T55 with the read-only runtime identity and receipt-coverage gate (SPEC T90); deployed migration/build state remains unknown until the preflight is run against the target instance.
 - [ ] Collect prospective activation receipts and measure coverage; do not infer response influence from assembly traces (SPEC T56).
 - [ ] Independently annotate belief pairs, run frozen held-out comparison and shadow observation, then review promotion thresholds (SPEC T57).
 - [ ] Acquire remaining raw research pools, independently annotate sources, evaluate held-out arms and blinded downstream citation/task usefulness (SPEC T58).
