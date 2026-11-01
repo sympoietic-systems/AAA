@@ -2,6 +2,10 @@
 
 > **Governance:** Adhere to [`GOAL.md`](GOAL.md) and [`docs/PDR.md`](docs/PDR.md). Active implementation tasks under Spec-Driven Development live in [`SPEC.md`](SPEC.md).
 
+## Repository integration (2026-11-01)
+
+- [x] Reconcile the package/test changes and merge all navigation-performance work into local main; checkpoint and reconcile T94 as a separate clean feature branch. See [repository state](docs/development/REPOSITORY_STATE.md) for commit provenance, exact checks, unchanged artifacts and the remaining live-experiment gate. Nothing pushed or deployed.
+
 ## Recent Verified Deliveries (2026-10-31)
 
 - [x] **B149 — Navigation loading & search performance** (`603096e`, `0c2fd56`): offloaded synchronous belief/skill reads, compact serialization, worker pool with admission control and GIL yielding, event history indexes, and code-split frontend bundles (B149, ADR-096, V15, V23).
