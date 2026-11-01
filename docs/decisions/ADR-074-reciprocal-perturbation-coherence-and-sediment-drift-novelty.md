@@ -25,7 +25,7 @@ $$\text{sim}(t_{\text{curr}}, t_i) = \text{cosine}(e_{\text{curr}}, e_i) \cdot \
 - Blends normalized drift ($0.7$) with conceptual phase velocity ($0.3$) to detect directional shifts.
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_pairwise_similarity_novelty.py` verifying cross-speaker weighting and centroid drift calculations.
+- Authored `backend/tests/modules/test_pairwise_similarity_novelty.py` verifying cross-speaker weighting and centroid drift calculations.
 
 ## Consequences
 

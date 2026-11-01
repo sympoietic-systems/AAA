@@ -170,7 +170,7 @@ def _process_scar_monologue_belief_writeback(
     segment_id: str = "scar:0",
 ):
     """Route scar reflection into intake; legacy activity cannot create crystallized standing."""
-    from backend.services.belief_passive_intake import passive_intake
+    from backend.services.belief.passive_intake import passive_intake
 
     db_path = getattr(belief_repo, "_db_path", None)
     if isinstance(db_path, str):

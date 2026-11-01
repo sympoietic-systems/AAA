@@ -71,7 +71,7 @@ We have implemented the **Split Resonance Attractor Window Topology** within the
 - **Zero Additional Network Latency:** Evaluating `gate_apparatus`, `gate_contemplation`, `organ_resonance`, and `belief_provocation` happens within the same single sub-200ms Jev call.
 
 ### 2. Attractor Window Re-seating & Fallback Discipline
-- In [`backend/utils/prompt_builder.py`](file:///d:/01_GIT/AAA/backend/utils/prompt_builder.py):
+- In [`backend/prompts/builder.py`](../../backend/prompts/builder.py):
   - `build_attractor_window()` accepts `salient_belief_label` and `salient_belief_id`.
   - If a Jev salient belief is identified and is not already claimed by Slots 1–4, it occupies **Slot 5**.
   - **Slot 6** is populated strictly by top cosine similarity against `signature_16d` from the remaining pool.

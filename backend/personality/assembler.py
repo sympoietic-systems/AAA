@@ -5,17 +5,17 @@ from pathlib import Path
 import yaml
 
 from backend.modules.base import ProcessingModule
+from backend.personality.loader import get_persona_text
 from backend.pipeline.registry import PipelineRegistry
-from backend.prompts.tag_protocols import get_tag_protocols_prompt
-from backend.utils.activation_provenance import build_activation_trace
-from backend.utils.persona_loader import get_persona_text
-from backend.utils.prompt_builder import (
+from backend.prompts.builder import (
     format_beliefs_block,
     format_skills_always_active,
     format_skills_matched,
     format_skills_on_demand_slugs,
 )
-from backend.utils.prompt_loader import get_prompt
+from backend.prompts.loader import get_prompt
+from backend.prompts.tag_protocols import get_tag_protocols_prompt
+from backend.utils.activation_provenance import build_activation_trace
 
 
 class PromptAssemblerModule(ProcessingModule):
@@ -521,7 +521,7 @@ def _build_system_content(
             for ghost in deduped_ghosts:
                 if isinstance(ghost, dict):
                     if ghost.get("selection_receipt"):
-                        from backend.modules.belief_selection import frame_selection
+                        from backend.modules.belief.selection import frame_selection
 
                         ghost_text += "  - " + frame_selection(ghost) + "\n"
                         continue

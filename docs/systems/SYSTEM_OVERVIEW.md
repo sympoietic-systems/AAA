@@ -993,7 +993,7 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 | `backend/modules/consolidation_checkpoint.py` | Memory node injection + consolidation triggers |
 | `backend/modules/conversation_metrics.py` | Real-time vitality metrics |
 | `backend/modules/homeostatic_regulator.py` | Metrics → parameter mapping |
-| `backend/modules/belief_engine.py` | Belief lifecycle + ecosystem + self-tuning |
+| `backend/modules/belief/engine.py` | Belief lifecycle + ecosystem + self-tuning |
 | `backend/modules/structural_engine.py` | Lexicon + Topology + LLM composite scoring |
 | `backend/modules/perception.py` | File ingestion + chunk retrieval |
 | `backend/modules/web_retrieval.py` | DuckDuckGo exogenous search |
@@ -1014,7 +1014,7 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 ### Storage
 | File | Purpose |
 |------|---------|
-| `backend/storage/models.py` | All ORM data classes |
+| `backend/storage/models/cognitive.py` | All ORM data classes |
 | `backend/storage/repositories/` | 10+ entity repository files |
 | `backend/storage/migrations/` | 40+ schema migration scripts |
 
@@ -1035,7 +1035,7 @@ All engineering fixes (R1-R5), autopoietic augmentations (S1-S3), and prompt ref
 | File | Purpose |
 |------|---------|
 | `backend/services/chat.py` | ChatService — pipeline orchestration + response assembly |
-| `backend/services/belief.py` | BeliefService — ecosystem health, attractor windows |
+| `backend/services/belief/service.py` | BeliefService — ecosystem health, attractor windows |
 | `backend/services/skill.py` | SkillService — registry queries |
 
 

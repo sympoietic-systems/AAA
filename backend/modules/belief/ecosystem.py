@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 import numpy as np
 
-from backend.modules.belief_math import parse_vector_16d
+from backend.modules.belief.math import parse_vector_16d
 from backend.storage.repositories import BeliefRepository
 from backend.utils.vector import cosine_similarity
 

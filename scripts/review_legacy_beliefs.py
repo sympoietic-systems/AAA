@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from backend.services.belief_legacy_replay import ReplayOutcome, encounter_for_proposal, replay_proposal
+from backend.services.belief.legacy_replay import ReplayOutcome, encounter_for_proposal, replay_proposal
 from backend.storage.models import BeliefProposal
 
 ALLOWED_STATUSES = ("pending", "refined")

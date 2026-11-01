@@ -22,7 +22,7 @@ We implemented the **Self-Initiation Arbiter (`SelfInitiationArbiterModule`)**, 
 
 ### 3. Verification & Ponytail Craft
 - Registered `self_initiation_arbiter` into pipeline order (`pipeline.py`, `modules.py`, `app_factory/__init__.py`).
-- Authored `backend/tests/test_self_initiation_arbiter.py` verifying autonomous triggers under hyper-fluent and vitality-stagnant conditions.
+- Authored `backend/tests/modules/test_self_initiation_arbiter.py` verifying autonomous triggers under hyper-fluent and vitality-stagnant conditions.
 
 ## Consequences
 

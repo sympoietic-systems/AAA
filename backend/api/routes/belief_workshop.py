@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from backend.api.belief_review_schemas import ReviewDecisionRequest
 from backend.api.deps import get_belief_repo, verify_password
 from backend.core.auth import auth_enabled
-from backend.services.belief_review_contracts import Actor, WorkshopCommand
-from backend.services.belief_workshop import BeliefWorkshop
+from backend.services.belief.review_contracts import Actor, WorkshopCommand
+from backend.services.belief.workshop import BeliefWorkshop
 from backend.storage.repositories.cognitive.belief import BeliefRepository
 from backend.storage.repositories.cognitive.belief_workshop import BeliefWorkshopRepository
 

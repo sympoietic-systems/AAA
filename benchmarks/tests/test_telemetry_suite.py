@@ -3,14 +3,15 @@ Unit tests for the Cybernetic Telemetry Benchmark Suite.
 """
 
 import json
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from benchmarks.common.loader import DialogueDataset, load_dataset, resolve_embeddings
-from benchmarks.suites.telemetry.evaluator import evaluate_sequence, compute_statistics
+from benchmarks.common.loader import load_dataset
 from benchmarks.suites.telemetry.comparator import compare_runs
+from benchmarks.suites.telemetry.evaluator import compute_statistics, evaluate_sequence
 from benchmarks.suites.telemetry.runner import TelemetryBenchmarkSuite
 
 
@@ -117,13 +118,17 @@ def test_comparator_detects_changed_metrics(mock_linear_dialogue):
         assert deltas[i].abs_delta >= deltas[i + 1].abs_delta
 
 
-def test_visualizer_and_runner(tmp_path, mock_linear_dialogue):
+def test_visualizer_and_runner(tmp_path, mock_linear_dialogue, monkeypatch):
+    monkeypatch.setattr(
+        "benchmarks.suites.telemetry.runner.resolve_embeddings",
+        lambda dataset, cache_dir=None: np.eye(len(dataset.messages), 384, dtype=np.float32),
+    )
     ds_file = tmp_path / "test_dialogue.json"
     with open(ds_file, "w", encoding="utf-8") as f:
         json.dump({"messages": mock_linear_dialogue}, f)
 
     eval_out = tmp_path / "eval_run"
-    res = TelemetryBenchmarkSuite.evaluate(ds_file, name="unit_test", out_dir=eval_out)
+    TelemetryBenchmarkSuite.evaluate(ds_file, name="unit_test", out_dir=eval_out)
 
     assert (eval_out / "metadata.json").exists()
     assert (eval_out / "run.log").exists()
@@ -133,7 +138,7 @@ def test_visualizer_and_runner(tmp_path, mock_linear_dialogue):
     assert (eval_out / "telemetry_audit_dashboard.png").exists() or (eval_out / "telemetry_audit_dashboard.html").exists()
 
     comp_out = tmp_path / "comp_run"
-    comp_res = TelemetryBenchmarkSuite.compare(eval_out, eval_out, name="self_diff", out_dir=comp_out)
+    TelemetryBenchmarkSuite.compare(eval_out, eval_out, name="self_diff", out_dir=comp_out)
 
     assert (comp_out / "metadata.json").exists()
     assert (comp_out / "run.log").exists()

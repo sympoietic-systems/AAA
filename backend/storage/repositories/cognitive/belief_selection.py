@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from backend.errors import ConstraintViolation, GlitchError
-from backend.services.belief_review_contracts import ReviewDecision
+from backend.services.belief.review_contracts import ReviewDecision
 from backend.storage.connection import with_connection
 from backend.storage.repositories.base import BaseRepository
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from backend.config import load_config
 from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
 from backend.modules.sensory.evidence_triage import EvidenceTriage
-from backend.services.belief_triage import BeliefEvidence, BeliefTriage, cosine, replay
+from backend.services.belief.triage import BeliefEvidence, BeliefTriage, cosine, replay
 from backend.storage.connection import close_thread_connections
 from backend.storage.repositories.cognitive.belief import BeliefRepository
 

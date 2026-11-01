@@ -187,7 +187,7 @@ Refactor step functions sequentially:
 4. `step_evaluate` & `step_synthesize`
 
 ### Phase 4: Verification & Testing
-1. Run and update `backend/tests/test_research_orchestrator_state.py` to assert correct transition routing.
+1. Run and update `backend/tests/services/research/test_research_orchestrator_state.py` to assert correct transition routing.
 2. Manually queue a research task and test step-by-step execution in the console to verify step previews and data propagation.
 
 ---

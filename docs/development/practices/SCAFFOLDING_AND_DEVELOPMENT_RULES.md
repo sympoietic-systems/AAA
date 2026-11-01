@@ -42,7 +42,7 @@ Rather than managing ad-hoc files, all code in AAA adheres to a four-tier archit
 When introducing a new capability, cognitive step, or entity, develop across the four tiers in this sequence:
 
 ### 2.1. Layer 4: Storage Sedimentation
-1. **Entity Definition:** Define immutable dataclass models in `backend/storage/models.py`.
+1. **Entity Definition:** Define immutable dataclass models in `backend/storage/models/cognitive.py`.
 2. **Schema & Migration:** Add DDL table initialization and composite indexes in `backend/storage/database.py`. Always ensure foreign keys include `ON DELETE CASCADE` where applicable.
 3. **Repository Methods:** Implement clean transactional access in `backend/storage/repositories/`.
    - Decorate repository functions with `@with_connection` to enable thread-local connection tracking.

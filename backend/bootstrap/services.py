@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from backend.metabolisation.daemon import AutopoieticDreamDaemon
     from backend.metabolisation.scheduler import BackgroundStartupScheduler
     from backend.modules.background_tasks.engine import BackgroundTaskEngine
-    from backend.modules.belief_engine import BeliefDynamicsEngine
+    from backend.modules.belief.engine import BeliefDynamicsEngine
     from backend.modules.conversation_metrics import ConversationMetricsModule
     from backend.modules.embedder import EmbedderModule
     from backend.modules.llm_client import BaseLLMProvider

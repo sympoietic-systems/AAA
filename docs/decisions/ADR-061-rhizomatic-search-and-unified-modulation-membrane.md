@@ -105,7 +105,7 @@ We will implement search queries directly in the SQL repositories:
 | File | Purpose |
 |---|---|
 | `backend/api/routes/search.py` | FastAPI route — 4 modes, weight sliders, polymorphic serialiser |
-| `backend/tests/test_search.py` | Unit tests for all 4 search modes |
+| `backend/tests/api/test_search.py` | Unit tests for all 4 search modes |
 | `frontend/src/api/search.ts` | Typed `searchArchive()` client + `SearchMatch` interface |
 | `frontend/src/components/panels/leftpanel/SearchTab.tsx` | Left-panel inline search tab |
 | `frontend/src/components/pages/search/SearchPage.tsx` | `/search` Unified Modulation Membrane page |

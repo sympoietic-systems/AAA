@@ -27,9 +27,9 @@ The rejected ladder remains useful as an experimental surface. Its failure preve
 
 ## Verification contracts
 
-- `backend/tests/test_intervention_evaluator.py`: causal ordering, deterministic bootstrap intervals, provider endpoint/model contracts.
-- `backend/tests/test_homeostatic_control_wiring.py` and `backend/tests/test_openrouter_provider.py`: requested and applied control receipts.
-- `backend/tests/test_pairwise_similarity_novelty.py` and `backend/tests/test_agential_boredom.py`: conversation-isolated reconstruction and persistent streak behavior.
-- `backend/tests/test_diffractive_activation.py`: adaptive-persistence thresholds and bounded active state.
-- `backend/tests/test_intervention_policy.py`: mode progression and production fallback after benchmark rejection.
+- `backend/tests/modules/test_intervention_evaluator.py`: causal ordering, deterministic bootstrap intervals, provider endpoint/model contracts.
+- `backend/tests/modules/test_homeostatic_control_wiring.py` and `backend/tests/services/test_openrouter_provider.py`: requested and applied control receipts.
+- `backend/tests/modules/test_pairwise_similarity_novelty.py` and `backend/tests/modules/test_agential_boredom.py`: conversation-isolated reconstruction and persistent streak behavior.
+- `backend/tests/modules/test_diffractive_activation.py`: adaptive-persistence thresholds and bounded active state.
+- `backend/tests/modules/test_intervention_policy.py`: mode progression and production fallback after benchmark rejection.
 - [Report 019](../reports/019-dialogue-feedback-control-report.md): offline calibration, repeated live ablation, scorecard, and limitations.

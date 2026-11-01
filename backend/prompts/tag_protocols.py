@@ -5,7 +5,7 @@ ontologically rigorous block loaded directly from:
     backend/prompts/personality/tag_protocols.yaml
 """
 
-from backend.utils.prompt_loader import get_prompt
+from backend.prompts.loader import get_prompt
 
 
 def get_tag_protocols_prompt() -> str:

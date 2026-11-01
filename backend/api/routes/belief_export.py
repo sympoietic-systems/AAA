@@ -10,8 +10,8 @@ from backend.api.belief_review_schemas import ExportItem, ExportPage, ReviewExpo
 from backend.api.deps import get_belief_repo, verify_password
 from backend.core.auth import get_auth_password
 from backend.errors import ValidationGlitch
-from backend.services.belief_export import BeliefExport
-from backend.services.belief_review_contracts import AgentId, Identifier
+from backend.services.belief.export import BeliefExport
+from backend.services.belief.review_contracts import AgentId, Identifier
 from backend.storage.repositories.cognitive.belief import BeliefRepository
 
 router = APIRouter(prefix="/beliefs/v2/agents/{agent_id}", dependencies=[Depends(verify_password)])

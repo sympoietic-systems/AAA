@@ -126,7 +126,7 @@ class SkillActivatorModule(ProcessingModule):
                     if (salient_label or salient_id) and self._belief_repo:
                         sig_bytes = payload.get("structural_signature")
                         sig_16d = np.frombuffer(sig_bytes, dtype=np.float32) if sig_bytes else None
-                        from backend.utils.prompt_builder import build_attractor_window
+                        from backend.prompts.builder import build_attractor_window
 
                         updated_window = await asyncio.to_thread(
                             build_attractor_window,
@@ -155,7 +155,7 @@ class SkillActivatorModule(ProcessingModule):
         # Strategies B + C: Delegated to shared match_on_demand_skills()
         current_vector = self._get_current_vector(payload)
         if on_demand_skills and (current_vector is not None or user_message):
-            from backend.utils.prompt_builder import match_on_demand_skills
+            from backend.prompts.builder import match_on_demand_skills
 
             matched = match_on_demand_skills(
                 on_demand_skills,

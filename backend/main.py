@@ -49,17 +49,7 @@ except Exception:
     _init_cfg = {}
 setup_logging(_init_cfg)
 
-# ── Re-export from bootstrap for backward compatibility ────────────────
-# External scripts and tests depend on these being importable from backend.main
 from backend.bootstrap.lifecycle import create_app  # noqa: E402
-from backend.bootstrap.modules import (  # noqa: E402, F401
-    _init_belief_engine,
-)
-from backend.bootstrap.providers import (  # noqa: E402, F401
-    _create_llm_provider,
-    _create_provider_from_config,
-    _init_providers,
-)
 
 # ── Module-level FastAPI app instance ──────────────────────────────────
 app = create_app()

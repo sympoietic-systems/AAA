@@ -2,12 +2,12 @@ import asyncio
 import json
 import logging
 
+from backend.prompts.loader import get_prompts_dict
 from backend.services.research.provider_observation import generate_unified
 from backend.services.research.steps.base import BaseResearchStep
 from backend.services.research.task_state import DigestPayload, StepEnvelope, StepOutput
 from backend.storage.research_receipts import EvidencePacket
 from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.research_logger import now_utc_str
 
 logger = logging.getLogger("aaa.research_orchestrator")

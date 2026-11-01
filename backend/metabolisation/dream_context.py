@@ -8,8 +8,8 @@ from datetime import UTC, datetime
 
 import numpy as np
 
+from backend.prompts.loader import get_prompts_dict
 from backend.storage.models import BeliefNode
-from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.vector import cosine_similarity
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class DreamContextMixin:
         return max(0.0, min(1.0, 1.0 - mean_autocorr))
 
     async def _evaluate_tension_hotspot(self) -> tuple[BeliefNode | None, float]:
-        from backend.utils.prompt_builder import build_dream_active_beliefs
+        from backend.prompts.builder import build_dream_active_beliefs
 
         beliefs = await asyncio.to_thread(build_dream_active_beliefs, self.belief_repo, "symbia")
         active_beliefs = [
@@ -238,7 +238,7 @@ class DreamContextMixin:
             "action": action,
         }
 
-        from backend.utils.prompt_builder import build_dream_selection
+        from backend.prompts.builder import build_dream_selection
 
         selected = await asyncio.to_thread(build_dream_selection, self.belief_repo, belief.id)
         ctx["belief_review_selection"] = (
@@ -247,7 +247,7 @@ class DreamContextMixin:
             else {"standing": "unknown", "reason": "outside_bounded_snapshot", "tool_authority": "none"}
         )
         if selected:
-            from backend.modules.belief_selection import frame_selection
+            from backend.modules.belief.selection import frame_selection
 
             ctx["belief_statement"] = frame_selection(selected, max_statement=4000)
 

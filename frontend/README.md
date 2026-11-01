@@ -78,6 +78,6 @@ Login exchanges the password for a seven-day HttpOnly session (configurable via 
 
 Markdown cannot supply arbitrary styles or classes. Annotation colors are application-owned. Export code must use `printContent` on sanitized rendered content and append user text through DOM text nodes.
 
-During iteration, run the tests for the boundary being changed, for example `npm test -- src/api/__tests__/auth.test.ts` or `npm test -- src/hooks/__tests__/useConversationFiles.test.ts`. A frontend-only edit does not require a full backend test run. For session-auth changes, use `uv run pytest backend/tests/test_browser_sessions.py backend/tests/test_auth_boundary.py -q` from the repository root.
+During iteration, run the tests for the boundary being changed, for example `npm test -- src/api/__tests__/auth.test.ts` or `npm test -- src/hooks/__tests__/useConversationFiles.test.ts`. A frontend-only edit does not require a full backend test run. For session-auth changes, use `uv run pytest backend/tests/api/test_browser_sessions.py backend/tests/api/test_auth_boundary.py -q` from the repository root.
 
 `useConversationFiles` owns uploads and indexing polling; `ConnectionCloudRenderer` owns canvas drawing. Async result commits must belong to the current entity/request lifetime. Notification polling starts only with an active session and subscribers, including auth-disabled mode.

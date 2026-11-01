@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from backend.modules.belief_math import calculate_concept_density, parse_vector_16d
+from backend.modules.belief.math import calculate_concept_density, parse_vector_16d
 from backend.storage.repositories.conversation.conversation import ConversationRepository
 from backend.utils.vector import cosine_similarity
 

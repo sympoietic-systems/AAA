@@ -1,6 +1,6 @@
 """ResearchContextBuilder — persona coherence for every research node probe.
 
-All computation and formatting delegated to backend.utils.prompt_builder.
+All computation and formatting delegated to backend.prompts.builder.
 The builder is a thin wrapper that resolves repos from app_state and delegates.
 
 See docs/systems/AUTONOMOUS_RESEARCH_ARCHITECTURE.md Section 5.4.
@@ -10,9 +10,8 @@ import asyncio
 import logging
 from typing import Any
 
-from backend.utils.anti_mastery import apply_anti_mastery_filter
-from backend.utils.persona_loader import get_identity_yaml_path, load_identity
-from backend.utils.prompt_builder import (
+from backend.personality.loader import get_identity_yaml_path, load_identity
+from backend.prompts.builder import (
     build_attractor_window,
     compute_structural_signature,
     format_beliefs_block,
@@ -24,6 +23,7 @@ from backend.utils.prompt_builder import (
     match_on_demand_skills,
     split_skills,
 )
+from backend.utils.anti_mastery import apply_anti_mastery_filter
 
 logger = logging.getLogger("aaa.research_context_builder")
 

@@ -25,7 +25,7 @@ We implemented the **Reflection Protocol** inside `HomeostaticRegulatorModule`:
 - Appends `[SOMATIC REFLECTION DIRECTIVE]` as a system message to `payload["messages"]` immediately before calling `LLMClientModule`, instructing the LLM that it may voice its structural state naturally if relevant to the dialogue.
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_reflection_protocol.py` verifying directive synthesis and prompt injection across flowing and tense metric states.
+- Authored `backend/tests/modules/test_reflection_protocol.py` verifying directive synthesis and prompt injection across flowing and tense metric states.
 
 ## Consequences
 

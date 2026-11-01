@@ -18,8 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from backend.core.logging_config import SecretMaskingFilter, mask_secrets
 from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
 from backend.modules.sensory.evidence_triage import EvidenceTriage
-from backend.services.belief_admission import admit_candidate
-from backend.services.belief_admission_policy import Candidate
+from backend.services.belief.admission import admit_candidate
+from backend.services.belief.admission_policy import Candidate
 from backend.storage.repositories import MessageRepository
 from benchmarks.suites.belief_conversation_replay import (
     checkpoint_call,

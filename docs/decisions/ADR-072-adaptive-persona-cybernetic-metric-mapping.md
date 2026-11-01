@@ -21,7 +21,7 @@ We integrated continuous mapping of all reserved cybernetic metrics in `TraitCom
 - **`conversation_vitality`**: Low vitality enhances `reserve` and triggers dynamic persona attractors.
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_adaptive_persona_metrics.py` verifying trait shifts across healthy vs. stagnant cybernetic metric profiles.
+- Authored `backend/tests/personality/test_adaptive_persona_metrics.py` verifying trait shifts across healthy vs. stagnant cybernetic metric profiles.
 
 ## Consequences
 

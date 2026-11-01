@@ -10,7 +10,7 @@ The Autopoietic Dream Daemon is the background engine that drives agential varie
 *   **Response Artifact Pipeline**: [chat.py](../../backend/services/chat.py) — `_parse_response_artifacts()` routes dream trigger tags to the signal queue.
 *   **Lifespan Setup**: [main.py](../../backend/main.py) — Spawns the daemon thread task asynchronously on system boot.
 *   **API Routes**: [routes.py](../../backend/api/routes.py) — Exposes telemetry and force trigger points.
-*   **Unit Tests**: [test_dream_daemon.py](../../backend/tests/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.
+*   **Unit Tests**: [test_dream_daemon.py](../../backend/tests/metabolisation/test_dream_daemon.py) — Complete mathematical and trigger assertion coverage.
 *   **Skill Definition**: [seed_skills.yaml](file:///d:/01_GIT/AAA/config/personality/seed_skills.yaml) — `self-triggered-dreaming` skill teaching Symbia when and how to emit the tag.
 
 ---

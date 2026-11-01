@@ -150,7 +150,7 @@ Every log is an inscription of system activity. Text logs that scroll past witho
 
 *   **Test Isolation**: The test suite is isolated from production files. `conftest.py` automatically configures the database path to `data/aaa_test.db` and deletes the test file upon suite teardown. Never run tests against production `aaa.db`.
 *   **Mocking Provider Properties**: In unit tests, avoid calling properties or methods on mock LLM clients that return coroutine instances unless they are explicitly awaited. Prevent `generate_unified` from calling mock properties by filtering out `NonCallableMock` types.
-*   **Executing Verification**: Run tests using `uv run pytest` or target specific test modules: `uv run pytest backend/tests/test_endpoint_security.py`.
+*   **Executing Verification**: Run tests using `uv run pytest` or target specific test modules: `uv run pytest backend/tests/api/test_endpoint_security.py`.
 
 ---
 

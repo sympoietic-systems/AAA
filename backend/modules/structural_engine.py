@@ -9,7 +9,7 @@ import numpy as np
 from backend.modules.base import ProcessingModule
 from backend.modules.llm_client import generate_unified
 from backend.modules.response_quality import quality_sample
-from backend.utils.prompt_loader import get_prompt
+from backend.prompts.loader import get_prompt
 from backend.utils.vector import CYBERNETIC_DIMENSIONS
 
 logger = logging.getLogger(__name__)

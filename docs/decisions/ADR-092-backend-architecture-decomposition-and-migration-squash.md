@@ -13,7 +13,7 @@ As the AAA (Autopoietic Agentic Assemblage) cognitive pipeline, research orchest
 
 1. **Monolithic Code Centers:**
    - `backend/api/routes/research.py` (1,168 lines): Conflated task lifecycle, step execution, preview caching, and asset scraping with inline Pydantic schemas.
-   - `backend/modules/belief_engine.py` (1,217 lines): Combined cognitive pipeline processing, mathematical vector warping, offline decay, and ghost ecology in one file.
+   - `backend/modules/belief/engine.py` (1,217 lines): Combined cognitive pipeline processing, mathematical vector warping, offline decay, and ghost ecology in one file.
    - `backend/services/export.py` (1,088 lines): Combined Markdown synthesis, JSON/YAML serialization, and graph export into a single class.
    - `backend/services/research/orchestrator.py` (1,123 lines): Coupled phase routing with schema mapping and background sediment batching.
    - `backend/api/routes/daily.py` (449 lines): Acted as a rogue service performing direct SQL queries, file I/O, and LLM calls inside route endpoints.

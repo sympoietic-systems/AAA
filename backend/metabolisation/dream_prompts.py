@@ -3,7 +3,7 @@ import json
 import logging
 
 from backend.modules.llm_client import generate_unified
-from backend.utils.prompt_loader import get_prompt, get_prompts_dict
+from backend.prompts.loader import get_prompt, get_prompts_dict
 
 logger = logging.getLogger(__name__)
 

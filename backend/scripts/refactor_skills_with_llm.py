@@ -34,8 +34,8 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
+from backend.bootstrap.providers import _init_providers
 from backend.config import load_config
-from backend.main import _init_providers
 from backend.modules.llm_client import generate_unified
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")

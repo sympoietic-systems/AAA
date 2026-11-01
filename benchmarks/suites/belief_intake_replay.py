@@ -13,7 +13,7 @@ from dotenv import dotenv_values
 
 from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
 from backend.modules.sensory.evidence_triage import EvidenceTriage
-from backend.services.belief_admission import admit_candidate
+from backend.services.belief.admission import admit_candidate
 from backend.storage.database import init_db
 from backend.storage.migrations import run_all_migrations
 from backend.storage.repositories import ConversationRepository, MessageRepository, NotificationRepository

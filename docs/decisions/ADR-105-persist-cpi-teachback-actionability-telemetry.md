@@ -21,7 +21,7 @@ While these metrics were computed in `ConversationMetricsModule`, they were not 
    - Created migration `m053_add_cpi_teachback_actionability_collapse_pressure.py` to add `cpi`, `teachback_ratio`, `actionability`, `collapse_pressure`, and `phase_transition_magnitude` (`REAL`) columns to `conversation_metrics`.
    - Updated `m050_baseline_schema.py` so fresh databases initialize with these columns directly.
 2. **Storage Entity & Row Mapping**:
-   - Extended `MetricsRecord` dataclass in `backend/storage/models.py`.
+   - Extended `MetricsRecord` dataclass in `backend/storage/models/cognitive.py`.
    - Updated `_row_to_metrics` in `backend/storage/row_mappers.py` to read the columns safely.
 3. **Repository & Service Layer**:
    - Updated `MetricsRepository.insert()` and `MetricsRepository.get_aggregates()` in `backend/storage/repositories/telemetry/metrics.py`.

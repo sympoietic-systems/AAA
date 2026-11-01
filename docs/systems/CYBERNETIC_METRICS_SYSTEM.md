@@ -308,19 +308,19 @@ Maps calculated metrics into emergent descriptive persona traits:
 ## 6. Verification Suite
 
 The entire cybernetic sensor suite is verified by unit tests across the test suite:
-- [test_glitch_fidelity_engine.py](../../backend/tests/test_glitch_fidelity_engine.py)
-- [test_pairwise_similarity_novelty.py](../../backend/tests/test_pairwise_similarity_novelty.py)
-- [test_spectral_entropy_collapse.py](../../backend/tests/test_spectral_entropy_collapse.py)
-- [test_coupling_self_divergence.py](../../backend/tests/test_coupling_self_divergence.py)
-- [test_directional_mutual_perturbation.py](../../backend/tests/test_directional_mutual_perturbation.py)
-- [test_predictive_surprise_velocity.py](../../backend/tests/test_predictive_surprise_velocity.py)
-- [test_drr_paskian_health.py](../../backend/tests/test_drr_paskian_health.py)
-- [test_allostatic_metrics.py](../../backend/tests/test_allostatic_metrics.py)
-- [test_sensorimotor_modulation.py](../../backend/tests/test_sensorimotor_modulation.py)
+- [test_glitch_fidelity_engine.py](../../backend/tests/modules/test_glitch_fidelity_engine.py)
+- [test_pairwise_similarity_novelty.py](../../backend/tests/modules/test_pairwise_similarity_novelty.py)
+- [test_spectral_entropy_collapse.py](../../backend/tests/modules/test_spectral_entropy_collapse.py)
+- [test_coupling_self_divergence.py](../../backend/tests/modules/test_coupling_self_divergence.py)
+- [test_directional_mutual_perturbation.py](../../backend/tests/modules/test_directional_mutual_perturbation.py)
+- [test_predictive_surprise_velocity.py](../../backend/tests/modules/test_predictive_surprise_velocity.py)
+- [test_drr_paskian_health.py](../../backend/tests/modules/test_drr_paskian_health.py)
+- [test_allostatic_metrics.py](../../backend/tests/modules/test_allostatic_metrics.py)
+- [test_sensorimotor_modulation.py](../../backend/tests/modules/test_sensorimotor_modulation.py)
 
 Execution command:
 ```bash
-cmd /c .venv\Scripts\python.exe -m pytest backend/tests/test_pairwise_similarity_novelty.py backend/tests/test_spectral_entropy_collapse.py backend/tests/test_coupling_self_divergence.py backend/tests/test_directional_mutual_perturbation.py backend/tests/test_predictive_surprise_velocity.py backend/tests/test_drr_paskian_health.py
+cmd /c .venv\Scripts\python.exe -m pytest backend/tests/modules/test_pairwise_similarity_novelty.py backend/tests/modules/test_spectral_entropy_collapse.py backend/tests/modules/test_coupling_self_divergence.py backend/tests/modules/test_directional_mutual_perturbation.py backend/tests/modules/test_predictive_surprise_velocity.py backend/tests/modules/test_drr_paskian_health.py
 ```
 
 ---

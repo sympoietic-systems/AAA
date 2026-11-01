@@ -1,7 +1,7 @@
 import pytest
 
-from backend.tests.test_belief_context import context
-from backend.tests.test_belief_triage import VECTOR, service
+from backend.tests.services.belief.test_belief_context import context
+from backend.tests.services.belief.test_belief_triage import VECTOR, service
 from benchmarks.suites.belief_calibration import evaluate, freeze
 from benchmarks.suites.calibration_contract import belief_score, digest, reviewed_label, validate_splits, wilson
 

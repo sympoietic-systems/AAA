@@ -5,8 +5,8 @@ import json
 from typing import Any
 
 from backend.core.logging_config import mask_secrets
+from backend.prompts.builder import format_skills_always_active
 from backend.storage.activation import ActivationEntry, ActivationTrace, BeliefSelectionReceipt
-from backend.utils.prompt_builder import format_skills_always_active
 
 
 def build_activation_trace(payload: dict[str, Any], assembled: list[dict[str, Any]]) -> dict[str, Any]:
@@ -58,7 +58,7 @@ def build_activation_trace(payload: dict[str, Any], assembled: list[dict[str, An
                     )
                     spectral_seen.add(spectral_key)
                 if injected and item.get("selection_receipt"):
-                    from backend.modules.belief_selection import safe_selection_data
+                    from backend.modules.belief.selection import safe_selection_data
 
                     # Use only assembly-owned structured selection; historical XML is never parsed.
                     raw = json.dumps(safe_selection_data(item["selection_receipt"]))

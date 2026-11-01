@@ -924,9 +924,9 @@ Symbia's identity is defined in `config/personality/identity.yaml` with a tiered
   - `research_orchestration` — 6 protocols for planning/reflecting/synthesizing (methodological rigor, source skepticism, gap awareness, synthesis over summary, economy, membrane traversal)
   - `research_analysis` — 4 protocols for individual source digest (close reading, source contextualization, diffractive extraction, concision)
 
-Access is through a shared utility (`backend/utils/persona_loader.py`):
+Access is through a shared utility (`backend/personality/loader.py`):
 ```python
-from backend.utils.persona_loader import get_persona_text, load_persona_for_context
+from backend.personality.loader import get_persona_text, load_persona_for_context
 
 # For conversation: core_identity + conversation protocols
 prompt = load_persona_for_context("conversation")
@@ -942,7 +942,7 @@ A `load_persona_for_context()` convenience function handles YAML loading (cached
 
 #### 5.4.2 Shared Architecture: `prompt_builder.py`
 
-All three consumers share a single utility module (`backend/utils/prompt_builder.py`) that provides:
+All three consumers share a single utility module (`backend/prompts/builder.py`) that provides:
 
 **Computation functions** (take repos + 16D signature, return structured data):
 - `compute_structural_signature(text, llm_provider=None)` — `CompositeStructuralScorer` when `structural_provider` is available (lexicon 25% + topology 25% + LLM 50%, 5s timeout with lexicon fallback), `LexiconScorer` otherwise
@@ -1067,7 +1067,7 @@ The `ResearchContextBuilder` is a **lightweight alternative** that:
 
 Following the existing AAA pattern (`backend/prompts/background_tasks/consolidate.yaml`, `backend/prompts/web_retrieval/`), all research agent prompts live in separate YAML files under `backend/prompts/research/`. Prompts are loaded at startup, dynamically assembled per-node, and never hardcoded in Python.
 
-**Identity is also YAML-based.** The persona (who Symbia IS) lives in `config/personality/identity.yaml` with a tiered structure: `core_identity` (invariant) + `operational_protocols` (task-dependent — `conversation`, `research_orchestration`, `research_analysis`). Access is through `backend/utils/persona_loader.py` which assembles identity + task-specific protocols. The persona is prepended to the YAML template's `system` block before the combined prompt is sent to the LLM.
+**Identity is also YAML-based.** The persona (who Symbia IS) lives in `config/personality/identity.yaml` with a tiered structure: `core_identity` (invariant) + `operational_protocols` (task-dependent — `conversation`, `research_orchestration`, `research_analysis`). Access is through `backend/personality/loader.py` which assembles identity + task-specific protocols. The persona is prepended to the YAML template's `system` block before the combined prompt is sent to the LLM.
 
 #### 5.5.1 Prompt File Structure
 
@@ -1163,7 +1163,7 @@ Prompts are assembled at runtime with variable interpolation — never hardcoded
 ```python
 # backend/services/research/agonistic_planner.py
 
-from backend.utils.prompt_loader import load_prompt
+from backend.prompts.loader import load_prompt
 
 class AgonisticPlanner:
     def __init__(self, prompts_dir: Path):
@@ -3625,7 +3625,7 @@ Before any PR implementing a phase of this subsystem is merged, verify:
 **Step 0.1 — Database Migration (All New Tables)** ✅
 - [x] Create `m032_rhizomatic_research_schema.py` migration file
 - [x] Execute DDL for `research_tasks`, `research_branches`, and `scraped_assets` tables
-- [x] Update `backend/storage/models.py` with dataclass mappings
+- [x] Update `backend/storage/models/cognitive.py` with dataclass mappings
 - [x] Create repository classes: `ResearchTaskRepository`, `ResearchBranchRepository`, `ScrapedAssetRepository`
 - [x] Add to `bootstrap/repositories.py` initialization
 

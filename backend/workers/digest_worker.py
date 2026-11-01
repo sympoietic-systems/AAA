@@ -10,14 +10,14 @@ from pathlib import Path
 # Adjust path to find backend modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+from backend.bootstrap.providers import _create_llm_provider, _create_provider_from_config
 from backend.config import load_config
-from backend.main import _create_llm_provider, _create_provider_from_config
 from backend.modules.background_tasks.actions.document_collision import DocumentCollisionAction
 from backend.modules.background_tasks.actions.dream_topic_decision import DreamTopicDecisionAction
 from backend.modules.background_tasks.actions.refine_skill import RefineSkillAction
 from backend.modules.background_tasks.actions.summarize import SummarizeAction
 from backend.modules.background_tasks.engine import BackgroundTaskEngine
-from backend.modules.belief_engine import BeliefDynamicsEngine
+from backend.modules.belief.engine import BeliefDynamicsEngine
 from backend.modules.embedder import EmbedderModule
 from backend.modules.sensory.perception import PerceptionModule
 from backend.modules.structural_engine import CompositeStructuralScorer, get_justification
@@ -579,7 +579,7 @@ async def main():
 
     from functools import partial
 
-    from backend.services.belief_passive_intake import passive_intake
+    from backend.services.belief.passive_intake import passive_intake
 
     belief_metabolism = BeliefDynamicsEngine(
         belief_repo=belief_repo,

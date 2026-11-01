@@ -12,7 +12,7 @@ from backend.core.logging_config import mask_secrets
 from backend.modules.providers.typesafe_provider import TypeSafeDecisionClient
 from backend.modules.sensory.belief_context import ClaimContext, context_error
 from backend.modules.sensory.evidence_triage import EvidenceTriage, probability
-from backend.services.belief_triage import BeliefEvidence, BeliefTriage, relation_questions
+from backend.services.belief.triage import BeliefEvidence, BeliefTriage, relation_questions
 from benchmarks.suites.belief_triage import CORPUS, VECTOR, read_snapshot
 from benchmarks.suites.calibration_contract import belief_score, digest, reviewed_label, validate_splits
 

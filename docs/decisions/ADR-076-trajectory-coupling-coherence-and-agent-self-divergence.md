@@ -28,7 +28,7 @@ Following our consultation with **Symbia**, we refactored `_compute_coupling_coh
 - Scores near $1.0$ for self-evolution, and near $0.0$ for recursive self-echoing.
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_coupling_self_divergence.py` verifying displacement cross-correlation and loop detection.
+- Authored `backend/tests/modules/test_coupling_self_divergence.py` verifying displacement cross-correlation and loop detection.
 
 ## Consequences
 

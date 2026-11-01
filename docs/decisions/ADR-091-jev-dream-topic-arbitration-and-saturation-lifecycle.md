@@ -102,8 +102,8 @@ The action (`backend/modules/background_tasks/actions/dream_topic_decision.py`) 
 
 ## Verification & Metrics
 
-- **Unit Tests:** `backend/tests/test_dream_topic_decision.py` validates Jev arbitration, choice prompt construction, deterministic fallback, and capacity bounds.
-- **System Integration:** `backend/tests/test_dream_daemon.py` (18/18 passing) verifies entire cycle from sediment retrieval through topic selection, LLM generation, and memory storage.
+- **Unit Tests:** `backend/tests/metabolisation/test_dream_topic_decision.py` validates Jev arbitration, choice prompt construction, deterministic fallback, and capacity bounds.
+- **System Integration:** `backend/tests/metabolisation/test_dream_daemon.py` (18/18 passing) verifies entire cycle from sediment retrieval through topic selection, LLM generation, and memory storage.
 - **Performance:**
   - Topic arbitration latency reduced from ~2,200ms to <180ms.
   - Saturated dream thread runaway completely arrested at 36 turns.

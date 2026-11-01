@@ -5,7 +5,7 @@ from typing import Any, Literal, Self
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from backend.modules.sensory.belief_context import ClaimContext
-from backend.services.belief_review_contracts import (
+from backend.services.belief.review_contracts import (
     AgentId,
     FrozenRecord,
     Identifier,

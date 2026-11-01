@@ -28,7 +28,7 @@ We implemented **Option B**:
 1. Added explicit catching of `httpx.RequestError`, `TimeoutError`, and `asyncio.TimeoutError` in `ModelPoolProvider.generate()`.
 2. When caught, the system pauses execution for `10 seconds` using `await asyncio.sleep(10)` and attempts a single retry on the same model and key.
 3. Added warning logs describing the connection failure and the waiting state, which act as the material trace of the perturbation.
-4. Unit tests were added to `backend/tests/test_model_pool.py` to ensure that:
+4. Unit tests were added to `backend/tests/services/test_model_pool.py` to ensure that:
    * Successful retries maintain the key's availability.
    * Double failures exhaust the key and trigger rotation as expected.
 

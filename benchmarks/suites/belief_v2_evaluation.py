@@ -9,7 +9,7 @@ from typing import Any
 
 import numpy as np
 
-from backend.modules.belief_selection import ParticipationPolicy, exploratory, frame_selection
+from backend.modules.belief.selection import ParticipationPolicy, exploratory, frame_selection
 from backend.storage.activation import BeliefSelectionReceipt
 from backend.storage.repositories.cognitive.belief_selection import SelectionRecord, SelectionSnapshot
 from benchmarks.suites.belief_auto_review import validate_provisional

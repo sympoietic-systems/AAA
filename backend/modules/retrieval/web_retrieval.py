@@ -283,7 +283,7 @@ class RhizomeWebProbe:
             interference_score = collision["interference_score"] if collision["interference_score"] is not None else 0.5
         elif self.llm:
             try:
-                from backend.utils.prompt_loader import get_prompt
+                from backend.prompts.loader import get_prompt
 
                 sys_prompt = get_prompt(
                     "web_retrieval/belief_collision.yaml",

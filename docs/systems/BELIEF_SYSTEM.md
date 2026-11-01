@@ -373,7 +373,7 @@ A deep code audit of the current codebase has revealed two implementation flaws 
 *   **Applies to:** All non-collapsed, non-faded beliefs not reinforced within the last 30 minutes.
 
 ### B. The Ghost Merging Persistence Bug
-*   **The Issue:** Inside `process_ghost_ecology` (`backend/modules/belief_engine.py`), when two collapsed beliefs in the spectral margin are highly similar ($sim > 0.9$), the system executes a "ghost merge." It compiles a merged `keeper_statement` (e.g. `"{keeper} [absorbed: {absorbed}]"`) and calls:
+*   **The Issue:** Inside `process_ghost_ecology` (`backend/modules/belief/engine.py`), when two collapsed beliefs in the spectral margin are highly similar ($sim > 0.9$), the system executes a "ghost merge." It compiles a merged `keeper_statement` (e.g. `"{keeper} [absorbed: {absorbed}]"`) and calls:
     ```python
     self._belief_repo.update_belief(
         belief_id=keeper.id,
@@ -405,12 +405,12 @@ A deep code audit of the current codebase has revealed two implementation flaws 
 The following files represent the physical substrate of the belief metabolism system:
 
 ### Core Logic & Metabolism
-*   [belief_engine.py](../../backend/modules/belief_engine.py): Contains the `BeliefDynamicsEngine`, nucleation, accretion calculations, ecosystem health metrics, tension fields, and coordinates warping.
+*   [belief_engine.py](../../backend/modules/belief/engine.py): Contains the `BeliefDynamicsEngine`, nucleation, accretion calculations, ecosystem health metrics, tension fields, and coordinates warping.
 *   [mass_decay.py](../../backend/metabolisation/mass_decay.py): Defines skill ecology and the legacy `_apply_mass_decay` entry point, which now shares the durable atrophy clock. The active daemon schedules `_atrophy_beliefs()` only when wall-clock decay is enabled.
 *   [daemon.py](../../backend/metabolisation/daemon.py): Orchestrates the background thread checks, evaluations, and resonance execution.
 
 ### Database Repositories & Schemas
-*   [models.py](../../backend/storage/models.py): Defines ORM classes `BeliefNode`, `BeliefEvent`, `BeliefTension`, and `EcosystemSnapshot`.
+*   [models.py](../../backend/storage/models/cognitive.py): Defines ORM classes `BeliefNode`, `BeliefEvent`, `BeliefTension`, and `EcosystemSnapshot`.
 *   [belief.py](../../backend/storage/repositories/cognitive/belief.py): Executes SQLite CRUD operations for belief nodes, tensions, events, and somatic variables.
 
 ### Initial Seed State

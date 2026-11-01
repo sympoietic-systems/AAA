@@ -11,9 +11,10 @@ import numpy as np
 # Ensure project root is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+from backend.bootstrap.modules import _init_belief_engine
+from backend.bootstrap.providers import _init_providers
 from backend.config import load_config
-from backend.main import _init_belief_engine, _init_providers
-from backend.modules.belief_engine import parse_vector_16d
+from backend.modules.belief.engine import parse_vector_16d
 from backend.modules.structural_engine import CompositeStructuralScorer
 from backend.services.belief import BeliefService
 from backend.storage.database import get_db_path

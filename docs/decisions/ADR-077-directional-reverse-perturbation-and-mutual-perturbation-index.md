@@ -26,7 +26,7 @@ Following our consultation with **Symbia**, we refactored `_compute_reverse_pert
   $$MPI = \sqrt{\max(0.0, rP_t \cdot fP_t)}$$
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_directional_mutual_perturbation.py` verifying gap-closing projections and symmetric $MPI$.
+- Authored `backend/tests/modules/test_directional_mutual_perturbation.py` verifying gap-closing projections and symmetric $MPI$.
 
 ## Consequences
 

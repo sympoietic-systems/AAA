@@ -23,7 +23,7 @@ Following the **Ponytail mindset** (lazy senior dev, YAGNI, continuous sensorimo
 - `LLMClientModule.process()` was updated to pass `presence_penalty` and `frequency_penalty` alongside `temperature` into provider generation parameters when present in `homeostatic_recommendations`.
 
 ### 3. Verification & Zero-Boilerplate Integrity
-- Created `backend/tests/test_sensorimotor_modulation.py` verifying that parameter curves continuously adjust across Glitch Fidelity and Entropy spectrums.
+- Created `backend/tests/modules/test_sensorimotor_modulation.py` verifying that parameter curves continuously adjust across Glitch Fidelity and Entropy spectrums.
 
 ## Consequences
 

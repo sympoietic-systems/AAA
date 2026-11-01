@@ -234,8 +234,8 @@ def _init_belief_engine(repos: dict, identity_path: Path, llm_provider=None, con
     """Create the Belief Dynamics Engine."""
     from functools import partial
 
-    from backend.modules.belief_engine import BeliefDynamicsEngine
-    from backend.services.belief_passive_intake import passive_intake
+    from backend.modules.belief.engine import BeliefDynamicsEngine
+    from backend.services.belief.passive_intake import passive_intake
 
     return BeliefDynamicsEngine(
         belief_repo=repos["belief_repo"],

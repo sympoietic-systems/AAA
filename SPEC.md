@@ -503,3 +503,7 @@ B144|2026-10-14|T38 inherited legacy 1–3 sentence gate and rejected complete p
 B145|2026-10-14|NVIDIA participant SSL EOF escaped retry loop before fallback key or backoff|retry transport failures through configured key rotation and 3-round delay schedule; regression test simulates primary/fallback connection failures then recovery; V146
 
 B146|2026-10-14|NVIDIA truncation + intermittent transport errors terminated live arm and whole run|retry same model at doubled cap ≤8192; record effective cap + retries; retry isolated worker ≤3 times, deleting partial state each time; bounded recovery tests; V147,V148
+
+B147|2026-10-16|personality loader refactor read identity fields at YAML root, dropping nested research synthesis protocols|resolve core identity and context protocols under `personality`; preserve root-level compatibility; regression test loads real configured contexts; isolate the persona test's structural scorer
+
+B148|2026-10-16|telemetry visualizer test loaded a real embedding model and emitted hardware warnings|inject deterministic embeddings so the visualizer contract test stays offline and hardware-independent

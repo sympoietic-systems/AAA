@@ -136,9 +136,9 @@ In alignment with ADR-097, this candidate controller will be evaluated via `run_
 
 ## Verification Contracts
 
-- `backend/tests/test_intervention_policy.py`: Asserts selection of `teachback_and_fork` on sustained tension and verifies non-empty directive structure.
-- `backend/tests/test_drr_paskian_health.py`: Asserts $CPI_t$ discounts ungrounded velocity and rewards grounded actionability.
-- `backend/tests/test_homeostatic_control_wiring.py`: Asserts sampling temperature stays locked within baseline under allostatic regulation, presence penalty is clamped $\le 0.40$, and Paskian directives are injected before the participant query.
+- `backend/tests/modules/test_intervention_policy.py`: Asserts selection of `teachback_and_fork` on sustained tension and verifies non-empty directive structure.
+- `backend/tests/modules/test_drr_paskian_health.py`: Asserts $CPI_t$ discounts ungrounded velocity and rewards grounded actionability.
+- `backend/tests/modules/test_homeostatic_control_wiring.py`: Asserts sampling temperature stays locked within baseline under allostatic regulation, presence penalty is clamped $\le 0.40$, and Paskian directives are injected before the participant query.
 - `backend/modules/llm_http.py`: Asserts runtime clamping of `presence_penalty <= 0.60` and `frequency_penalty <= 0.40` across all outbound model invocations.
 - `benchmarks/suites/telemetry/run_dialogue_feedback_benchmark.py`: Executes the live 6-conversation paired ablation against the adaptive participant simulator.
 - `docs/reports/020-paskian-teachback-feedback-control-report.md`: Documents the empirical receipts and bootstrap scorecard.

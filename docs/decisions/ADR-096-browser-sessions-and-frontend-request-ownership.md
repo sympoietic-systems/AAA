@@ -32,7 +32,7 @@ The lint inventory records remaining debt rather than claiming an entirely clean
 
 ## Verification contracts
 
-- `backend/tests/test_browser_sessions.py`: bad credentials, session expiry/capacity/rotation, logout replay, cookie flags, CSRF/origin rejection, bearer compatibility.
+- `backend/tests/api/test_browser_sessions.py`: bad credentials, session expiry/capacity/rotation, logout replay, cookie flags, CSRF/origin rejection, bearer compatibility.
 - `frontend/src/api/__tests__/auth.test.ts`: malformed auth, legacy credential removal, normalized URL boundary, Request headers/signals.
 - `frontend/src/utils/__tests__/sanitizeSchema.test.tsx` and `printContent.test.ts`: hostile HTML/CSS/URLs, retained annotations, text-only print notes and sandbox policy.
 - Hook/store tests: obsolete search/task/note/upload/notification completions and polling disposal.

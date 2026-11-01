@@ -10,11 +10,11 @@ import numpy as np
 
 from backend.metabolisation.sedimentation import store_daemon_metrics
 from backend.modules.llm_client import generate_unified
+from backend.prompts.loader import get_prompts_dict
 from backend.services.annotations import process_research_proposals
-from backend.services.belief_admission import admit_candidate
+from backend.services.belief.admission import admit_candidate
 from backend.services.response_quality import assess_message
 from backend.utils.parsers.belief import parse_belief_nucleate_tags
-from backend.utils.prompt_loader import get_prompts_dict
 from backend.utils.vector import cosine_similarity
 
 logger = logging.getLogger(__name__)

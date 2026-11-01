@@ -76,4 +76,4 @@ In `benchmarks/suites/telemetry/boredom_evaluator.py`, we implement:
 3. **Finite Autopoietic Recovery:**  
    Demonstrated a healthy recovery half-life of $\tau_{1/2} = 5$ turns, returning the dialogue to high-vitality flowing states after deep adversarial stress.
 4. **Verification:**  
-   Unit test coverage established in `backend/tests/test_agential_boredom.py` (8/8 tests green in 7.10s).
+   Unit test coverage established in `backend/tests/modules/test_agential_boredom.py` (8/8 tests green in 7.10s).

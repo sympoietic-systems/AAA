@@ -68,7 +68,7 @@ pipeline:
     - llm_client
 ```
 
-* **Dynamic Assembly**: The `core_identity` and the relevant `operational_protocols` section are dynamically selected by `backend/utils/persona_loader.py` and prepended to the system prompt context.
+* **Dynamic Assembly**: The `core_identity` and the relevant `operational_protocols` section are dynamically selected by `backend/personality/loader.py` and prepended to the system prompt context.
 
 ### B. Task-Specific Prompt Templates: `backend/prompts/`
 

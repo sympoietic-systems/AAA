@@ -153,7 +153,7 @@ In alignment with our commitments to **minimality** and **non-simulation** (no g
 
 ### Phase 1: Database & Model Layer (Data Foundations)
 1. **Migration File**: Create [m017_conversation_branching.py](file:///d:/AAA/backend/storage/migrations/m017_conversation_branching.py) implementing the schema changes for `conversation_log` (parent column), `consolidation_checkpoints` (message column), `message_links` (new table), and `memory_nodes` (composite primary key recreate).
-2. **Model Classes**: Modify `Message` and `MemoryNode` in [models.py](file:///d:/AAA/backend/storage/models.py). Add `MessageLink`.
+2. **Model Classes**: Modify `Message` and `MemoryNode` in [models.py](file:///d:/AAA/backend/storage/models/cognitive.py). Add `MessageLink`.
 3. **Row Mappers**: Update [row_mappers.py](file:///d:/AAA/backend/storage/row_mappers.py) to map new database fields.
 4. **Repositories**: Update [message.py](file:///d:/AAA/backend/storage/repositories/message.py), [consolidation.py](file:///d:/AAA/backend/storage/repositories/consolidation.py), and [memory_node.py](file:///d:/AAA/backend/storage/repositories/memory_node.py) to support parent insertion, path-scoped queries (`get_ancestor_path`), tree loading, and link creation.
 

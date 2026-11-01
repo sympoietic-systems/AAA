@@ -113,7 +113,7 @@ async def run_background_belief_nucleation(
 ):
     """Route explicit emissions through shared admission; provider absence never loses a candidate."""
     from backend.config import load_config
-    from backend.services.belief_admission import admit_candidate
+    from backend.services.belief.admission import admit_candidate
     from backend.storage.database import get_db_path
 
     if message_id is None:

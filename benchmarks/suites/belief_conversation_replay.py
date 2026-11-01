@@ -19,11 +19,11 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.core.logging_config import SecretMaskingFilter
-from backend.modules.belief_selection import ParticipationPolicy, exploratory, selection_item
+from backend.modules.belief.selection import ParticipationPolicy, exploratory, selection_item
 from backend.modules.llm_protocol import ProviderResponseError, RateLimitError
+from backend.prompts.builder import DEFAULT_BELIEFS_FOOTER, DEFAULT_BELIEFS_HEADER, format_beliefs_block
 from backend.storage.repositories.cognitive.belief_selection import SelectionRecord, SelectionSnapshot
 from backend.utils.parsers.belief import parse_belief_nucleate_tags
-from backend.utils.prompt_builder import DEFAULT_BELIEFS_FOOTER, DEFAULT_BELIEFS_HEADER, format_beliefs_block
 from benchmarks.suites.belief_auto_review import (
     ObservedNvidiaProvider,
     ObservedReviewProvider,

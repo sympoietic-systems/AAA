@@ -1,5 +1,9 @@
-"""Child delivery is an attributed archive, never a parent conclusion."""
+"""Child delivery is an attributed archive, never a parent conclusion.
 
-from backend.storage.research_evidence import ChildArchive as ChildEvidencePacket
+Note: Canonical location is backend.storage.models.research.children.
+"""
+
+from backend.storage.models.research.children import *  # noqa: F403
+from backend.storage.models.research.children import ChildEvidencePacket
 
 __all__ = ["ChildEvidencePacket"]

@@ -153,7 +153,7 @@ Adds `source_type` (TEXT DEFAULT 'conversation') and `source_id` (TEXT) columns 
 
 ### M1: Models
 
-**File:** `backend/storage/models.py`
+**File:** `backend/storage/models/cognitive.py`
 
 - Add `source_type: str = "conversation"` and `source_id: str = ""` to `MemoryNode` dataclass
 

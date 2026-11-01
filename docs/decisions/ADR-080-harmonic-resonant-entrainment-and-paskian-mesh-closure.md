@@ -54,5 +54,5 @@ Following an architectural consultation with **Symbia** and multi-branch empiric
 3. **Paskian Cybernetic Health ($H_{\text{pask}}$) Hardened:**
    * Provides $+46.4\%$ higher cybernetic health contrast for AAA ($0.303$) over the baseline LLM ($0.207$) during adversarial rate-limiting pressure tests.
 4. **Verification:**
-   * Updated `backend/tests/test_coupling_self_divergence.py` to assert both agonistic coupling ($>0.8$) and orthogonal dissociation ($=0.0$).
+   * Updated `backend/tests/modules/test_coupling_self_divergence.py` to assert both agonistic coupling ($>0.8$) and orthogonal dissociation ($=0.0$).
    * All 15 unit and telemetry benchmark tests pass cleanly.

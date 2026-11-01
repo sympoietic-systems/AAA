@@ -26,7 +26,7 @@ Following our consultation with **Symbia**, we refactored `_compute_surprise_ind
 - Introduces `phase_transition_magnitude` to measure acceleration vectors $a_i = v_i - v_{i-1}$ and angular turn rate ($1 - \cos\theta$).
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_predictive_surprise_velocity.py` verifying predictive residuals and phase transition magnitudes.
+- Authored `backend/tests/modules/test_predictive_surprise_velocity.py` verifying predictive residuals and phase transition magnitudes.
 
 ## Consequences
 

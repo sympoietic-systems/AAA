@@ -25,7 +25,7 @@ We extended post-processing in `backend/services/annotations.py` to convert `<sc
 - Retained the 200-character context length safeguard for downstream context presentation.
 
 ### 3. Verification & Ponytail Craft
-- Authored `backend/tests/test_scar_fold_monologue.py` verifying belief mass accretion and event logging from scar-fold tags.
+- Authored `backend/tests/modules/test_scar_fold_monologue.py` verifying belief mass accretion and event logging from scar-fold tags.
 
 ## Consequences
 

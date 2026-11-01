@@ -6,8 +6,8 @@ import sys
 # Ensure project root is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
+from backend.bootstrap.providers import _init_providers
 from backend.config import load_config
-from backend.main import _init_providers
 from backend.modules.background_tasks.actions.refine_belief import RefineBeliefAction
 from backend.storage.database import get_db_path
 from backend.storage.repositories import BeliefRepository

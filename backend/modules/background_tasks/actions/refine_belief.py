@@ -52,7 +52,7 @@ class RefineBeliefAction(BackgroundAction):
         # 4. Load Symbia core personality
         personality_prompt = ""
         try:
-            from backend.utils.persona_loader import get_identity_yaml_path, get_persona_text, load_identity
+            from backend.personality.loader import get_identity_yaml_path, get_persona_text, load_identity
 
             identity_path = get_identity_yaml_path()
             if identity_path.exists():

@@ -102,7 +102,7 @@ class ResearchMetabolismEngine:
     async def _synthesize_findings(self, task: dict, all_content: str) -> str:
         """Generate a cross-branch executive summary of research findings."""
         try:
-            from backend.utils.prompt_loader import get_prompts_dict
+            from backend.prompts.loader import get_prompts_dict
 
             prompt_data = get_prompts_dict("research/synthesizer.yaml")
 

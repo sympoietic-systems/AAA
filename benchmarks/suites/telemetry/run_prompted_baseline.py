@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 import httpx
 from sentence_transformers import SentenceTransformer
 
-from backend.utils.persona_loader import load_persona_for_context
+from backend.personality.loader import load_persona_for_context
 from benchmarks.suites.telemetry.live import DEFAULT_PROMPTS, compute_metrics_for_turns
 
 # Configure logging

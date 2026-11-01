@@ -881,7 +881,7 @@ The following files form the physical substrate of the memory system:
 * [dream_context.py](../../backend/metabolisation/dream_context.py): DreamContextMixin — stagnation evaluation, somatic vitality calculation, tension hotspot detection (belief stress score formula), nomadic synthesis context building, dream context assembly.
 
 ### Database Repositories & Schemas
-* [models.py](../../backend/storage/models.py): Defines ORM classes `Conversation`, `MemoryNode`, `Message`, and `BeliefNode`.
+* [models.py](../../backend/storage/models/cognitive.py): Defines ORM classes `Conversation`, `MemoryNode`, `Message`, and `BeliefNode`.
 * [message.py](../../backend/storage/repositories/message.py): `get_ancestor_path()` recursive CTE, `get_all_embeddings_except()`, `get_sediment_messages_with_metadata()`, `get_embeddings_in_similarity_range()`, `get_embeddings_and_signatures_except()`.
 * [memory_node.py](../../backend/storage/repositories/memory_node.py): `save_nodes()`, `get_nodes()`, `get_nodes_by_checkpoint()`, `delete_by_checkpoint()`.
 

@@ -108,7 +108,7 @@
       "PerceptionMetabolismHandler.metabolize_perception": 1,
       "PerceptionMetabolismHandler.metabolize_web": 1
     },
-    "backend/modules/belief_engine.py": {
+    "backend/modules/belief/engine.py": {
       "BeliefDynamicsEngine._ensure_signature": 3,
       "BeliefDynamicsEngine._find_closest_active_belief": 1,
       "BeliefDynamicsEngine._nucleate_proto_belief": 1,
@@ -210,23 +210,23 @@
     "backend/services/backup.py": {
       "create_verified_backup": 1
     },
-    "backend/services/belief_common.py": {
+    "backend/services/belief/common.py": {
       "_score_statement_16d": 1
     },
-    "backend/services/belief_mutation.py": {
+    "backend/services/belief/mutation.py": {
       "BeliefMutationUseCases.create_new_belief": 1,
       "BeliefMutationUseCases.update_belief_details": 1
     },
-    "backend/services/belief_proposal.py": {
+    "backend/services/belief/proposal.py": {
       "BeliefProposalUseCases.synthesize_merge_statement": 2
     },
-    "backend/services/belief_query.py": {
+    "backend/services/belief/query.py": {
       "BeliefQueryUseCases.get_beliefs": 2
     },
-    "backend/services/belief_serializer.py": {
+    "backend/services/belief/serializer.py": {
       "_parse_source_trace": 1
     },
-    "backend/services/belief_version.py": {
+    "backend/services/belief/version.py": {
       "BeliefVersionUseCases.revert_belief_version": 1
     },
     "backend/services/chat.py": {
