@@ -60,6 +60,7 @@ function VersionItem({
 
 interface SkillDetailProps {
   skill: DbSkillInfo | null
+  contentError?: string
   content?: string
   loading: boolean
   onUpdate: (updatedSkill: DbSkillInfo, updatedContent: string) => void
@@ -67,7 +68,7 @@ interface SkillDetailProps {
   agentFlux: boolean
 }
 
-export const SkillDetail = memo(function SkillDetail({ skill, content, loading, onUpdate, onDelete, agentFlux }: SkillDetailProps) {
+export const SkillDetail = memo(function SkillDetail({ skill, content, contentError, loading, onUpdate, onDelete, agentFlux }: SkillDetailProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editDescription, setEditDescription] = useState("")
   const [editContent, setEditContent] = useState("")
@@ -85,9 +86,12 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
     setIsEditing(false); setIsConfirmingDelete(false); setErrorMsg(null); setExpandedVersions({})
     if (!skill) { setVersions([]); return }
     setVersions([]); setActiveTab("details")
-    apiFetch(`/api/skills/${skill.id}/versions`)
-      .then(res => res.json()).then(data => { if (data?.versions) setVersions(data.versions) })
-      .catch(e => console.error("Failed to load versions:", e))
+    let current = true
+    const controller = new AbortController()
+    apiFetch(`/api/skills/${skill.id}/versions`, { signal: controller.signal })
+      .then(res => res.json()).then(data => { if (current && data?.versions) setVersions(data.versions) })
+      .catch(e => { if (current) console.error("Failed to load versions:", e) })
+    return () => { current = false; controller.abort() }
   }, [skill])
 
   if (!skill) {
@@ -100,12 +104,14 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
 
   /* ── Handlers (after null guard, before JSX) ── */
   const handleStartEdit = () => {
+    if (loading || content === undefined || contentError) return
     setEditDescription(skill.description); setEditContent(content || "")
     setEditTriggers(skill.trigger_keywords.join(", ")); setIsEditing(true)
     setIsConfirmingDelete(false); setErrorMsg(null)
   }
 
   const handleSave = async () => {
+    if (loading || content === undefined || contentError) return
     setIsSavingOrDeleting(true); setErrorMsg(null)
     try {
       const triggers = editTriggers.split(",").map(t => t.trim()).filter(t => t.length > 0)
@@ -195,7 +201,7 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
               ) : (
                 <button onClick={() => setIsConfirmingDelete(true)} disabled={isSavingOrDeleting} className="text-[10px] text-action-dim hover:text-semantic-red font-mono transition-colors cursor-pointer select-none font-bold">[delete]</button>
               )}
-              <button onClick={handleStartEdit} disabled={isSavingOrDeleting} className="text-[10px] text-action-dim hover:text-action-hover font-mono transition-colors cursor-pointer select-none font-bold">[edit]</button>
+              <button onClick={handleStartEdit} disabled={isSavingOrDeleting || loading || content === undefined || !!contentError} className="text-[10px] text-action-dim hover:text-action-hover font-mono transition-colors cursor-pointer select-none font-bold">[edit]</button>
             </>
           )}
           <span className="text-[9px] font-mono font-bold text-semantic-purple">{skill.always_active ? "baseline" : "on-demand"}</span>
@@ -257,7 +263,9 @@ export const SkillDetail = memo(function SkillDetail({ skill, content, loading, 
             <div className="text-[#555] font-mono text-[10px] uppercase">[ Full Content ]</div>
             {loading ? (
               <div className="text-[#555] animate-pulse mt-0.5">loading...</div>
-            ) : content ? (
+            ) : contentError ? (
+              <div role="alert" className="text-semantic-red">{contentError}</div>
+            ) : content !== undefined ? (
               <div className="mt-1 text-[10px] text-[#888] whitespace-pre-wrap leading-relaxed">{content}</div>
             ) : (
               <div className="text-[#444] italic mt-0.5">Click a skill to load its content</div>

@@ -6,7 +6,7 @@ import { apiFetch } from "../api/http"
 // Design follows Symbia's vision + FRONTEND_DESIGN_PRINCIPLES.md.
 
 import React, { memo, useState, useEffect, useRef, useCallback } from "react"
-import { UnifiedFooter } from "./UI"
+import { UnifiedFooter } from "./UI/UnifiedFooter"
 
 interface Line {
   text: string

@@ -52,6 +52,7 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/archive_search.py",
     "backend/services/belief/legacy_replay.py",
     "backend/services/belief/recurrence.py",
     "backend/storage/repositories/cognitive/belief_recurrence.py",

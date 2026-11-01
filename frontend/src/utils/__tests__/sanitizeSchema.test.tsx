@@ -1,3 +1,4 @@
+import { renderToStaticMarkup } from "react-dom/server"
 import { render } from "@testing-library/react"
 import { expect, it } from "vitest"
 import ReactMarkdown from "react-markdown"
@@ -13,4 +14,17 @@ it("V38 strips hostile HTML, URLs, CSS and classes while retaining annotations",
   expect(container.querySelector("mark")?.className).toBe("note-highlight note-shared")
   expect(container.querySelector("mark")?.getAttribute("data-note-id")).toBe("n1")
   expect(container.querySelector("a")?.getAttribute("href")).toBeNull()
+})
+
+it("renders lazy math policy while rejecting raw HTML event handlers", async () => {
+  const { safeMathPlugins } = await import("../markdownPolicy")
+  const { default: remarkMath } = await import("remark-math")
+  const html = renderToStaticMarkup(
+    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={safeMathPlugins}>
+      {'$x^2$ <img src="x" onerror="alert(1)"><script>alert(2)</script>'}
+    </ReactMarkdown>
+  )
+  expect(html).toContain('class="katex"')
+  expect(html).not.toContain("onerror")
+  expect(html).not.toContain("<script")
 })

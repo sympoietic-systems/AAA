@@ -5,6 +5,7 @@ import {
   refreshMetricsForce,
   daemonState,
   subscribeDaemon,
+  subscribeBeliefs,
 } from '../telemetryStore'
 
 vi.mock('../notificationStore', () => ({
@@ -70,4 +71,12 @@ describe('telemetryStore', () => {
     await refreshMetricsForce('conv-1')
     expect(metricsState['conv-1']?.loading).toBe(false)
   })
+})
+
+it("requests compact beliefs with a cancellable transport", async () => {
+  const { getBeliefs } = await import("../../api/client")
+  const unsubscribe = subscribeBeliefs("compact-conv", () => {})
+  await flushPromises()
+  expect(getBeliefs).toHaveBeenCalledWith("compact-conv", "symbia", false, expect.any(AbortSignal))
+  unsubscribe()
 })

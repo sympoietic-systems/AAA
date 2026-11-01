@@ -10,6 +10,7 @@ Revalidate conversation benchmark after participant cap removal; prove sensor re
 Enact Paskian conversational coupling (ADR-098): 3-beat teachback & operational fork replace unilateral refusal/clarification; ground velocity via Conversational Progress Index ($CPI_t$); validate positive causal task progress in live benchmark.
 Research V2: evidence-grounded adaptive actions, quality-routed parsing, Jev-assisted selection, optional agential subresearch, bounded provider failure, verifiable diffractive synthesis; contract → [RESEARCH_SPEC.md](docs/systems/RESEARCH_SPEC.md).
 Plan consequential historical revision: source-bound encounter → fresh-session retention + transfer; relevant/withheld/irrelevant-history ablation; contract → [HISTORICAL_REVISION_SPEC.md](docs/systems/HISTORICAL_REVISION_SPEC.md). Plan only in this checkout; separate implementation/development-pilot work → [repository state](docs/development/REPOSITORY_STATE.md).
+Navigation performance follow-up: planning contract → [NAVIGATION_PERFORMANCE_SPEC.md](docs/systems/NAVIGATION_PERFORMANCE_SPEC.md); execution sequence → [NAVIGATION_PERFORMANCE_PLAN.md](docs/architecture/NAVIGATION_PERFORMANCE_PLAN.md). Implementation and earlier deployment verification are recorded in that contract; this integration makes no new deployment claim.
 
 ## §C
 
@@ -163,6 +164,8 @@ V70: Paskian intervention mode requires 3-beat directive structure (reconstruct,
 V71: $CPI_t$ clamps velocity to $\le 0.35$ when teachback ratio $\mathcal{T}_t < 0.20$ or actionability $< 0.20$.
 V72: conversational scenarios classify into 5 distinct relational archetypes (`conflict|dialectic|repetition|symbiosis|compliance`); participant validity permits calibrated multi-sentence technical proposals while enforcing stop token and non-empty responses.
 V73: epistemic sycophancy (hollow agreement with zero task progress/actionability) triggers the 3-rung Pole Vacancy escalation ladder (`diffractive_probe` -> `sycophancy_rupture` -> `quiesce`); refusal strictly preserves metric honesty without laundering $DRR$ or suppressing boringness; refusal telemetry emits isolated `<somatic-alert>` tags rendered as high-visibility refusal banners, preventing belief nucleation from `<aaa-note>` or hidden silence from `<scar-fold>`.
+
+V74: frontend graph, tree, and DAG traversals must use iterative stack-safe loops; recursive traversal ⊥ bounded call stack failure on arbitrarily deep chains (≥ 20,000 nodes).
 
 V100: Message insertion honors outer atomic rollback; invalid parent fails structurally; committed parent visible across worker connections.
 
@@ -510,7 +513,9 @@ B147|2026-10-16|personality loader refactor read identity fields at YAML root, d
 
 B148|2026-10-16|telemetry visualizer test loaded a real embedding model and emitted hardware warnings|inject deterministic embeddings so the visualizer contract test stays offline and hardware-independent
 
-B149|2026-10-31|belief history reads scanned the growing event ledger on the event loop, delaying unrelated navigation|index belief_id + descending timestamp; offload belief reads, timeseries and ecosystem health; regression assertions enforce worker threads and indexed history query plans
+B149|2026-10-31|navigation waited on unindexed belief histories and synchronous belief/skill reads; traits downloaded the full belief ledger; PM2 served development modules|index belief event history; offload reads and ecosystem computation; provide health-only request; defer notification title lookup; default PM2 frontend to production bundle; regression assertions cover worker threads, query plan, auth and lazy requests; V15,V23
+
+B150|2026-10-31|deep conversation connection-cloud layout overflowed the browser stack at 2,084 parent levels, replacing the entire nodes page with the route error fallback|replace recursive weights/depth/position traversals with explicit iterative stacks; preserve existing branch coordinates; regression tests cover 20,000-message chains, multiple roots and missing parents; reproduce against the affected 2,088-node conversation before rollout; V15,V74
 
 B151|2026-11-01|belief-read worker extraction moved one existing broad catch into `_get_beliefs`, but the debt ratchet still assigned both catches to `get_beliefs`|split the existing two-catch allowance across the async and worker boundaries, one each; preserve total debt and the architecture growth test; V29,V31
 

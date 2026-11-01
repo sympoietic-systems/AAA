@@ -6,31 +6,31 @@ export { type MetricsResponse, type HomeostaticRecommendations, type MetricsInfo
 export { type DaemonStatusResponse, type SchedulerStatusResponse, type DreamEntry, type DreamHistoryResponse }
 export { type AgentInfo, type ConversationTokenInfo, type TokenResponse }
 
-export async function getMetrics(window = 20, conversationId?: string, limit = 30): Promise<MetricsResponse> {
+export async function getMetrics(window = 20, conversationId?: string, limit = 30, signal?: AbortSignal): Promise<MetricsResponse> {
   const params = new URLSearchParams({ window: String(window), limit: String(limit) })
   if (conversationId) {
     params.set("conversation_id", conversationId)
   }
-  const res = await apiFetch(`${BASE}/metrics?${params.toString()}`)
+  const res = await apiFetch(`${BASE}/metrics?${params.toString()}`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
-export async function getTokens(conversationId?: string): Promise<TokenResponse> {
+export async function getTokens(conversationId?: string, signal?: AbortSignal): Promise<TokenResponse> {
   const params = conversationId ? `?conversation_id=${conversationId}` : ""
-  const res = await apiFetch(`${BASE}/tokens${params}`)
+  const res = await apiFetch(`${BASE}/tokens${params}`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
-export async function getDaemonStatus(): Promise<DaemonStatusResponse> {
-  const res = await apiFetch(`${BASE}/daemon/status`)
+export async function getDaemonStatus(signal?: AbortSignal): Promise<DaemonStatusResponse> {
+  const res = await apiFetch(`${BASE}/daemon/status`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
 
-export async function getSchedulerStatus(): Promise<SchedulerStatusResponse> {
-  const res = await apiFetch(`${BASE}/scheduler/status`)
+export async function getSchedulerStatus(signal?: AbortSignal): Promise<SchedulerStatusResponse> {
+  const res = await apiFetch(`${BASE}/scheduler/status`, { signal })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

@@ -1,5 +1,5 @@
 import React, { memo, useState, useRef } from "react"
-import { UnifiedFooter } from "../../UI"
+import { UnifiedFooter } from "../../UI/UnifiedFooter"
 
 interface Props {
   onPasswordSubmit: (password: string) => Promise<void>

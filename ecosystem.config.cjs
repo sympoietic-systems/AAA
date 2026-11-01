@@ -33,7 +33,7 @@ module.exports = {
     {
       name: "aaa-frontend",
       script: "bash",
-      args: "scripts/run_frontend.sh dev",
+      args: "scripts/run_frontend.sh",
       cwd: __dirname,
       autorestart: true,
       watch: false,
@@ -42,6 +42,9 @@ module.exports = {
       env: {
         AAA_FRONTEND_HOST: "0.0.0.0",
         AAA_FRONTEND_PORT: "5174",
+        AAA_FRONTEND_MODE: "production",
+      },
+      env_development: {
         AAA_FRONTEND_MODE: "dev",
       },
       max_size: "10M",

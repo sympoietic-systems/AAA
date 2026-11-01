@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, memo } from "react"
 import {
-  getDbSkills,
   getSkillContent,
   getAgent
 } from "../../../api/client"
-import type { DbSkillsResponse, DbSkillInfo } from "../../../api/client"
+import { getDbSkillSummaries } from "../../../api/skills"
+import type { DbSkillSummaryResponse, DbSkillSummary } from "../../../api/types"
+import type { DbSkillInfo } from "../../../api/client"
 import { SkillListItem } from "./skills/SkillListItem"
 import { SkillDetail } from "./skills/SkillDetail"
 import { NewSkillForm } from "./skills/NewSkillForm"
@@ -17,19 +18,21 @@ interface SkillsSectionProps {
 }
 
 function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
-  const [data, setData] = useState<DbSkillsResponse | null>(null)
+  const [data, setData] = useState<DbSkillSummaryResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [agentFlux, setAgentFlux] = useState<boolean>(false)
 
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [skillContent, setSkillContent] = useState<Record<string, string>>({})
-  const [loadingContent, setLoadingContent] = useState<string | null>(null)
+  const [loadingContent, setLoadingContent] = useState<Record<string, boolean>>({})
+  const [contentErrors, setContentErrors] = useState<Record<string, string>>({})
+  const pendingContent = useRef(new Set<string>())
   const [isAdding, setIsAdding] = useState(false)
   const detailRef = useRef<HTMLDivElement>(null)
 
   // Fetch skills and agent info on mount
   useEffect(() => {
-    getDbSkills()
+    getDbSkillSummaries()
       .then(d => setData({
         always_active: d?.always_active || [],
         on_demand: d?.on_demand || [],
@@ -54,16 +57,20 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
 
   // Load skill content on demand
   const handleLoadContent = async (name: string) => {
-    if (skillContent[name]) return
-    setLoadingContent(name)
+    if (skillContent[name] !== undefined || pendingContent.current.has(name)) return
+    pendingContent.current.add(name)
+    setLoadingContent(prev => ({ ...prev, [name]: true }))
+    setContentErrors(prev => ({ ...prev, [name]: "" }))
     try {
       const result = await getSkillContent(name)
-      const text = result.content || result.description || `(no content — lifecycle: ${result.lifecycle_stage || "?"})`
+      if (result.content === undefined || result.content === null) throw new Error("Skill content was not returned")
+      const text = result.content
       setSkillContent(prev => ({ ...prev, [name]: text }))
     } catch (e: any) {
-      setSkillContent(prev => ({ ...prev, [name]: `Failed: ${e.message}` }))
+      setContentErrors(prev => ({ ...prev, [name]: `Failed to load content: ${e.message}` }))
     } finally {
-      setLoadingContent(null)
+      pendingContent.current.delete(name)
+      setLoadingContent(prev => ({ ...prev, [name]: false }))
     }
   }
 
@@ -81,8 +88,8 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
   const handleUpdate = (updatedSkill: DbSkillInfo, updatedContent: string) => {
     setData(prev => {
       if (!prev) return null
-      const updateList = (list: DbSkillInfo[]) =>
-        list.map(s => s.id === updatedSkill.id ? updatedSkill : s)
+      const updateList = (list: DbSkillSummary[]) =>
+        list.map(s => s.id === updatedSkill.id ? { ...updatedSkill, content_loaded: false as const } : s)
       return {
         always_active: updateList(prev.always_active),
         on_demand: updateList(prev.on_demand),
@@ -96,7 +103,8 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
     }
   }
 
-  const handleCreateSuccess = (newSkill: DbSkillInfo) => {
+  const handleCreateSuccess = (created: DbSkillInfo) => {
+    const newSkill: DbSkillSummary = { ...created, content_loaded: false }
     setData(prev => {
       if (!prev) return null
       const always_active = newSkill.always_active
@@ -207,7 +215,8 @@ function SkillsSectionComponent({ initialSelectedId }: SkillsSectionProps) {
           <SkillDetail
             skill={selected}
             content={selectedName ? skillContent[selectedName] : undefined}
-            loading={loadingContent === selectedName}
+            loading={!!selectedName && !!loadingContent[selectedName]}
+            contentError={selectedName ? contentErrors[selectedName] : undefined}
             onUpdate={handleUpdate}
             onDelete={handleDeleteSuccess}
             agentFlux={agentFlux}
