@@ -513,3 +513,7 @@ B149|2026-10-31|belief history reads scanned the growing event ledger on the eve
 B151|2026-11-01|belief-read worker extraction moved one existing broad catch into `_get_beliefs`, but the debt ratchet still assigned both catches to `get_beliefs`|split the existing two-catch allowance across the async and worker boundaries, one each; preserve total debt and the architecture growth test; V29,V31
 
 B152|2026-11-01|pending test relocation dropped consultation message-agent assertions and left its SQLite connection open|restore both message identity/speaker assertions and close the isolated test connection deterministically; V17,V18
+
+B153|2026-11-01|workshop/export integration test wrote a real-clock decision but queried an October-only window, so it expired on November 1|freeze the workshop clock and encounter time; derive export bounds from those fixtures; parameterize both sides of the old cutoff and a later year while preserving lineage/dissent assertions; V27,V30
+
+B154|2026-11-01|same-key workshop request missed its prior receipt, then saw the state advanced by an identical concurrent command and returned a stale-state conflict|recheck the hash-bound prior receipt before rejecting advanced state; deterministic interleaving proves identical-key replay and different-key rejection; retain the six-request race and single-decision assertions; V17,V34; BELIEF_SPEC V2

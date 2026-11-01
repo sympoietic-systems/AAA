@@ -85,6 +85,10 @@ class BeliefWorkshop:
             or (current["version"] if current else 0) != command.expected_review_version
             or (current["state"] if current else None) != command.expected_state
         ):
+            # An identical request may have committed after the initial lookup.
+            prior = self.repository.prior(agent, command_id, digest)
+            if prior:
+                return prior
             raise ConstraintViolation("Stale workshop statement/state/version", entity="belief_workshop")
         if command.action in {"revise", "supersede"} and (not current or current["state"] != "adopted"):
             raise ConstraintViolation("Linked action requires a canonical commitment", entity="belief_workshop")

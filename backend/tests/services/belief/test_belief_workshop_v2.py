@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import sqlite3
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -159,10 +160,31 @@ def test_concurrent_commands_single_decision(db, candidate, same_key):
         )
 
     results = asyncio.run(race())
-    assert sum(isinstance(r, dict) for r in results) == (6 if same_key else 1)
+    assert sum(isinstance(r, dict) for r in results) == (6 if same_key else 1), results
     assert all(isinstance(r, (dict, ConstraintViolation)) for r in results)
     assert len(sql(db, "SELECT * FROM belief_review_decisions WHERE record_id=?", (candidate,))) == 1
     assert family(db, candidate)["command_count"] == 1
+
+
+@pytest.mark.parametrize("same_key", [True, False])
+def test_command_completed_between_prior_lookup_and_snapshot(db, candidate, monkeypatch, same_key):
+    service = BeliefWorkshop(db)
+    snapshot = service.repository.snapshot
+    completed = []
+
+    def snapshot_after_commit(agent, record):
+        completed.append(BeliefWorkshop(db)._command(agent, record, "winner", command(), OPERATOR))
+        return snapshot(agent, record)
+
+    monkeypatch.setattr(service.repository, "snapshot", snapshot_after_commit)
+    if same_key:
+        result = asyncio.run(service.command("symbia", candidate, "winner", command(), actor=OPERATOR))
+        assert result == completed[0]
+    else:
+        with pytest.raises(ConstraintViolation, match="Stale workshop"):
+            asyncio.run(service.command("symbia", candidate, "different", command(), actor=OPERATOR))
+    assert family(db, candidate)["command_count"] == 1
+    assert len(sql(db, "SELECT * FROM belief_review_decisions WHERE record_id=?", (candidate,))) == 1
 
 
 def test_agent_cannot_adopt_and_declared_positions_not_forged(db, candidate):
@@ -506,13 +528,22 @@ def test_api_auth_boundaries_and_server_actor(db, candidate, monkeypatch):
     assert http.get(url(candidate) + "/review").status_code == 403
 
 
-def test_api_receipt_source_lineage_and_dissent_match_review_and_export(db, monkeypatch):
+@pytest.mark.parametrize(
+    "decision_timestamp",
+    ["2026-10-31T23:59:59+00:00", "2026-11-01T00:00:00+00:00", "2030-01-01T12:00:00+00:00"],
+)
+def test_api_receipt_source_lineage_and_dissent_match_review_and_export(db, monkeypatch, decision_timestamp):
     """One authenticated source-bound intake remains traceable through review and export."""
+    decision_time = datetime.fromisoformat(decision_timestamp)
+    monkeypatch.setattr(
+        "backend.services.belief.workshop.datetime", SimpleNamespace(now=lambda tz: decision_time.astimezone(tz))
+    )
     saved = asyncio.run(
         BeliefReviewStore(db).register(
             incoming(
                 id="encounter:e2e-lineage",
                 segment_id="tag:e2e-lineage",
+                received_at=decision_time - timedelta(seconds=1),
                 lineage=(
                     LineageEntry(
                         source_id="42",
@@ -532,6 +563,7 @@ def test_api_receipt_source_lineage_and_dissent_match_review_and_export(db, monk
     created = http.post(url(saved.record_id) + "/decisions", json=payload, headers=headers)
     assert created.status_code == 200, created.text
     receipt = created.json()
+    assert datetime.fromisoformat(receipt["decision"]["timestamp"]) == decision_time
     assert receipt["decision"]["dissent"] == ["The replay scope remains contested"]
     assert receipt["counter_trace"]["disposition"] == "retained_scoped_dissent"
     assert receipt["tool_authority"] == "none"
@@ -541,7 +573,10 @@ def test_api_receipt_source_lineage_and_dissent_match_review_and_export(db, monk
     assert review["commands"][0]["decision"]["dissent"] == receipt["decision"]["dissent"]
     assert review["counter_traces"] == [receipt["counter_trace"]]
 
-    interval = {"from": "2026-10-01T00:00:00Z", "to": "2026-11-01T00:00:00Z"}
+    interval = {
+        "from": saved.encounter.received_at.astimezone(UTC).isoformat(),
+        "to": (decision_time + timedelta(seconds=1)).isoformat(),
+    }
     decision_page = http.get("/api/beliefs/v2/agents/symbia/decisions", params=interval, headers=headers)
     assert decision_page.status_code == 200, decision_page.text
     exported_decision = next(item for item in decision_page.json()["items"] if item["id"] == receipt["decision"]["id"])
