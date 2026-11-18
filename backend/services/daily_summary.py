@@ -5,6 +5,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -14,7 +15,7 @@ DATE_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class DailySummaryService:
-    def __init__(self, state):
+    def __init__(self, state: Any) -> None:
         self._state = state
 
     @property

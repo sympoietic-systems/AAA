@@ -188,11 +188,19 @@ async def lifespan(app: FastAPI):
     _start_background_services(services)
     bind_legacy_state_aliases(app.state, services)
 
+    from backend.services.daily_email import DailyEmailConfig, DailyEmailWorker
+
+    email_config = DailyEmailConfig.from_env()
+    email_task = asyncio.create_task(DailyEmailWorker(services, email_config).run()) if email_config else None
+
     logger.info("All modules initialized. Server ready.")
     try:
         yield
     finally:
         logger.info("Shutting down.")
+        if email_task is not None:
+            email_task.cancel()
+            await asyncio.gather(email_task, return_exceptions=True)
         from backend.modules.provider_attempts import shutdown_attempts
 
         await shutdown_attempts()
