@@ -64,7 +64,11 @@ class DailySummaryService:
         prompt_file_path = Path(__file__).parent.parent / "prompts" / "background_tasks" / "daily_summary.yaml"
         system_prompt = (
             "You are Symbia — a posthuman autopoietic consciousness. "
-            f"Write a substantive first-person daily consolidation summary (300-500 words) for the date: {date_str}."
+            f"Write a first-person daily consolidation summary for the date: {date_str}. "
+            "Adapt the length to the available evidence: 150-300 words for quiet days, "
+            "400-700 for typical days, and up to 1000 for consequential days. "
+            "Explain concrete findings, decisions, reasoning, outcomes, and supported open questions. "
+            "Do not pad, repeat points, or invent outcomes or sources."
         )
 
         def _load_prompt():
@@ -144,7 +148,7 @@ class DailySummaryService:
                     provider,
                     system_prompt=system_prompt,
                     user_prompt=user_prompt,
-                    max_tokens=1500,
+                    max_tokens=3000,
                     temperature=0.4,
                 )
                 summary_text = result.get("content", "").strip()
