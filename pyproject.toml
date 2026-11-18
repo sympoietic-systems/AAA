@@ -19,6 +19,7 @@ dependencies = [
     "mobi>=0.4.1",
     "crawl4ai>=0.8.9",
     "matplotlib>=3.11.2",
+    "markdown-it-py[linkify]>=4.0,<5",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +53,10 @@ python_version = "3.11"
 strict = true
 follow_imports = "silent"
 files = [
+    "backend/services/daily_email.py",
+    "backend/services/daily_email_rendering.py",
+    "backend/storage/repositories/telemetry/daily_email_repository.py",
+    "backend/storage/migrations/m071_daily_email.py",
     "backend/services/archive_search.py",
     "backend/services/belief/legacy_replay.py",
     "backend/services/belief/recurrence.py",

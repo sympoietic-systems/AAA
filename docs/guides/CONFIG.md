@@ -549,3 +549,28 @@ Main-model research synthesis requests up to 32,768 output tokens to avoid trunc
 Use **Rerun step** on the failed phase in the existing research. Explicit recovery creates a new bounded execution revision with the current configured limits. It retains source text, successful analyses and previous findings, and only calls the model for missing or failed analyses. The original failed action and provider receipts remain unchanged. Recovery gets a new deadline and provider-attempt allowance. `AAA_RESEARCH_MAX_RECOVERY_REVISIONS=64` controls the same-task recovery ceiling (range 1..256); existing tasks can continue recovery after deployment without migration. Every revision remains bounded by its watchdog and provider-attempt allowance. Running phases, unfinished actions and running subresearch must resolve before recovery. Family-wide branching attempt limits remain cumulative.
 
 Automatic mode resumes the remaining pipeline after the recovered phase. Manual mode waits for the next step. Recovery does not silently replay an expired task at server startup, and does not renew existing branch consent or child allocations.
+
+## Daily review email
+
+Set `AAA_DAILY_EMAIL_ENABLED=true` on the instance responsible for delivery. Keep
+it disabled on other instances that use separate databases, such as a local
+checkout, to avoid sending the same review twice.
+
+The worker sends the previous completed UTC review day at
+`AAA_DAILY_EMAIL_HOUR=8` in `AAA_DAILY_EMAIL_TIMEZONE=Asia/Shanghai`. It checks on
+startup and every five minutes, and catches up with the latest due review after
+an outage. It reuses a cached summary or generates one through the existing
+background provider. The email contains HTML with rendered Markdown, supported
+application links, memory nodes, evolution and activity, plus a plain-text fallback.
+
+Configure `AAA_DAILY_EMAIL_TO`, `AAA_SMTP_HOST`, `AAA_SMTP_PORT` (465 for TLS or
+587 for STARTTLS), `AAA_SMTP_USER` (also the sender address), and
+`AAA_SMTP_PASSWORD` in the server's private environment. Titan requires third-party
+mail access; accounts with two-factor authentication need an application password.
+Do not commit mailbox credentials. See [Titan's SMTP setup](https://support.titan.email/hc/en-us/articles/4405162224665-Configuring-Titan-on-Email-Scripts).
+
+Database migration `m071_daily_email` stores per-date, per-recipient delivery leases
+and successful receipts. Failed attempts retry after five minutes. A crash after
+SMTP accepts a message but before its receipt is stored can cause a duplicate;
+SMTP does not provide exactly-once delivery. Logs record successful review dates.
+Application links require the normal AAA login.

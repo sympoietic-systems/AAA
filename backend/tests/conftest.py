@@ -17,6 +17,7 @@ os.environ["AAA_RUN_MIGRATIONS"] = "true"
 def isolate_auth_environment(monkeypatch):
     """Keep ordinary tests independent of developer credentials and live providers."""
     monkeypatch.setenv("AAA_PASSWORD", "")
+    monkeypatch.setenv("AAA_DAILY_EMAIL_ENABLED", "false")
     for key in (
         "AAA_LLM_API_KEY",
         "AAA_BACKGROUND_API_KEY",
